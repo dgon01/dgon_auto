@@ -4,3 +4,4 @@ pypdf2
 openpyxl
 pypdf
 fpdf
+requests

@@ -39,7 +39,7 @@ st.markdown(f"""
     /* Noto Sans KR 폰트 임포트 */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
     
-    /* 앱 전체 폰트 적용 (시스템 아이콘 보호를 위해 * 대신 .stApp 사용) */
+    /* 앱 전체 폰트 적용 */
     .stApp {{
         font-family: 'Noto Sans KR', sans-serif !important;
     }}
@@ -182,19 +182,6 @@ st.markdown(f"""
         border: 1px solid #e1e8ed;
     }}
     
-    /* 익스팬더 스타일 */
-    .streamlit-expanderHeader {{
-        background: linear-gradient(135deg, #f0f4f8 0%, #e1e8ed 100%);
-        border-radius: 10px;
-        font-weight: 600;
-        color: #00428B;
-        border: 2px solid #00428B;
-    }}
-    
-    .streamlit-expanderHeader:hover {{
-        background: linear-gradient(135deg, #e1e8ed 0%, #d1dae0 100%);
-    }}
-    
     /* 메트릭 스타일 */
     [data-testid="stMetricValue"] {{
         font-size: 32px;
@@ -205,75 +192,6 @@ st.markdown(f"""
     [data-testid="stMetricLabel"] {{
         color: #0055b8;
         font-weight: 600;
-    }}
-    
-    /* 체크박스 스타일 */
-    .stCheckbox {{
-        padding: 8px 0;
-    }}
-    
-    /* 제목 스타일 */
-    h1, h2, h3 {{
-        color: #00428B;
-        font-weight: 700;
-    }}
-    
-    /* 구분선 - 등기온 옐로우 */
-    hr {{
-        margin: 25px 0;
-        border: none;
-        border-top: 3px solid #FDD000;
-    }}
-    
-    /* 성공 메시지 */
-    .stSuccess {{
-        background-color: #d4edda;
-        border-left: 5px solid #28a745;
-    }}
-    
-    /* 경고 메시지 */
-    .stWarning {{
-        background-color: #fff3cd;
-        border-left: 5px solid #FDD000;
-    }}
-    
-    /* 에러 메시지 */
-    .stError {{
-        background-color: #f8d7da;
-        border-left: 5px solid #dc3545;
-    }}
-    
-    /* 정보 메시지 */
-    .stInfo {{
-        background-color: #d1ecf1;
-        border-left: 5px solid #00428B;
-    }}
-    
-    /* 라디오 버튼 스타일 */
-    .stRadio > div {{
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 10px;
-    }}
-    
-    /* 넘버 인풋 스타일 */
-    .stNumberInput > div > div > input {{
-        border-radius: 10px;
-        border: 2px solid #e1e8ed;
-    }}
-    
-    /* 강조 텍스트 */
-    strong {{
-        color: #00428B;
-    }}
-    
-    /* 링크 색상 */
-    a {{
-        color: #00428B;
-    }}
-    
-    a:hover {{
-        color: #0055b8;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -454,7 +372,7 @@ def extract_address_from_estate(estate_text):
     return ""
 
 # =============================================================================
-# 4. PDF 생성 로직
+# 4. PDF 생성 로직 (생략 - 기존과 동일)
 # =============================================================================
 
 def draw_fit_text(c, text, x, y, max_width, font_name='Korean', max_size=11, min_size=6):
@@ -488,10 +406,9 @@ class PDFConverter(FPDF):
         start_y = self.get_y(); start_x = self.l_margin
         box_width = self.w - self.l_margin * 2
         self.set_y(start_y + self.line_height)
-        content_start_y = self.get_y()
         content_func()
         content_end_y = self.get_y()
-        box_height = (content_end_y - content_start_y) + self.line_height + 4
+        box_height = (content_end_y - start_y) + self.line_height + 4 # 높이 계산 수정
         self.set_draw_color(211, 211, 211)
         self.rect(start_x, start_y + self.font_size / 2, box_width, box_height)
         title_width = self.get_string_width(title)
@@ -499,9 +416,7 @@ class PDFConverter(FPDF):
         self.rect(start_x + 9, start_y, title_width + 4, self.font_size, 'F')
         self.set_xy(start_x + 11, start_y)
         self.cell(0, self.font_size, title)
-        self.set_y(start_y + self.line_height)
-        content_func()
-        self.set_y(start_y + box_height + 4)
+        self.set_y(content_end_y + 4) # 박스 밖으로 이동
     
     def output_pdf(self, data, save_path):
         self.add_page(); self.set_font(self.font_family, 'B', 20)
@@ -532,6 +447,8 @@ class PDFConverter(FPDF):
                 self.cell(self.col_width1, self.line_height, "보수 소계")
                 self.cell(self.col_width2, self.line_height, f"{data['fee_totals']['보수총액']:,} 원", ln=1, align="R")
             self.draw_labelframe_box("1. 보수액", fee_content)
+            self.ln(5) # 간격 추가
+        
         def costs_content():
             self.set_font(self.font_family, '', 10)
             items = data['cost_items']
@@ -544,6 +461,8 @@ class PDFConverter(FPDF):
             self.cell(self.col_width1, self.line_height, "공과금소계")
             self.cell(self.col_width2, self.line_height, f"{data['cost_totals']['공과금 총액']:,} 원", ln=1, align="R")
         self.draw_labelframe_box(data['cost_section_title'], costs_content)
+        self.ln(5)
+
         self.set_font(self.font_family, 'B', 12)
         self.cell(self.col_width1 - 10, 10, "등기비용 합계")
         self.cell(self.col_width2 + 10, 10, f"{data['grand_total']:,} 원", ln=True, align="R")
@@ -556,6 +475,7 @@ class PDFConverter(FPDF):
             self.set_x(self.l_margin + 5)
             self.cell(0, self.line_height, "• 업무는 입금이 확인된 후에 진행됩니다.", ln=1)
         self.draw_labelframe_box("안내사항", notes_content)
+        self.ln(5)
         def bank_content():
             self.set_font(self.font_family, '', 10); self.set_x(self.l_margin + 5)
             self.cell(0, self.line_height, "• 신한은행 100-035-852291", ln=1)
@@ -681,6 +601,13 @@ if 'calc_data' not in st.session_state:
     st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
     st.session_state['input_debtor_rrn'] = ""
     st.session_state['input_owner_rrn'] = ""
+    
+    # [수정] 결과 표시용 초기화 (3탭)
+    st.session_state['auto_reg_disp'] = "0"
+    st.session_state['auto_edu_disp'] = "0"
+    st.session_state['auto_jeung_disp'] = "0"
+    st.session_state['auto_bond_disp'] = "0"
+
 
 def parse_int_input(text_input):
     try:
@@ -769,6 +696,12 @@ def calculate_all(data):
     data['공과금 총액'] = cost_total
     data['총 합계'] = fee_total + cost_total
     
+    # [수정] 3탭 결과창에 즉시 반영 (세션 강제 주입)
+    st.session_state['auto_reg_disp'] = format_number_with_comma(data["등록면허세"])
+    st.session_state['auto_edu_disp'] = format_number_with_comma(data["지방교육세"])
+    st.session_state['auto_jeung_disp'] = format_number_with_comma(data["증지대"])
+    st.session_state['auto_bond_disp'] = format_number_with_comma(data["채권할인금액"])
+
     return data
 
 # 탭 구현
@@ -792,7 +725,9 @@ with tab1:
         st.session_state['guarantee'] = "한정근담보"
         # 💡 초기화 시 빈 문자열로 변경
         st.session_state['input_amount'] = ""
+        st.session_state['amount_raw_input'] = "" # [수정] 위젯 키값도 초기화
         st.session_state['input_collateral_addr'] = ""
+        st.session_state['collateral_addr_input'] = "" # [수정] 위젯 키값도 초기화
         st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
         st.session_state['input_debtor_rrn'] = ""
         st.session_state['input_owner_rrn'] = ""
@@ -830,26 +765,30 @@ with tab1:
         st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
         st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
         
-        # 💡 채권최고액 - on_change 콜백으로 자동 콤마 및 앞자리 0 제거
+        # 💡 [수정] 채권최고액 - on_change 콜백 (위젯 키 직접 업데이트)
         def format_amount_on_change():
-            raw_val = st.session_state['amount_raw_input']
-            # 숫자만 추출
+            # 입력된 값(amount_raw_input)을 가져옴
+            raw_val = st.session_state.get('amount_raw_input', '')
             clean_val = re.sub(r'[^\d]', '', raw_val)
+            
             if not clean_val:
                 st.session_state['input_amount'] = ""
+                st.session_state['amount_raw_input'] = "" # 입력창도 비움
                 return
             
-            # 정수로 변환하여 앞자리 0 제거
             int_val = int(clean_val)
-            st.session_state['input_amount'] = "{:,}".format(int_val)
+            formatted = "{:,}".format(int_val)
+            
+            # 세션 상태에 저장 (데이터용)
+            st.session_state['input_amount'] = formatted
+            # 위젯 상태에 저장 (화면 표시용) -> 이게 있어야 입력 중에 콤마가 보임
+            st.session_state['amount_raw_input'] = formatted
         
         st.text_input(
             "채권최고액", 
-            value=st.session_state.get('input_amount', ""),
-            key='amount_raw_input',
+            key='amount_raw_input',  # value=... 대신 key로 관리
             on_change=format_amount_on_change,
-            placeholder="0",
-            help="숫자만 입력하면 자동으로 콤마가 추가됩니다."
+            placeholder="숫자만 입력하면 자동으로 콤마가 생깁니다"
         )
         
         # 한글 금액 표시
@@ -858,29 +797,34 @@ with tab1:
             korean_amt = number_to_korean(clean_amt)
             st.info(f"💰 **{korean_amt}**")
         
-        # 💡 물건지 주소 - 복사 버튼 수정 (Callback 방식 적용으로 확실한 동작)
+        # 💡 [수정] 물건지 주소 복사 - 위젯 Key(collateral_addr_input) 직접 타겟팅
         st.markdown("#### 물건지 주소")
         col_addr1, col_addr2 = st.columns([5, 1])
         
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
+                # 입력창(text_area)의 key에 값을 넣어야 즉시 반영됨
+                st.session_state['collateral_addr_input'] = st.session_state['t1_debtor_addr']
+                # 데이터 변수도 같이 업데이트
                 st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
         
         with col_addr1:
-            st.session_state['input_collateral_addr'] = st.text_area(
+            st.text_area(
                 "물건지 주소 (수기 입력)", 
-                value=st.session_state.get('input_collateral_addr', ""),
-                key='collateral_addr_input',
+                key='collateral_addr_input', # 이 key를 통해 값을 넣음
                 height=100,
                 label_visibility="collapsed"
             )
+            # 입력값 변경 시 변수에 저장 (동기화)
+            if 'collateral_addr_input' in st.session_state:
+                st.session_state['input_collateral_addr'] = st.session_state['collateral_addr_input']
         
         with col_addr2:
             st.write("")
             st.write("")
             st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
 
-    # 4. 부동산의 표시 (아래로 이동 + 넓게)
+    # 4. 부동산의 표시
     st.markdown("---")
     st.markdown("### 🏠 부동산의 표시")
     st.caption("※ 등기부등본 내용을 입력하세요")
@@ -1089,8 +1033,11 @@ with tab3:
         with st.container(border=True):
             st.markdown("#### 🏛️ 공과금")
             st.markdown("##### 자동 계산")
-            # 자동 계산 항목은 나중에 채워짐 (placeholder)
-            metric_placeholder_c_auto = st.empty()
+            # [수정] 자동 계산 항목에 key 부여 (calculate_all 함수에서 이 key에 값을 꽂아넣음)
+            st.text_input("등록면허세", key="auto_reg_disp", disabled=True)
+            st.text_input("지방교육세", key="auto_edu_disp", disabled=True)
+            st.text_input("증지대", key="auto_jeung_disp", disabled=True)
+            st.text_input("채권할인금액", key="auto_bond_disp", disabled=True)
             
             st.divider()
             st.markdown("##### 수기 입력")
@@ -1129,12 +1076,6 @@ with tab3:
         st.metric("공급가액", format_number_with_comma(final_data.get('공급가액')) + " 원")
         st.metric("부가세", format_number_with_comma(final_data.get('부가세')) + " 원")
         st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
-        
-    with metric_placeholder_c_auto.container():
-        st.text_input("등록면허세", value=format_number_with_comma(final_data.get('등록면허세')), disabled=True, key="auto_reg_disp")
-        st.text_input("지방교육세", value=format_number_with_comma(final_data.get('지방교육세')), disabled=True, key="auto_edu_disp")
-        st.text_input("증지대", value=format_number_with_comma(final_data.get('증지대')), disabled=True, key="auto_jeung_disp")
-        st.text_input("채권할인금액", value=format_number_with_comma(final_data.get('채권할인금액')), disabled=True, key="auto_bond_disp")
 
     with metric_placeholder_c_total.container():
          st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)

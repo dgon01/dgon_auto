@@ -33,21 +33,29 @@ def get_base64_image(image_path):
 LOGO_PATH = os.path.join(APP_ROOT, "my_icon.ico")
 logo_base64 = get_base64_image(LOGO_PATH)
 
-# 커스텀 CSS 스타일 (DG-ON 브랜드 컬러 적용)
+# 💡 등기온 공식 브랜드 컬러 및 Noto Sans KR 폰트 적용
 st.markdown(f"""
 <style>
-    /* 메인 컨테이너 배경 */
-    .main {{
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    /* Noto Sans KR 폰트 임포트 */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+    
+    /* 전체 폰트 적용 */
+    * {{
+        font-family: 'Noto Sans KR', sans-serif !important;
     }}
     
-    /* 헤더 로고 및 타이틀 */
+    /* 메인 컨테이너 배경 */
+    .main {{
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+    }}
+    
+    /* 헤더 로고 및 타이틀 - 등기온 블루 */
     .header-container {{
-        background: linear-gradient(135deg, #003d82 0%, #0066cc 100%);
+        background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
         padding: 20px 40px;
         border-radius: 15px;
         margin-bottom: 30px;
-        box-shadow: 0 4px 15px rgba(0, 61, 130, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 66, 139, 0.3);
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -76,7 +84,7 @@ st.markdown(f"""
     }}
     
     .header-subtitle {{
-        color: #ffd700;
+        color: #FDD000;
         font-size: 1.2rem;
         font-weight: 500;
         margin: 0;
@@ -96,7 +104,7 @@ st.markdown(f"""
         border-radius: 10px;
         padding: 12px 24px;
         font-weight: 600;
-        color: #003d82;
+        color: #00428B;
         border: 2px solid transparent;
         transition: all 0.3s;
     }}
@@ -107,9 +115,9 @@ st.markdown(f"""
     }}
     
     .stTabs [aria-selected="true"] {{
-        background: linear-gradient(135deg, #003d82 0%, #0066cc 100%);
+        background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
         color: white;
-        border-color: #ffd700;
+        border-color: #FDD000;
     }}
     
     /* 버튼 스타일 */
@@ -117,31 +125,31 @@ st.markdown(f"""
         border-radius: 10px;
         font-weight: 600;
         transition: all 0.3s;
-        border: 2px solid #0066cc;
+        border: 2px solid #00428B;
         background-color: white;
-        color: #003d82;
+        color: #00428B;
     }}
     
     .stButton > button:hover {{
-        background: linear-gradient(135deg, #003d82 0%, #0066cc 100%);
+        background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
         color: white;
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4);
+        box-shadow: 0 6px 20px rgba(0, 66, 139, 0.4);
     }}
     
-    /* 다운로드 버튼 */
+    /* 다운로드 버튼 - 등기온 옐로우 */
     .stDownloadButton > button {{
-        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-        color: #003d82;
+        background: linear-gradient(135deg, #FDD000 0%, #ffd966 100%);
+        color: #00428B;
         border: none;
         font-weight: 700;
         border-radius: 10px;
     }}
     
     .stDownloadButton > button:hover {{
-        background: linear-gradient(135deg, #ffed4e 0%, #ffd700 100%);
+        background: linear-gradient(135deg, #ffd966 0%, #FDD000 100%);
         transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(255, 215, 0, 0.5);
+        box-shadow: 0 8px 25px rgba(253, 208, 0, 0.5);
     }}
     
     /* 입력 필드 스타일 */
@@ -156,8 +164,8 @@ st.markdown(f"""
     .stTextInput > div > div > input:focus,
     .stTextArea > div > div > textarea:focus,
     .stSelectbox > div > div > select:focus {{
-        border-color: #0066cc;
-        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        border-color: #00428B;
+        box-shadow: 0 0 0 3px rgba(0, 66, 139, 0.1);
     }}
     
     /* 컨테이너 스타일 */
@@ -174,8 +182,8 @@ st.markdown(f"""
         background: linear-gradient(135deg, #f0f4f8 0%, #e1e8ed 100%);
         border-radius: 10px;
         font-weight: 600;
-        color: #003d82;
-        border: 2px solid #0066cc;
+        color: #00428B;
+        border: 2px solid #00428B;
     }}
     
     .streamlit-expanderHeader:hover {{
@@ -186,11 +194,11 @@ st.markdown(f"""
     [data-testid="stMetricValue"] {{
         font-size: 32px;
         font-weight: 700;
-        color: #003d82;
+        color: #00428B;
     }}
     
     [data-testid="stMetricLabel"] {{
-        color: #0066cc;
+        color: #0055b8;
         font-weight: 600;
     }}
     
@@ -201,15 +209,15 @@ st.markdown(f"""
     
     /* 제목 스타일 */
     h1, h2, h3 {{
-        color: #003d82;
+        color: #00428B;
         font-weight: 700;
     }}
     
-    /* 구분선 */
+    /* 구분선 - 등기온 옐로우 */
     hr {{
         margin: 25px 0;
         border: none;
-        border-top: 3px solid #ffd700;
+        border-top: 3px solid #FDD000;
     }}
     
     /* 성공 메시지 */
@@ -221,7 +229,7 @@ st.markdown(f"""
     /* 경고 메시지 */
     .stWarning {{
         background-color: #fff3cd;
-        border-left: 5px solid #ffc107;
+        border-left: 5px solid #FDD000;
     }}
     
     /* 에러 메시지 */
@@ -233,7 +241,7 @@ st.markdown(f"""
     /* 정보 메시지 */
     .stInfo {{
         background-color: #d1ecf1;
-        border-left: 5px solid #0066cc;
+        border-left: 5px solid #00428B;
     }}
     
     /* 라디오 버튼 스타일 */
@@ -247,6 +255,20 @@ st.markdown(f"""
     .stNumberInput > div > div > input {{
         border-radius: 10px;
         border: 2px solid #e1e8ed;
+    }}
+    
+    /* 강조 텍스트 */
+    strong {{
+        color: #00428B;
+    }}
+    
+    /* 링크 색상 */
+    a {{
+        color: #00428B;
+    }}
+    
+    a:hover {{
+        color: #0055b8;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -281,12 +303,14 @@ else:
         </div>
     </div>
     """, unsafe_allow_html=True)
+
 # =============================================================================
 # 1. 라이브러리 및 환경 설정
 # =============================================================================
 
 try:
     import openpyxl
+    from openpyxl.cell.cell import MergedCell
     EXCEL_OK = True
 except ImportError:
     EXCEL_OK = False
@@ -668,7 +692,6 @@ def handle_creditor_change():
     st.session_state.calc_data['교통비'] = format_number_with_comma(str(default_fees.get("교통비")))
     st.session_state.calc_data['원인증서'] = format_number_with_comma(str(default_fees.get("원인증서")))
     st.session_state.calc_data['creditor_key_check'] = creditor_key
-    st.session_state.calc_data['주소변경'] = format_number_with_comma("0")
     st.session_state.calc_data['확인서면'] = format_number_with_comma("0")
     st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
 
@@ -702,14 +725,19 @@ def calculate_all(data):
     edu = floor_10(reg * 0.2)
     jeungji = 18000 * parcels
     
+    # 💡 주소변경 로직 - Tkinter 버전과 동일
     if st.session_state['addr_change']:
         count = st.session_state['addr_count']
+        # 공과금 증가
         reg += 6000 * count
         edu += 1200 * count
         jeungji += 3000 * count
-        data['주소변경'] = 20000 * count
+        # 주소변경 보수료 (유노스 등 기준 인당 2만원)
+        addr_svc_fee = 20000 * count
+        data['주소변경'] = addr_svc_fee
     else:
-        data['주소변경'] = st.session_state.calc_data.get('주소변경', "0")
+        # 체크 해제시 수기 입력값 보존
+        data['주소변경'] = parse_int_input(data.get('주소변경', 0))
     
     bond = 0
     if amount >= 20_000_000: bond = math.ceil(amount * 0.01 / 10000) * 10000
@@ -758,7 +786,6 @@ with tab1:
         st.session_state['contract_type'] = "개인"
         st.session_state['guarantee'] = "한정근담보"
         st.session_state['input_amount'] = "0"
-        st.session_state['prev_amount'] = "0"
         st.session_state['input_collateral_addr'] = ""
         st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
         st.session_state['input_debtor_rrn'] = ""
@@ -788,39 +815,31 @@ with tab1:
         st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=True)
         st.text_area("채권자 주소", value=creditor_info.get('addr', ''), disabled=True)
         st.session_state['input_debtor'] = st.text_input("채무자 성명", value=st.session_state.get('input_debtor'), key='t1_debtor_name')
-        st.session_state['input_debtor_addr'] = st.text_area("채무자 주소", value=st.session_state.get('input_debtor_addr'), key='t1_debtor_addr')
+        st.session_state['input_debtor_addr'] = st.text_area("채무자 주소", value=st.session_state.get('input_debtor_addr'), key='t1_debtor_addr', height=100)
         st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
-        st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr')
+        st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr', height=100)
 
     # 3. 담보 및 계약 정보
     with st.expander("🤝 담보 및 계약 정보", expanded=True):
         st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
         st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
         
-        # 💡 채권최고액 - 스마트 포맷팅
-        if 'prev_amount' not in st.session_state:
-            st.session_state['prev_amount'] = "0"
+        # 💡 채권최고액 - on_change 콜백으로 자동 콤마
+        def format_amount_on_change():
+            raw_val = st.session_state['amount_raw_input']
+            formatted = format_number_with_comma(raw_val)
+            st.session_state['input_amount'] = formatted
         
-        amount_input = st.text_input(
+        st.text_input(
             "채권최고액", 
             value=st.session_state.get('input_amount', "0"),
-            key='smart_amount_input',
-            placeholder="숫자만 입력하세요 (예: 50000000)",
-            help="숫자 입력 후 다른 필드 클릭 시 자동으로 콤마가 추가됩니다"
+            key='amount_raw_input',
+            on_change=format_amount_on_change,
+            placeholder="숫자 입력 (예: 26000000)",
+            help="숫자 입력 후 Enter 또는 탭 키를 누르면 콤마가 자동으로 추가됩니다"
         )
         
-        # 값이 변경되었고, 포맷이 필요한 경우에만 rerun
-        if amount_input != st.session_state['prev_amount']:
-            formatted = format_number_with_comma(amount_input)
-            if formatted != amount_input:
-                st.session_state['input_amount'] = formatted
-                st.session_state['prev_amount'] = formatted
-                st.rerun()
-            else:
-                st.session_state['input_amount'] = amount_input
-                st.session_state['prev_amount'] = amount_input
-        
-        # 한글 금액 실시간 표시
+        # 한글 금액 표시
         if st.session_state.get('input_amount') and st.session_state['input_amount'] != "0":
             clean_amt = remove_commas(st.session_state['input_amount'])
             korean_amt = number_to_korean(clean_amt)
@@ -831,24 +850,21 @@ with tab1:
         col_addr1, col_addr2 = st.columns([5, 1])
         
         with col_addr1:
-            # key를 제거하고 value만 사용
-            input_collateral = st.text_input(
+            st.session_state['input_collateral_addr'] = st.text_area(
                 "물건지 주소 (수기 입력)", 
                 value=st.session_state.get('input_collateral_addr', ""),
+                key='collateral_addr_input',
+                height=100,
                 label_visibility="collapsed"
             )
-            # 값이 변경되면 세션에 저장
-            if input_collateral != st.session_state.get('input_collateral_addr'):
-                st.session_state['input_collateral_addr'] = input_collateral
         
         with col_addr2:
             st.write("")
-            if st.button("📋 복사", help="채무자 주소를 물건지 주소로 복사", key='copy_addr_btn'):
-                # 채무자 주소를 물건지 주소로 복사
+            st.write("")
+            if st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', use_container_width=True):
                 debtor_addr = st.session_state.get('input_debtor_addr', "")
                 if debtor_addr:
                     st.session_state['input_collateral_addr'] = debtor_addr
-                    st.success("✅ 채무자 주소가 복사되었습니다!")
                     st.rerun()
                 else:
                     st.warning("⚠️ 채무자 주소를 먼저 입력해주세요!")
@@ -875,15 +891,15 @@ with tab1:
         selected_template_path = st.session_state['template_status'].get(st.session_state['contract_type'])
         
         if selected_template_path:
-            st.success(f"✅ {st.session_state['contract_type']} 템플릿 준비 완료")
+            st.success(f"✅ 템플릿 준비완료")
             is_disabled = False
         else:
-            st.warning(f"⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")
+            st.warning(f"⚠️ 템플릿 없음")
             is_disabled = True
         
-        if st.button("🚀 계약서 PDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK, use_container_width=True):
+        if st.button("🚀 계약서\nPDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK, use_container_width=True):
             if not LIBS_OK: 
-                st.error("PDF 생성 라이브러리(reportlab/pypdf2/fpdf)가 설치되지 않았습니다.")
+                st.error("PDF 라이브러리 미설치")
             else:
                 debtor_name = st.session_state['input_debtor'] if st.session_state['input_debtor'] else "미지정"
                 
@@ -904,16 +920,16 @@ with tab1:
                 try:
                     pdf_buffer = make_pdf(selected_template_path, data)
                     st.download_button(
-                        label="⬇️ PDF 다운로드",
+                        label="⬇️ 다운로드",
                         data=pdf_buffer,
-                        file_name=f"근저당권설정계약서_{debtor_name}.pdf",
+                        file_name=f"근저당권설정_{debtor_name}.pdf",
                         mime="application/pdf",
                         use_container_width=True
                     )
-                    st.success("✅ PDF 파일 생성 완료!")
+                    st.success("✅ PDF 생성완료!")
                 except Exception as e:
-                    st.error(f"PDF 생성 중 오류 발생: {e}")
-                    st.exception(e)
+                    st.error(f"오류: {e}")
+
 # =============================================================================
 # Tab 2: 자필서명 정보
 # =============================================================================
@@ -1030,7 +1046,6 @@ with tab3:
         st.session_state.calc_data['제증명'] = format_number_with_comma(str(default_fees.get("제증명")))
         st.session_state.calc_data['교통비'] = format_number_with_comma(str(default_fees.get("교통비")))
         st.session_state.calc_data['원인증서'] = format_number_with_comma(str(default_fees.get("원인증서")))
-        st.session_state.calc_data['주소변경'] = format_number_with_comma("0")
         st.session_state.calc_data['확인서면'] = format_number_with_comma("0")
         st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
         st.session_state.calc_data['creditor_key_check'] = creditor_key
@@ -1076,7 +1091,7 @@ with tab3:
             st.metric("기본료", format_number_with_comma(current_data.get('기본료')) + " 원")
             st.metric("공급가액", format_number_with_comma(current_data.get('공급가액')) + " 원")
             st.metric("부가세", format_number_with_comma(current_data.get('부가세')) + " 원")
-            st.markdown(f"**총 보수액:** <h3 style='color:#003d82;'>{format_number_with_comma(current_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
+            st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(current_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
 
     with col_c:
         with st.container(border=True):
@@ -1092,10 +1107,9 @@ with tab3:
             
             st.markdown("##### 수기 입력")
             
+            # 💡 수기 입력 필드 (주소변경 보수료 제외)
             for k in ["제증명", "교통비", "원인증서", "확인서면", "선순위 말소"]:
                 st.session_state.calc_data[k] = st.text_input(k, value=current_data.get(k), key=f'cost_manual_{k}')
-            
-            st.session_state.calc_data['주소변경'] = st.text_input("주소변경 (보수료)", value=current_data.get('주소변경'), key='cost_addr_change')
             
             st.divider()
             st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(current_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)
@@ -1121,12 +1135,14 @@ with tab3:
             
             addr_cols = st.columns([3, 1])
             addr_cols[0].checkbox(
-                "주소변경 포함 (공과금 및 보수료)", 
+                "주소변경 포함 (공과금)", 
                 value=st.session_state['addr_change'],
                 key='addr_change_checkbox',
                 on_change=toggle_addr_change
             )
             st.session_state['addr_count'] = addr_cols[1].number_input("인원수", min_value=1, max_value=10, value=st.session_state['addr_count'], step=1)
+            
+            st.caption(f"💡 주소변경 보수료: {format_number_with_comma(current_data.get('주소변경', 0))} 원")
             
             st.divider()
 
@@ -1214,7 +1230,7 @@ with tab3:
                         claim_amount = parse_int_input(current_data["채권최고액"])
                         collateral_addr = current_data['물건지']
                         
-                        # 좌측
+                        # 좌측 (사무소 보관용)
                         safe_set_value(ws, 'A24', date_str)
                         safe_set_value(ws, 'M5', claim_amount)
                         safe_set_value(ws, 'E7', collateral_addr)
@@ -1223,9 +1239,9 @@ with tab3:
                         safe_set_value(ws, 'C21', current_data["보수총액"])
                         safe_set_value(ws, 'C22', current_data["총 합계"])
                         
-                        # 우측
+                        # 우측 (고객 보관용)
                         safe_set_value(ws, 'U24', date_str)
-                        safe_set_value(ws, 'V4', debtor)  # 채무자 성명
+                        safe_set_value(ws, 'V4', debtor)  # 💡 채무자 성명
                         safe_set_value(ws, 'AG5', claim_amount)
                         safe_set_value(ws, 'Y7', collateral_addr)
                         

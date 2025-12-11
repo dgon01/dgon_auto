@@ -923,6 +923,8 @@ with tab3:
                         wb = openpyxl.load_workbook(excel_template_path)
                         ws = wb.active
                         
+                        # ... (Excel 생성 코드 계속)
+                        
                         # 💡 병합된 셀 안전하게 처리하는 함수
                         def safe_set_value(sheet, cell_ref, value):
                             """병합된 셀의 경우 왼쪽 상단 셀에 값 설정"""

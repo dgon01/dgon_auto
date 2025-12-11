@@ -600,7 +600,7 @@ with tab1:
                     st.session_state['input_collateral_addr'] = st.session_state.get('input_debtor_addr', "")
                     st.rerun()
 
-    with col_r:
+	with col_r:
         st.header("🏠 부동산의 표시")
         st.caption("※ 등기부등본 내용 입력")
         st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=400, key='estate_text_area')
@@ -613,7 +613,7 @@ with tab1:
             st.success(f"✅ {st.session_state['contract_type']} 템플릿 준비 완료")
             is_disabled = False
         else:
-            st.warning(f⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")
+            st.warning(f⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")  # 여기!
             is_disabled = True
         
         if st.button("🚀 계약서 PDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK):

@@ -85,15 +85,19 @@ def format_number_with_comma(num_str):
     # 입력이 int 타입일 경우 문자열로 강제 변환
     if isinstance(num_str, int):
         num_str = str(num_str)
-        
+    
+    # 원본에 콤마가 있었는지 체크
+    has_comma = ',' in num_str
+    
+    # 숫자만 추출
     numbers = re.sub(r'[^\d]', '', num_str)
     if not numbers: return ""
     
     try:
         num_int = int(numbers)
         
-        # 💡 천 단위 생략 보정 (단, 이미 4자리 이상이면 보정하지 않음)
-        if num_int > 0 and len(numbers) < 4:
+        # 💡 천 단위 생략 보정: 콤마가 없고 3자리 이하인 경우에만 ,000 추가
+        if num_int > 0 and len(numbers) < 4 and not has_comma:
              numbers = numbers + '000'
              num_int = int(numbers)
              
@@ -537,16 +541,23 @@ with tab1:
             st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr')
 
         # 3. 담보 및 계약 정보
+       # 3. 담보 및 계약 정보 부분 (Tab 1)
         with st.expander("🤝 담보 및 계약 정보", expanded=True):
             st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
             st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
             
-            # 💡 채권최고액 입력 및 ,000 단위 보정 적용
+            # 💡 채권최고액 입력 - 콤마 필수, 포맷/한글 표시 제거
             amount_input_key = 'amount_input_tab1_raw'
-            amount_raw_input = st.text_input("채권최고액", value=st.session_state.get(amount_input_key, st.session_state.get('input_amount').replace(',','') if st.session_state.get('input_amount') else ""), key=amount_input_key)
+            
+            amount_raw_input = st.text_input(
+                "채권최고액 (콤마 포함 입력)", 
+                value=st.session_state.get('input_amount', "0"), 
+                key=amount_input_key,
+                help="예: 50,000,000"
+            )
+            
+            # 콤마가 있든 없든 재포맷
             st.session_state['input_amount'] = format_number_with_comma(amount_raw_input)
-            st.markdown(f"**현재 포맷된 금액:** `{st.session_state['input_amount']} 원`")
-            st.markdown(f"**한글 금액:** `{convert_multiple_amounts_to_korean(remove_commas(st.session_state['input_amount']))}`")
             
             st.session_state['input_collateral_addr'] = st.text_input("물건지 주소 (수기 입력)", value=st.session_state.get('input_collateral_addr'), key='t1_collateral_addr')
             
@@ -788,14 +799,28 @@ with tab3:
             st.markdown(f"## 총 청구금액: <span style='color:red;'>{format_number_with_comma(current_data.get('총 합계'))} 원</span>", unsafe_allow_html=True)
             st.divider()
 
-            # 옵션 설정
-            st.session_state['show_fee'] = st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'])
+            # 💡 옵션 설정 - on_change로 즉시 반영
+            def toggle_show_fee():
+                st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
+            
+            def toggle_addr_change():
+                st.session_state['addr_change'] = st.session_state['addr_change_checkbox']
+            
+            st.checkbox(
+                "보수액 포함 표시", 
+                value=st.session_state['show_fee'],
+                key='show_fee_checkbox',
+                on_change=toggle_show_fee
+            )
             
             addr_cols = st.columns([3, 1])
-            st.session_state['addr_change'] = addr_cols[0].checkbox("주소변경 포함 (공과금 및 보수료)", value=st.session_state['addr_change'])
+            addr_cols[0].checkbox(
+                "주소변경 포함 (공과금 및 보수료)", 
+                value=st.session_state['addr_change'],
+                key='addr_change_checkbox',
+                on_change=toggle_addr_change
+            )
             st.session_state['addr_count'] = addr_cols[1].number_input("인원수", min_value=1, max_value=10, value=st.session_state['addr_count'], step=1)
-            
-            st.divider()
 
             # 영수증/비용내역 다운로드 버튼
             download_cols = st.columns(2)
@@ -860,32 +885,45 @@ with tab3:
                 else:
                     try:
                         import openpyxl
+                        from openpyxl.cell.cell import MergedCell
+                        
                         wb = openpyxl.load_workbook(excel_template_path)
                         ws = wb.active
                         
-                        ws['B2'] = st.session_state['input_date'] 
+                        # 💡 MergedCell 처리 함수
+                        def set_cell_value(sheet, cell_ref, value):
+                            """병합된 셀도 안전하게 값 설정"""
+                            cell = sheet[cell_ref]
+                            if isinstance(cell, MergedCell):
+                                # 병합된 셀의 경우 병합 해제 후 값 설정
+                                for merged_range in list(sheet.merged_cells.ranges):
+                                    if cell.coordinate in merged_range:
+                                        sheet.unmerge_cells(str(merged_range))
+                                        break
+                            sheet[cell_ref] = value
                         
-                        ws['B4'] = current_data['금융사']
-                        ws['V4'] = current_data['채무자']
-                        ws['AG5'] = parse_int_input(current_data["채권최고액"])
-                        ws['Y7'] = current_data['물건지']
+                        set_cell_value(ws, 'B2', st.session_state['input_date'])
+                        set_cell_value(ws, 'B4', current_data['금융사'])
+                        set_cell_value(ws, 'V4', current_data['채무자'])
+                        set_cell_value(ws, 'AG5', parse_int_input(current_data["채권최고액"]))
+                        set_cell_value(ws, 'Y7', current_data['물건지'])
                         
-                        ws['AH11'] = current_data["등록면허세"]
-                        ws['AH12'] = current_data["지방교육세"]
-                        ws['AH13'] = current_data["증지대"] 
-                        ws['AH14'] = current_data["채권할인금액"]
-                        ws['AH15'] = parse_int_input(current_data["제증명"])
-                        ws['AH16'] = parse_int_input(current_data["교통비"])
-                        ws['AH17'] = parse_int_input(current_data["원인증서"])
-                        ws['AH18'] = parse_int_input(current_data["주소변경"])
-                        ws['AH19'] = parse_int_input(current_data["확인서면"])
-                        ws['AH20'] = parse_int_input(current_data["선순위 말소"])
-                        ws['AH21'] = current_data["공급가액"]
-                        ws['AH22'] = current_data["부가세"]
-                        ws['AH23'] = current_data["보수총액"]
-                        ws['AH25'] = current_data["공과금 총액"]
-                        ws['Y26'] = current_data["공과금 총액"]
-                        ws['AG27'] = current_data["총 합계"]
+                        set_cell_value(ws, 'AH11', current_data["등록면허세"])
+                        set_cell_value(ws, 'AH12', current_data["지방교육세"])
+                        set_cell_value(ws, 'AH13', current_data["증지대"])
+                        set_cell_value(ws, 'AH14', current_data["채권할인금액"])
+                        set_cell_value(ws, 'AH15', parse_int_input(current_data["제증명"]))
+                        set_cell_value(ws, 'AH16', parse_int_input(current_data["교통비"]))
+                        set_cell_value(ws, 'AH17', parse_int_input(current_data["원인증서"]))
+                        set_cell_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
+                        set_cell_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
+                        set_cell_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
+                        set_cell_value(ws, 'AH21', current_data["공급가액"])
+                        set_cell_value(ws, 'AH22', current_data["부가세"])
+                        set_cell_value(ws, 'AH23', current_data["보수총액"])
+                        set_cell_value(ws, 'AH25', current_data["공과금 총액"])
+                        set_cell_value(ws, 'Y26', current_data["공과금 총액"])
+                        set_cell_value(ws, 'AG27', current_data["총 합계"])
 
                         excel_buffer = BytesIO()
                         wb.save(excel_buffer)

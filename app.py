@@ -1050,7 +1050,7 @@ with tab3:
                         excel_buffer.seek(0)
                         
                         download_cols[1].download_button(
-                            label=⬇️ Excel 다운로드 (클릭)",
+                            label="⬇️ Excel 다운로드 (클릭)",
                             data=excel_buffer,
                             file_name=f"영수증_{current_data['채무자']}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

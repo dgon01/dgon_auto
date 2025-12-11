@@ -921,29 +921,15 @@ with tab3:
                         collateral_addr = current_data['물건지']
                         
                         # 💡 좌측 (사무소 보관용) 데이터 입력
-                        safe_set_value(ws, 'E5', date_str)  # 작성일
-                        safe_set_value(ws, 'C6', creditor)  # 근저당권설정
-                        safe_set_value(ws, 'E6', claim_amount)  # 채권최고액
-                        safe_set_value(ws, 'C8', collateral_addr)  # 물건지
+                        safe_set_value(ws, 'a24', date_str)  # 작성일
+                        safe_set_value(ws, 'm5', claim_amount)  # 채권최고액
+                        safe_set_value(ws, 'e7', collateral_addr)  # 물건지
                         
-                        # 좌측 보수액 (B열 기준)
-                        safe_set_value(ws, 'C11', current_data["공급가액"])  # 기본료 또는 공급가액
-                        # 만약 다른 보수 항목이 있다면 추가
-                        
-                        # 좌측 부가가치세
-                        safe_set_value(ws, 'C20', current_data["부가세"])
-                        
-                        # 좌측 소계 (보수액)
-                        safe_set_value(ws, 'C21', current_data["보수총액"])
-                        
-                        # 좌측 총계
-                        safe_set_value(ws, 'C22', current_data["총 합계"])
-                        
+                          
                         # 💡 우측 (고객 보관용) 데이터 입력
-                        safe_set_value(ws, 'AE5', date_str)  # 작성일
-                        safe_set_value(ws, 'AC6', creditor)  # 근저당권설정
-                        safe_set_value(ws, 'AE6', claim_amount)  # 채권최고액
-                        safe_set_value(ws, 'AC8', collateral_addr)  # 물건지
+                        safe_set_value(ws, 'u24', date_str)  # 작성일
+                        safe_set_value(ws, 'Ag5', claim_amount)  # 채권최고액
+                        safe_set_value(ws, 'y7', collateral_addr)  # 물건지
                         
                         # 우측 공과금 항목 (AH열)
                         safe_set_value(ws, 'AH11', current_data["등록면허세"])
@@ -951,17 +937,15 @@ with tab3:
                         safe_set_value(ws, 'AH13', current_data["증지대"])
                         safe_set_value(ws, 'AH14', current_data["채권할인금액"])
                         safe_set_value(ws, 'AH15', parse_int_input(current_data["제증명"]))
-                        safe_set_value(ws, 'AH16', parse_int_input(current_data["교통비"]))
-                        safe_set_value(ws, 'AH17', parse_int_input(current_data["원인증서"]))
-                        safe_set_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
-                        safe_set_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
-                        safe_set_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
+                        safe_set_value(ws, 'AH16', parse_int_input(current_data["원인증서"]))
+                        safe_set_value(ws, 'AH17', parse_int_input(current_data["주소변경"]))
+                        safe_set_value(ws, 'AH18', parse_int_input(current_data["선순위 말소"]))
                         
                         # 💡 우측 소계 (AH21) - AH11~AH20의 합계
                         safe_set_value(ws, 'AH21', current_data["공과금 총액"])
                         
                         # 💡 우측 총계 (Y22) - 보수총액 + 공과금총액
-                        safe_set_value(ws, 'Y22', current_data["총 합계"])
+                        safe_set_value(ws, 'AH21', current_data["공과금 총액"])
                         
                         # 💡 하단 사무소 정보 (좌측/우측 동일하게)
                         firm_name = "법무법인 시화"

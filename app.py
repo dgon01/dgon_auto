@@ -758,7 +758,7 @@ with tab1:
         st.session_state['contract_type'] = "개인"
         st.session_state['guarantee'] = "한정근담보"
         st.session_state['input_amount'] = "0"
-        st.session_state['_amount_temp'] = "0"
+        st.session_state['prev_amount'] = "0"
         st.session_state['input_collateral_addr'] = ""
         st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
         st.session_state['input_debtor_rrn'] = ""
@@ -767,76 +767,110 @@ with tab1:
     
     st.markdown("---")
     
-    col_l, col_r = st.columns([7, 3])
-    
-    with col_l:
-        # 1. 기본 정보
-        with st.expander("📌 기본 정보", expanded=True):
-            date_raw = st.text_input("작성일자", value=st.session_state.get('input_date'), help="YYYYMMDD 형식 입력 후 포맷 자동 변환")
-            st.session_state['input_date'] = format_date(date_raw)
+    # 1. 기본 정보
+    with st.expander("📌 기본 정보", expanded=True):
+        date_raw = st.text_input("작성일자", value=st.session_state.get('input_date'), help="YYYYMMDD 형식 입력 후 포맷 자동 변환")
+        st.session_state['input_date'] = format_date(date_raw)
 
-        # 2. 당사자 정보
-        with st.expander("👤 당사자 정보", expanded=True):
-            creditor_list = list(CREDITORS.keys())
-            selected_creditor = st.selectbox(
-                "채권자 선택", 
-                options=creditor_list, 
-                index=creditor_list.index(st.session_state.get('input_creditor')) if st.session_state.get('input_creditor') in creditor_list else 0,
-                key='t1_creditor_select', 
-                on_change=handle_creditor_change
-            )
-            st.session_state['input_creditor'] = selected_creditor
-            
-            creditor_info = CREDITORS.get(selected_creditor, {})
-            st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=True)
-            st.text_area("채권자 주소", value=creditor_info.get('addr', ''), disabled=True)
-            st.session_state['input_debtor'] = st.text_input("채무자 성명", value=st.session_state.get('input_debtor'), key='t1_debtor_name')
-            st.session_state['input_debtor_addr'] = st.text_area("채무자 주소", value=st.session_state.get('input_debtor_addr'), key='t1_debtor_addr')
-            st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
-            st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr')
-
-        # 3. 담보 및 계약 정보
-        with st.expander("🤝 담보 및 계약 정보", expanded=True):
-            st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
-            st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
-            
-            def format_amount_input():
-                raw_value = st.session_state['_amount_temp']
-                st.session_state['input_amount'] = format_number_with_comma(raw_value)
-            
-            if '_amount_temp' not in st.session_state:
-                st.session_state['_amount_temp'] = st.session_state.get('input_amount', "0")
-            
-            st.text_input(
-                "채권최고액 (콤마 포함 입력)", 
-                value=st.session_state.get('input_amount', "0"),
-                key='_amount_temp',
-                on_change=format_amount_input,
-                help="숫자 입력 후 Enter 또는 다른 필드 클릭 시 자동으로 콤마가 추가됩니다"
-            )
-            
-            col_addr1, col_addr2 = st.columns([4, 1])
-            with col_addr1:
-                collateral_addr_input = st.text_input(
-                    "물건지 주소 (수기 입력)", 
-                    value=st.session_state.get('input_collateral_addr', ""), 
-                    key='t1_collateral_addr_input'
-                )
-                st.session_state['input_collateral_addr'] = collateral_addr_input
-            
-            with col_addr2:
-                st.write("")
-                st.write("")
-                if st.button("📋 복사", help="채무자 주소를 물건지 주소로 복사", key='copy_addr_btn'):
-                    st.session_state['input_collateral_addr'] = st.session_state.get('input_debtor_addr', "")
-                    st.rerun()
-
-    with col_r:
-        st.markdown("### 🏠 부동산의 표시")
-        st.caption("※ 등기부등본 내용 입력")
-        st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=400, key='estate_text_area')
+    # 2. 당사자 정보
+    with st.expander("👤 당사자 정보", expanded=True):
+        creditor_list = list(CREDITORS.keys())
+        selected_creditor = st.selectbox(
+            "채권자 선택", 
+            options=creditor_list, 
+            index=creditor_list.index(st.session_state.get('input_creditor')) if st.session_state.get('input_creditor') in creditor_list else 0,
+            key='t1_creditor_select', 
+            on_change=handle_creditor_change
+        )
+        st.session_state['input_creditor'] = selected_creditor
         
-        st.markdown("### 📑 파일 생성")
+        creditor_info = CREDITORS.get(selected_creditor, {})
+        st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=True)
+        st.text_area("채권자 주소", value=creditor_info.get('addr', ''), disabled=True)
+        st.session_state['input_debtor'] = st.text_input("채무자 성명", value=st.session_state.get('input_debtor'), key='t1_debtor_name')
+        st.session_state['input_debtor_addr'] = st.text_area("채무자 주소", value=st.session_state.get('input_debtor_addr'), key='t1_debtor_addr')
+        st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
+        st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr')
+
+    # 3. 담보 및 계약 정보
+    with st.expander("🤝 담보 및 계약 정보", expanded=True):
+        st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
+        st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
+        
+        # 💡 채권최고액 - 스마트 포맷팅
+        if 'prev_amount' not in st.session_state:
+            st.session_state['prev_amount'] = "0"
+        
+        amount_input = st.text_input(
+            "채권최고액", 
+            value=st.session_state.get('input_amount', "0"),
+            key='smart_amount_input',
+            placeholder="숫자만 입력하세요 (예: 50000000)",
+            help="숫자 입력 후 다른 필드 클릭 시 자동으로 콤마가 추가됩니다"
+        )
+        
+        # 값이 변경되었고, 포맷이 필요한 경우에만 rerun
+        if amount_input != st.session_state['prev_amount']:
+            formatted = format_number_with_comma(amount_input)
+            if formatted != amount_input:
+                st.session_state['input_amount'] = formatted
+                st.session_state['prev_amount'] = formatted
+                st.rerun()
+            else:
+                st.session_state['input_amount'] = amount_input
+                st.session_state['prev_amount'] = amount_input
+        
+        # 한글 금액 실시간 표시
+        if st.session_state.get('input_amount') and st.session_state['input_amount'] != "0":
+            clean_amt = remove_commas(st.session_state['input_amount'])
+            korean_amt = number_to_korean(clean_amt)
+            st.info(f"💰 **{korean_amt}**")
+        
+        # 💡 물건지 주소 - 복사 버튼 수정
+        st.markdown("#### 물건지 주소")
+        col_addr1, col_addr2 = st.columns([5, 1])
+        
+        with col_addr1:
+            # key를 제거하고 value만 사용
+            input_collateral = st.text_input(
+                "물건지 주소 (수기 입력)", 
+                value=st.session_state.get('input_collateral_addr', ""),
+                label_visibility="collapsed"
+            )
+            # 값이 변경되면 세션에 저장
+            if input_collateral != st.session_state.get('input_collateral_addr'):
+                st.session_state['input_collateral_addr'] = input_collateral
+        
+        with col_addr2:
+            st.write("")
+            if st.button("📋 복사", help="채무자 주소를 물건지 주소로 복사", key='copy_addr_btn'):
+                # 채무자 주소를 물건지 주소로 복사
+                debtor_addr = st.session_state.get('input_debtor_addr', "")
+                if debtor_addr:
+                    st.session_state['input_collateral_addr'] = debtor_addr
+                    st.success("✅ 채무자 주소가 복사되었습니다!")
+                    st.rerun()
+                else:
+                    st.warning("⚠️ 채무자 주소를 먼저 입력해주세요!")
+
+    # 4. 부동산의 표시 (아래로 이동 + 넓게)
+    st.markdown("---")
+    st.markdown("### 🏠 부동산의 표시")
+    st.caption("※ 등기부등본 내용을 입력하세요")
+    
+    col_estate, col_pdf = st.columns([3, 1])
+    
+    with col_estate:
+        st.session_state['estate_text'] = st.text_area(
+            "부동산 표시 내용", 
+            value=st.session_state['estate_text'], 
+            height=300, 
+            key='estate_text_area',
+            label_visibility="collapsed"
+        )
+    
+    with col_pdf:
+        st.markdown("#### 📑 파일 생성")
         
         selected_template_path = st.session_state['template_status'].get(st.session_state['contract_type'])
         
@@ -880,7 +914,6 @@ with tab1:
                 except Exception as e:
                     st.error(f"PDF 생성 중 오류 발생: {e}")
                     st.exception(e)
-
 # =============================================================================
 # Tab 2: 자필서명 정보
 # =============================================================================

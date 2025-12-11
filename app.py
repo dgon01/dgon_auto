@@ -372,7 +372,7 @@ def extract_address_from_estate(estate_text):
     return ""
 
 # =============================================================================
-# 4. PDF 생성 로직 (생략 - 기존과 동일)
+# 4. PDF 생성 로직
 # =============================================================================
 
 def draw_fit_text(c, text, x, y, max_width, font_name='Korean', max_size=11, min_size=6):
@@ -408,7 +408,7 @@ class PDFConverter(FPDF):
         self.set_y(start_y + self.line_height)
         content_func()
         content_end_y = self.get_y()
-        box_height = (content_end_y - start_y) + self.line_height + 4 # 높이 계산 수정
+        box_height = (content_end_y - start_y) + self.line_height + 4
         self.set_draw_color(211, 211, 211)
         self.rect(start_x, start_y + self.font_size / 2, box_width, box_height)
         title_width = self.get_string_width(title)
@@ -416,7 +416,7 @@ class PDFConverter(FPDF):
         self.rect(start_x + 9, start_y, title_width + 4, self.font_size, 'F')
         self.set_xy(start_x + 11, start_y)
         self.cell(0, self.font_size, title)
-        self.set_y(content_end_y + 4) # 박스 밖으로 이동
+        self.set_y(content_end_y + 4)
     
     def output_pdf(self, data, save_path):
         self.add_page(); self.set_font(self.font_family, 'B', 20)
@@ -447,7 +447,7 @@ class PDFConverter(FPDF):
                 self.cell(self.col_width1, self.line_height, "보수 소계")
                 self.cell(self.col_width2, self.line_height, f"{data['fee_totals']['보수총액']:,} 원", ln=1, align="R")
             self.draw_labelframe_box("1. 보수액", fee_content)
-            self.ln(5) # 간격 추가
+            self.ln(5)
         
         def costs_content():
             self.set_font(self.font_family, '', 10)
@@ -585,7 +585,6 @@ if 'calc_data' not in st.session_state:
     st.session_state['show_fee'] = True
     st.session_state['addr_change'] = False
     st.session_state['addr_count'] = 1
-    # 💡 초기값을 빈 문자열로 변경
     st.session_state['input_amount'] = ""
     st.session_state['input_parcels'] = 1
     st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
@@ -601,13 +600,6 @@ if 'calc_data' not in st.session_state:
     st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
     st.session_state['input_debtor_rrn'] = ""
     st.session_state['input_owner_rrn'] = ""
-    
-    # [수정] 결과 표시용 초기화 (3탭)
-    st.session_state['auto_reg_disp'] = "0"
-    st.session_state['auto_edu_disp'] = "0"
-    st.session_state['auto_jeung_disp'] = "0"
-    st.session_state['auto_bond_disp'] = "0"
-
 
 def parse_int_input(text_input):
     try:
@@ -629,6 +621,7 @@ def handle_creditor_change():
     st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
 
 def calculate_all(data):
+    # [수정] Session State에 직접 쓰지 않고 계산된 dict만 리턴하도록 변경 (오류 방지)
     amount = parse_int_input(data.get('채권최고액')) 
     parcels = parse_int_input(data.get('필지수'))
     try:
@@ -696,12 +689,6 @@ def calculate_all(data):
     data['공과금 총액'] = cost_total
     data['총 합계'] = fee_total + cost_total
     
-    # [수정] 3탭 결과창에 즉시 반영 (세션 강제 주입)
-    st.session_state['auto_reg_disp'] = format_number_with_comma(data["등록면허세"])
-    st.session_state['auto_edu_disp'] = format_number_with_comma(data["지방교육세"])
-    st.session_state['auto_jeung_disp'] = format_number_with_comma(data["증지대"])
-    st.session_state['auto_bond_disp'] = format_number_with_comma(data["채권할인금액"])
-
     return data
 
 # 탭 구현
@@ -781,7 +768,7 @@ with tab1:
             
             # 세션 상태에 저장 (데이터용)
             st.session_state['input_amount'] = formatted
-            # 위젯 상태에 저장 (화면 표시용) -> 이게 있어야 입력 중에 콤마가 보임
+            # 위젯 상태에 저장 (화면 표시용)
             st.session_state['amount_raw_input'] = formatted
         
         st.text_input(
@@ -1033,11 +1020,9 @@ with tab3:
         with st.container(border=True):
             st.markdown("#### 🏛️ 공과금")
             st.markdown("##### 자동 계산")
-            # [수정] 자동 계산 항목에 key 부여 (calculate_all 함수에서 이 key에 값을 꽂아넣음)
-            st.text_input("등록면허세", key="auto_reg_disp", disabled=True)
-            st.text_input("지방교육세", key="auto_edu_disp", disabled=True)
-            st.text_input("증지대", key="auto_jeung_disp", disabled=True)
-            st.text_input("채권할인금액", key="auto_bond_disp", disabled=True)
+            # [수정] 자동 계산 항목에 value 직접 바인딩 (key 제거 혹은 Read-only로 사용)
+            # 여기서는 placeholder를 만들고 아래에서 'value'를 채운 위젯을 다시 그림
+            metric_placeholder_c_auto = st.empty()
             
             st.divider()
             st.markdown("##### 수기 입력")
@@ -1070,12 +1055,19 @@ with tab3:
     final_data = calculate_all(calc_input_data)
     st.session_state['calc_data'] = final_data # 세션 상태 업데이트
 
-    # 3. 계산된 결과 화면에 표시 (Metric)
+    # 3. 계산된 결과 화면에 표시 (Metric & Input)
     with metric_placeholder_f.container():
         st.metric("기본료", format_number_with_comma(final_data.get('기본료')) + " 원")
         st.metric("공급가액", format_number_with_comma(final_data.get('공급가액')) + " 원")
         st.metric("부가세", format_number_with_comma(final_data.get('부가세')) + " 원")
         st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
+    
+    # [수정] 여기가 핵심입니다. calculate_all 결과값을 'value'에 직접 넣어서 표시
+    with metric_placeholder_c_auto.container():
+        st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=True)
+        st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=True)
+        st.text_input("증지대", value=format_number_with_comma(final_data.get("증지대")), disabled=True)
+        st.text_input("채권할인금액", value=format_number_with_comma(final_data.get("채권할인금액")), disabled=True)
 
     with metric_placeholder_c_total.container():
          st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)

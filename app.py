@@ -541,7 +541,6 @@ with tab1:
         # 2. 당사자 정보
         with st.expander("👤 당사자 정보", expanded=True):
             creditor_list = list(CREDITORS.keys())
-            # 💡 on_change 콜백 연결
             selected_creditor = st.selectbox(
                 "채권자 선택", 
                 options=creditor_list, 
@@ -574,7 +573,7 @@ with tab1:
             if '_amount_temp' not in st.session_state:
                 st.session_state['_amount_temp'] = st.session_state.get('input_amount', "0")
             
-            # 💡 채권최고액 입력 - 콤마 자동 추가
+            # 채권최고액 입력
             st.text_input(
                 "채권최고액 (콤마 포함 입력)", 
                 value=st.session_state.get('input_amount', "0"),
@@ -583,7 +582,7 @@ with tab1:
                 help="숫자 입력 후 Enter 또는 다른 필드 클릭 시 자동으로 콤마가 추가됩니다"
             )
             
-            # 💡 물건지 주소 복사 버튼 수정
+            # 물건지 주소 복사 버튼
             col_addr1, col_addr2 = st.columns([4, 1])
             with col_addr1:
                 collateral_addr_input = st.text_input(
@@ -594,13 +593,13 @@ with tab1:
                 st.session_state['input_collateral_addr'] = collateral_addr_input
             
             with col_addr2:
-                st.write("")  # 정렬을 위한 공백
-                st.write("")  # 정렬을 위한 공백
+                st.write("")
+                st.write("")
                 if st.button("📋 복사", help="채무자 주소를 물건지 주소로 복사", key='copy_addr_btn'):
                     st.session_state['input_collateral_addr'] = st.session_state.get('input_debtor_addr', "")
                     st.rerun()
 
-        with col_r:
+    with col_r:
         st.header("🏠 부동산의 표시")
         st.caption("※ 등기부등본 내용 입력")
         st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=400, key='estate_text_area')
@@ -613,7 +612,7 @@ with tab1:
             st.success(f"✅ {st.session_state['contract_type']} 템플릿 준비 완료")
             is_disabled = False
         else:
-            st.warning(f⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")  # 여기!
+            st.warning(f"⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")
             is_disabled = True
         
         if st.button("🚀 계약서 PDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK):
@@ -648,6 +647,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"PDF 생성 중 오류 발생: {e}")
                     st.exception(e)
+
 # =============================================================================
 # Tab 2: 자필서명 정보
 # =============================================================================

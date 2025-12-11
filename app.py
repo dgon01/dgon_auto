@@ -7,6 +7,7 @@ from datetime import datetime
 import sys
 
 # 현재 실행 디렉토리를 기준으로 경로 설정 (Streamlit 환경에 최적화)
+# 이 경로는 GitHub에 배포 시 템플릿 파일이 Streamlit_Web_App.py와 같은 레벨에 있어야 함
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # =============================================================================
@@ -20,6 +21,7 @@ except ImportError:
     EXCEL_OK = False
 
 try:
+    # ReportLab, PyPDF2, FPDF는 웹 환경에서 PDF 생성을 위해 필수
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfbase import pdfmetrics
@@ -51,11 +53,11 @@ CREDITORS = {
     "(주)하이클래스대부 사내이사 성윤호": {"addr": "서울특별시 강남구 도곡로 188, 3층 4호(도곡동,도곡스퀘어)", "corp_num": "110111-0933512", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}}
 }
 
-# 💡 템플릿 파일 경로를 앱 루트 기준으로 설정
+# 템플릿 파일 경로를 앱 루트 기준으로 설정
 def resource_path(relative_path):
     return os.path.join(APP_ROOT, relative_path)
 
-# 💡 폰트 경로 설정
+# 폰트 경로 설정
 FONT_PATH = resource_path("Malgun.ttf") 
 
 # 💡 템플릿 파일 상태 확인 (세션 상태에 저장)
@@ -70,7 +72,7 @@ if 'template_status' not in st.session_state:
     st.session_state['missing_templates'] = missing_files
 
 # =============================================================================
-# 2. 유틸리티 및 계산 로직 (기존 코드와 동일)
+# 2. 유틸리티 및 계산 로직
 # =============================================================================
 def format_date(text):
     if not text: return ""
@@ -78,12 +80,28 @@ def format_date(text):
     if len(numbers) == 8: return f"{numbers[:4]}년 {numbers[4:6]}월 {numbers[6:8]}일"
     return text
 
+# 💡 [수정] 천 단위 입력 보정 로직 및 str/int 타입 안전성 강화
 def format_number_with_comma(num_str):
     if not num_str: return ""
+    
+    # 입력이 int 타입일 경우 문자열로 강제 변환 (TypeError 방지)
+    if isinstance(num_str, int):
+        num_str = str(num_str)
+        
     numbers = re.sub(r'[^\d]', '', num_str)
     if not numbers: return ""
+    
     try:
-        return "{:,}".format(int(numbers))
+        num_int = int(numbers)
+        
+        # 💡 천 단위 생략 보정:
+        # 입력된 숫자가 1000 미만이고 0이 아닐 경우, 뒤에 '000'을 붙여서 천 단위 보정
+        # (예: "10" 입력 -> "10,000"으로 인식)
+        if num_int > 0 and num_int < 1000 and len(numbers) < 4:
+             numbers = numbers + '000'
+             num_int = int(numbers)
+             
+        return "{:,}".format(num_int)
     except ValueError:
         return num_str
 
@@ -151,11 +169,7 @@ def extract_address_from_estate(estate_text):
 # =============================================================================
 # 3. PDF 생성 로직 (Streamlit 출력에 맞게 수정)
 # =============================================================================
-# draw_fit_text, PDFConverter, create_overlay_pdf, make_pdf, 
-# create_signature_overlay_pdf, make_signature_pdf 함수는 그대로 사용
-# (단, output_pdf와 make_pdf/make_signature_pdf는 BytesIO를 반환하도록 수정된 Streamlit 버전 사용)
 
-# ... (PDFConverter 클래스 시작)
 def draw_fit_text(c, text, x, y, max_width, font_name='Korean', max_size=11, min_size=6):
     if not text: return
     current_size = max_size
@@ -205,7 +219,7 @@ class PDFConverter(FPDF):
         self.add_page(); self.set_font(self.font_family, 'B', 20)
         self.cell(0, 12, "근저당권설정 비용내역", ln=True, align="C"); self.ln(2)
         self.set_font(self.font_family, '', 9)
-        # 💡 작성일은 입력값 사용
+        # 작성일은 입력값 사용
         self.cell(0, 5, f"작성일: {data['date_input']}", ln=True, align="R"); self.ln(2) 
         self.set_font(self.font_family, '', 10)
         client = data['client']
@@ -262,7 +276,7 @@ class PDFConverter(FPDF):
             self.cell(0, self.line_height, "• 예금주 : 법무법인 시화", ln=1)
         self.draw_labelframe_box("입금 계좌 정보", bank_content)
 
-        return self.output(dest='S') # Streamlit이 다운로드 가능한 바이트 스트림 반환
+        return self.output(dest='S') 
 
 def create_overlay_pdf(data, font_path):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
@@ -357,7 +371,7 @@ if 'calc_data' not in st.session_state:
     st.session_state['input_parcels'] = 1
     st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
     st.session_state['input_debtor'] = ""
-    st.session_state['input_creditor'] = list(CREDITORS.keys())[0] # 기본값 설정
+    st.session_state['input_creditor'] = list(CREDITORS.keys())[0]
     st.session_state['input_collateral_addr'] = ""
     st.session_state['input_debtor_addr'] = ""
     st.session_state['input_owner'] = ""
@@ -380,9 +394,15 @@ def parse_int_input(text_input):
 # 계산 로직 통합 함수 (Dg-Form.py의 recalc_all을 간소화)
 def calculate_all(data):
     # 1. 기초 데이터 파싱
-    amount = parse_int_input(data['채권최고액'])
+    # 💡 채권최고액은 이미 format_number_with_comma를 거쳐 콤마가 붙은 문자열입니다.
+    # 다시 parse_int_input으로 콤마 제거 후 int로 변환합니다.
+    amount = parse_int_input(data['채권최고액']) 
     parcels = parse_int_input(data['필지수'])
-    rate = float(data['채권할인율']) / 100
+    # 할인율은 float 처리
+    try:
+        rate = float(remove_commas(data['채권할인율'])) / 100
+    except ValueError:
+        rate = 0 
     
     # 2. 보수료 계산
     base_fee = lookup_base_fee(amount)
@@ -414,7 +434,10 @@ def calculate_all(data):
         reg += 6000 * count
         edu += 1200 * count
         jeungji += 3000 * count
-        data['주소변경'] = 20000 * count # 보수료 항목에 반영
+        data['주소변경'] = 20000 * count # 보수료 항목에 반영 (자동 덮어쓰기)
+    else:
+        # 체크 해제 시 주소변경비 보수료는 수기 입력값(0 또는 다른 값) 유지
+        pass
     
     # 채권 계산
     bond = 0
@@ -472,7 +495,7 @@ with tab1:
         # 2. 당사자 정보
         with st.expander("👤 당사자 정보", expanded=True):
             creditor_list = list(CREDITORS.keys())
-            selected_creditor = st.selectbox("채권자 선택", options=creditor_list, index=creditor_list.index(st.session_state.get('input_creditor')) if st.session_state.get('input_creditor') in creditor_list else 0)
+            selected_creditor = st.selectbox("채권자 선택", options=creditor_list, index=creditor_list.index(st.session_state.get('input_creditor')) if st.session_state.get('input_creditor') in creditor_list else 0, key='t1_creditor_select')
             st.session_state['input_creditor'] = selected_creditor
             
             creditor_info = CREDITORS.get(selected_creditor, {})
@@ -488,15 +511,18 @@ with tab1:
             st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
             st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
             
-            amount_raw = st.text_input("채권최고액", value=st.session_state.get('input_amount'), key='amount_input_tab1')
-            st.session_state['input_amount'] = format_number_with_comma(amount_raw)
-            st.markdown(f"**한글 금액:** `{convert_multiple_amounts_to_korean(amount_raw)}`")
+            # 💡 채권최고액 입력 및 콤마 처리/천 단위 보정
+            amount_input_key = 'amount_input_tab1_raw'
+            amount_raw_input = st.text_input("채권최고액", value=st.session_state.get(amount_input_key, st.session_state.get('input_amount').replace(',','') if st.session_state.get('input_amount') else ""), key=amount_input_key)
+            st.session_state['input_amount'] = format_number_with_comma(amount_raw_input)
+            st.markdown(f"**현재 포맷된 금액:** `{st.session_state['input_amount']} 원`")
+            st.markdown(f"**한글 금액:** `{convert_multiple_amounts_to_korean(amount_raw_input)}`")
             
             st.session_state['input_collateral_addr'] = st.text_input("물건지 주소 (수기 입력)", value=st.session_state.get('input_collateral_addr'), key='t1_collateral_addr')
             
             if st.button("물건지 주소 = 채무자 주소 복사"):
                  st.session_state['input_collateral_addr'] = st.session_state['input_debtor_addr']
-                 st.experimental_rerun()
+                 # st.experimental_rerun() # 주소 복사는 바로 반영되므로 재실행 불필요
 
     with col_r:
         st.header("🏠 부동산의 표시")
@@ -514,18 +540,18 @@ with tab1:
             st.warning(f"⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")
             is_disabled = True
         
-        # PDF 생성 및 다운로드
         if st.button("🚀 계약서 PDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK):
             if not LIBS_OK: 
                 st.error("PDF 생성 라이브러리(reportlab/pypdf2/fpdf)가 설치되지 않았습니다.");
             else:
                 debtor_name = st.session_state['input_debtor'] if st.session_state['input_debtor'] else "미지정"
-                
+                amount_raw_for_korean = remove_commas(amount_raw_input)
+
                 data = {
                     "date": st.session_state['input_date'], "creditor_name": st.session_state['input_creditor'], "creditor_addr": creditor_info.get('addr', ''),
                     "debtor_name": st.session_state['input_debtor'], "debtor_addr": st.session_state['input_debtor_addr'],
                     "owner_name": st.session_state['input_owner'], "owner_addr": st.session_state['input_owner_addr'],
-                    "guarantee_type": st.session_state['guarantee'], "claim_amount": convert_multiple_amounts_to_korean(amount_raw),
+                    "guarantee_type": st.session_state['guarantee'], "claim_amount": convert_multiple_amounts_to_korean(amount_raw_for_korean),
                     "estate_list": st.session_state['estate_text'].strip().split("\n"), "contract_type": st.session_state['contract_type']
                 }
                 
@@ -572,7 +598,6 @@ with tab2:
             st.warning("⚠️ 자필서명정보 템플릿 파일이 없습니다.")
             is_disabled = True
         
-        # PDF 생성 및 다운로드
         if st.button("📄 자필서명정보 PDF 생성", key="generate_sig_pdf", disabled=is_disabled or not LIBS_OK):
             if not LIBS_OK: st.error("PDF 생성 라이브러리가 설치되지 않았습니다.");
             else:
@@ -626,15 +651,19 @@ with tab3:
         st.text_input("물건지", value=extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'), disabled=True)
     
     
-    # 계산 데이터 초기화 및 업데이트 (금융사 변경 시 초기값 업데이트)
+    # 💡 금융사 변경 감지 및 초기값 설정
     creditor_key = st.session_state['input_creditor']
     default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
 
     if st.session_state.calc_data.get('creditor_key_check') != creditor_key:
         # 금융사 변경 시 수기 비용 초기화
-        st.session_state.calc_data['제증명'] = format_number_with_comma(default_fees.get("제증명"))
-        st.session_state.calc_data['교통비'] = format_number_with_comma(default_fees.get("교통비"))
-        st.session_state.calc_data['원인증서'] = format_number_with_comma(default_fees.get("원인증서"))
+        # 💡 format_number_with_comma(str(int_value)) 형식으로 오류 방지 및 콤마 적용
+        st.session_state.calc_data['제증명'] = format_number_with_comma(str(default_fees.get("제증명")))
+        st.session_state.calc_data['교통비'] = format_number_with_comma(str(default_fees.get("교통비")))
+        st.session_state.calc_data['원인증서'] = format_number_with_comma(str(default_fees.get("원인증서")))
+        st.session_state.calc_data['주소변경'] = format_number_with_comma("0")
+        st.session_state.calc_data['확인서면'] = format_number_with_comma("0")
+        st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
         st.session_state.calc_data['creditor_key_check'] = creditor_key
         st.experimental_rerun()
         
@@ -646,16 +675,15 @@ with tab3:
         '채무자': st.session_state['input_debtor'],
         '물건지': extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'),
         '추가보수_label': "추가보수", '기타보수_label': "기타보수",
-        # 수기 입력 항목은 session_state에서 직접 로드
         '추가보수_val': st.session_state.calc_data.get('추가보수_val', "0"),
         '기타보수_val': st.session_state.calc_data.get('기타보수_val', "0"),
         '할인금액': st.session_state.calc_data.get('할인금액', "0"),
-        '제증명': st.session_state.calc_data.get('제증명', format_number_with_comma(default_fees.get("제증명"))),
-        '교통비': st.session_state.calc_data.get('교통비', format_number_with_comma(default_fees.get("교통비"))),
-        '원인증서': st.session_state.calc_data.get('원인증서', format_number_with_comma(default_fees.get("원인증서"))),
-        '주소변경': st.session_state.calc_data.get('주소변경', "0"),
-        '확인서면': st.session_state.calc_data.get('확인서면', "0"),
-        '선순위 말소': st.session_state.calc_data.get('선순위 말소', "0"),
+        '제증명': st.session_state.calc_data.get('제증명'),
+        '교통비': st.session_state.calc_data.get('교통비'),
+        '원인증서': st.session_state.calc_data.get('원인증서'),
+        '주소변경': st.session_state.calc_data.get('주소변경'),
+        '확인서면': st.session_state.calc_data.get('확인서면'),
+        '선순위 말소': st.session_state.calc_data.get('선순위 말소'),
     }
     
     # 커스텀 비용 변수 로드
@@ -694,11 +722,12 @@ with tab3:
         with st.container(border=True):
             st.subheader("🏛️ 공과금 (Tax)")
             
-            st.markdown("##### 자동 계산")
-            st.metric("등록면허세", format_number_with_comma(current_data.get('등록면허세')))
-            st.metric("지방교육세", format_number_with_comma(current_data.get('지방교육세')))
-            st.metric("증지대", format_number_with_comma(current_data.get('증지대')))
-            st.metric("채권할인금액", format_number_with_comma(current_data.get('채권할인금액')))
+            st.markdown("##### 자동 계산 (ReadOnly)")
+            # 자동 계산 항목은 Metric으로 표시하거나, disabled=True인 text_input 사용
+            st.text_input("등록면허세", value=format_number_with_comma(current_data.get('등록면허세')), disabled=True)
+            st.text_input("지방교육세", value=format_number_with_comma(current_data.get('지방교육세')), disabled=True)
+            st.text_input("증지대", value=format_number_with_comma(current_data.get('증지대')), disabled=True)
+            st.text_input("채권할인금액", value=format_number_with_comma(current_data.get('채권할인금액')), disabled=True)
             
             st.divider()
             
@@ -737,7 +766,7 @@ with tab3:
                 if LIBS_OK:
                     pdf_data = st.session_state.calc_data 
                     data_for_pdf = {
-                        "date_input": st.session_state['input_date'], # 💡 작성일 추가
+                        "date_input": st.session_state['input_date'], 
                         'client': {
                             '채권최고액': format_number_with_comma(pdf_data['채권최고액']), '필지수': pdf_data['필지수'],
                             '금융사': pdf_data['금융사'], '채무자': pdf_data['채무자'], '물건지': pdf_data['물건지']
@@ -776,15 +805,13 @@ with tab3:
                         import openpyxl
                         wb = openpyxl.load_workbook(excel_template_path); ws = wb.active
                         
-                        # 💡 작성일 입력 (1탭의 작성일자 사용)
                         ws['B2'] = st.session_state['input_date'] 
                         
-                        # 데이터 채우기 (셀 위치는 템플릿에 맞춰 조정 필요)
                         ws['B4'] = current_data['금융사']; ws['V4'] = current_data['채무자']; 
                         ws['AG5'] = parse_int_input(current_data["채권최고액"])
                         ws['Y7'] = current_data['물건지']
                         
-                        # 비용 항목 채우기 (예시 셀 위치)
+                        # 비용 항목 채우기 (셀 위치는 템플릿에 맞춰 조정 필요)
                         ws['AH11'] = current_data["등록면허세"]
                         ws['AH12'] = current_data["지방교육세"]
                         ws['AH13'] = current_data["증지대"] 

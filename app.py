@@ -893,40 +893,49 @@ with tab3:
                         wb = openpyxl.load_workbook(excel_template_path)
                         ws = wb.active
                         
-                        # 💡 MergedCell 처리 함수
-                        def set_cell_value(sheet, cell_ref, value):
-                            """병합된 셀도 안전하게 값 설정"""
-                            cell = sheet[cell_ref]
-                            if isinstance(cell, MergedCell):
-                                # 병합된 셀의 경우 병합 해제 후 값 설정
-                                for merged_range in list(sheet.merged_cells.ranges):
-                                    if cell.coordinate in merged_range:
-                                        sheet.unmerge_cells(str(merged_range))
-                                        break
-                            sheet[cell_ref] = value
+                        # 💡 병합된 셀 안전하게 처리하는 함수
+                        def safe_set_value(sheet, cell_ref, value):
+                            """병합된 셀의 경우 왼쪽 상단 셀에 값 설정"""
+                            try:
+                                cell = sheet[cell_ref]
+                                
+                                # MergedCell인 경우 병합 범위의 시작 셀 찾기
+                                if isinstance(cell, MergedCell):
+                                    for merged_range in sheet.merged_cells.ranges:
+                                        if cell.coordinate in merged_range:
+                                            # 병합 범위의 시작 셀(왼쪽 상단)에 값 설정
+                                            start_cell = merged_range.start_cell
+                                            sheet[start_cell.coordinate].value = value
+                                            return
+                                else:
+                                    # 일반 셀은 그냥 값 설정
+                                    cell.value = value
+                            except Exception as e:
+                                st.warning(f"셀 {cell_ref} 설정 실패: {e}")
                         
-                        set_cell_value(ws, 'B2', st.session_state['input_date'])
-                        set_cell_value(ws, 'B4', current_data['금융사'])
-                        set_cell_value(ws, 'V4', current_data['채무자'])
-                        set_cell_value(ws, 'AG5', parse_int_input(current_data["채권최고액"]))
-                        set_cell_value(ws, 'Y7', current_data['물건지'])
+                        # 데이터 입력
+                        safe_set_value(ws, 'B2', st.session_state['input_date'])
+                        safe_set_value(ws, 'B4', current_data['금융사'])
+                        safe_set_value(ws, 'V4', current_data['채무자'])
+                        safe_set_value(ws, 'AG5', parse_int_input(current_data["채권최고액"]))
+                        safe_set_value(ws, 'Y7', current_data['물건지'])
                         
-                        set_cell_value(ws, 'AH11', current_data["등록면허세"])
-                        set_cell_value(ws, 'AH12', current_data["지방교육세"])
-                        set_cell_value(ws, 'AH13', current_data["증지대"])
-                        set_cell_value(ws, 'AH14', current_data["채권할인금액"])
-                        set_cell_value(ws, 'AH15', parse_int_input(current_data["제증명"]))
-                        set_cell_value(ws, 'AH16', parse_int_input(current_data["교통비"]))
-                        set_cell_value(ws, 'AH17', parse_int_input(current_data["원인증서"]))
-                        set_cell_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
-                        set_cell_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
-                        set_cell_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
-                        set_cell_value(ws, 'AH21', current_data["공급가액"])
-                        set_cell_value(ws, 'AH22', current_data["부가세"])
-                        set_cell_value(ws, 'AH23', current_data["보수총액"])
-                        set_cell_value(ws, 'AH25', current_data["공과금 총액"])
-                        set_cell_value(ws, 'Y26', current_data["공과금 총액"])
-                        set_cell_value(ws, 'AG27', current_data["총 합계"])
+                        safe_set_value(ws, 'AH11', current_data["등록면허세"])
+                        safe_set_value(ws, 'AH12', current_data["지방교육세"])
+                        safe_set_value(ws, 'AH13', current_data["증지대"])
+                        safe_set_value(ws, 'AH14', current_data["채권할인금액"])
+                        safe_set_value(ws, 'AH15', parse_int_input(current_data["제증명"]))
+                        safe_set_value(ws, 'AH16', parse_int_input(current_data["교통비"]))
+                        safe_set_value(ws, 'AH17', parse_int_input(current_data["원인증서"]))
+                        safe_set_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
+                        safe_set_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
+                        safe_set_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
+                        safe_set_value(ws, 'AH21', current_data["공급가액"])
+                        safe_set_value(ws, 'AH22', current_data["부가세"])
+                        safe_set_value(ws, 'AH23', current_data["보수총액"])
+                        safe_set_value(ws, 'AH25', current_data["공과금 총액"])
+                        safe_set_value(ws, 'Y26', current_data["공과금 총액"])
+                        safe_set_value(ws, 'AG27', current_data["총 합계"])
 
                         excel_buffer = BytesIO()
                         wb.save(excel_buffer)

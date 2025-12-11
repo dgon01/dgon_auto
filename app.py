@@ -540,24 +540,27 @@ with tab1:
             st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
             st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr')
 
-        # 3. 담보 및 계약 정보
-       # 3. 담보 및 계약 정보 부분 (Tab 1)
+       # 3. 담보 및 계약 정보
         with st.expander("🤝 담보 및 계약 정보", expanded=True):
             st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
             st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
             
-            # 💡 채권최고액 입력 - 콤마 필수, 포맷/한글 표시 제거
-            amount_input_key = 'amount_input_tab1_raw'
+            # 💡 채권최고액 입력 콜백
+            def update_amount():
+                raw = st.session_state['_amount_temp']
+                st.session_state['input_amount'] = format_number_with_comma(raw)
             
-            amount_raw_input = st.text_input(
+            # 초기값 설정
+            if '_amount_temp' not in st.session_state:
+                st.session_state['_amount_temp'] = st.session_state.get('input_amount', "0")
+            
+            st.text_input(
                 "채권최고액 (콤마 포함 입력)", 
-                value=st.session_state.get('input_amount', "0"), 
-                key=amount_input_key,
-                help="예: 50,000,000"
+                value=st.session_state.get('input_amount', "0"),
+                key='_amount_temp',
+                on_change=update_amount,
+                help="숫자 입력 후 Enter 또는 다른 필드 클릭 시 자동으로 콤마가 추가됩니다"
             )
-            
-            # 콤마가 있든 없든 재포맷
-            st.session_state['input_amount'] = format_number_with_comma(amount_raw_input)
             
             st.session_state['input_collateral_addr'] = st.text_input("물건지 주소 (수기 입력)", value=st.session_state.get('input_collateral_addr'), key='t1_collateral_addr')
             

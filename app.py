@@ -30,7 +30,7 @@ def get_base64_image(image_path):
         return None
 
 # 로고 이미지 경로
-LOGO_PATH = os.path.join(APP_ROOT, "KakaoTalk_20250331_180755414_01.jpg")
+LOGO_PATH = os.path.join(APP_ROOT, "my_icon.ico")
 logo_base64 = get_base64_image(LOGO_PATH)
 
 # 커스텀 CSS 스타일 (DG-ON 브랜드 컬러 적용)
@@ -235,6 +235,19 @@ st.markdown(f"""
         background-color: #d1ecf1;
         border-left: 5px solid #0066cc;
     }}
+    
+    /* 라디오 버튼 스타일 */
+    .stRadio > div {{
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 10px;
+    }}
+    
+    /* 넘버 인풋 스타일 */
+    .stNumberInput > div > div > input {{
+        border-radius: 10px;
+        border: 2px solid #e1e8ed;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -243,7 +256,7 @@ if logo_base64:
     st.markdown(f"""
     <div class="header-container">
         <div class="logo-title-container">
-            <img src="data:image/jpeg;base64,{logo_base64}" class="header-logo" alt="DG-ON Logo">
+            <img src="data:image/x-icon;base64,{logo_base64}" class="header-logo" alt="DG-ON Logo">
             <div>
                 <h1 class="header-title">DG-Form</h1>
                 <p class="header-subtitle">등기온 전자설정 자동화 시스템</p>
@@ -262,9 +275,12 @@ else:
             <h1 class="header-title">🏠 DG-Form</h1>
             <p class="header-subtitle">등기온 전자설정 자동화 시스템</p>
         </div>
+        <div style="color: white; text-align: right;">
+            <p style="margin: 0; font-size: 1.1rem; font-weight: 600;">법무법인 시화</p>
+            <p style="margin: 0; font-size: 0.9rem; opacity: 0.9;">부동산 등기는 등기온</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
-
 # =============================================================================
 # 1. 라이브러리 및 환경 설정
 # =============================================================================

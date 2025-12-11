@@ -737,7 +737,7 @@ with tab3:
         st.text_input("물건지", value=extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'), disabled=True)
     
     
-    # 💡 금융사 변경 감지 및 초기값 설정
+    # 금융사 변경 감지 및 초기값 설정
     creditor_key = st.session_state['input_creditor']
     default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
 
@@ -832,7 +832,7 @@ with tab3:
             st.markdown(f"## 총 청구금액: <span style='color:red;'>{format_number_with_comma(current_data.get('총 합계'))} 원</span>", unsafe_allow_html=True)
             st.divider()
 
-            # 💡 옵션 설정 - on_change로 즉시 반영
+            # 옵션 설정 - on_change로 즉시 반영
             def toggle_show_fee():
                 st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             
@@ -854,6 +854,8 @@ with tab3:
                 on_change=toggle_addr_change
             )
             st.session_state['addr_count'] = addr_cols[1].number_input("인원수", min_value=1, max_value=10, value=st.session_state['addr_count'], step=1)
+            
+            st.divider()
 
             # 영수증/비용내역 다운로드 버튼
             download_cols = st.columns(2)
@@ -923,9 +925,7 @@ with tab3:
                         wb = openpyxl.load_workbook(excel_template_path)
                         ws = wb.active
                         
-                        # ... (Excel 생성 코드 계속)
-                        
-                        # 💡 병합된 셀 안전하게 처리하는 함수
+                        # 병합된 셀 안전하게 처리하는 함수
                         def safe_set_value(sheet, cell_ref, value):
                             """병합된 셀의 경우 왼쪽 상단 셀에 값 설정"""
                             try:
@@ -945,67 +945,28 @@ with tab3:
                             except Exception as e:
                                 st.warning(f"셀 {cell_ref} 설정 실패: {e}")
                         
-                        # 대부업 영수증 (Excel) 다운로드
-            excel_template_path = st.session_state['template_status'].get("영수증")
-            if download_cols[1].button("🏦 대부업 영수증 Excel", disabled=not EXCEL_OK or not excel_template_path):
-                if not EXCEL_OK:
-                    st.error("Excel 라이브러리(openpyxl)가 설치되지 않았습니다.")
-                elif not excel_template_path:
-                    st.error("영수증 템플릿 파일이 준비되지 않았습니다.")
-                else:
-                    try:
-                        import openpyxl
-                        from openpyxl.cell.cell import MergedCell
-                        
-                        wb = openpyxl.load_workbook(excel_template_path)
-                        ws = wb.active
-                        
-                        # 💡 병합된 셀 안전하게 처리하는 함수
-                        def safe_set_value(sheet, cell_ref, value):
-                            """병합된 셀의 경우 왼쪽 상단 셀에 값 설정"""
-                            try:
-                                cell = sheet[cell_ref]
-                                
-                                # MergedCell인 경우 병합 범위의 시작 셀 찾기
-                                if isinstance(cell, MergedCell):
-                                    for merged_range in sheet.merged_cells.ranges:
-                                        if cell.coordinate in merged_range:
-                                            # 병합 범위의 시작 셀(왼쪽 상단)에 값 설정
-                                            start_cell = merged_range.start_cell
-                                            sheet[start_cell.coordinate].value = value
-                                            return
-                                else:
-                                    # 일반 셀은 그냥 값 설정
-                                    cell.value = value
-                            except Exception as e:
-                                st.warning(f"셀 {cell_ref} 설정 실패: {e}")
-                        
-                        # 💡 공통 정보
+                        # 공통 정보
                         date_str = st.session_state['input_date']
                         creditor = current_data['금융사']
                         debtor = current_data['채무자']
                         claim_amount = parse_int_input(current_data["채권최고액"])
                         collateral_addr = current_data['물건지']
                         
-                        # 💡 좌측 (사무소 보관용) 데이터 입력
-                        safe_set_value(ws, 'A24', date_str)  # 작성일
-                        safe_set_value(ws, 'M5', claim_amount)  # 채권최고액
-                        safe_set_value(ws, 'E7', collateral_addr)  # 물건지
-                        
-                        # 좌측 보수액 영역
-                        safe_set_value(ws, 'C11', current_data["공급가액"])  # 기본료/공급가액
-                        safe_set_value(ws, 'C20', current_data["부가세"])  # 부가가치세
-                        safe_set_value(ws, 'C21', current_data["보수총액"])  # 보수 소계
-                        
-                        # 좌측 총계 (보수 + 공과금)
+                        # 좌측 (사무소 보관용) 데이터 입력
+                        safe_set_value(ws, 'A24', date_str)
+                        safe_set_value(ws, 'M5', claim_amount)
+                        safe_set_value(ws, 'E7', collateral_addr)
+                        safe_set_value(ws, 'C11', current_data["공급가액"])
+                        safe_set_value(ws, 'C20', current_data["부가세"])
+                        safe_set_value(ws, 'C21', current_data["보수총액"])
                         safe_set_value(ws, 'C22', current_data["총 합계"])
                         
-                        # 💡 우측 (고객 보관용) 데이터 입력
-                        safe_set_value(ws, 'U24', date_str)  # 작성일
-                        safe_set_value(ws, 'AG5', claim_amount)  # 채권최고액
-                        safe_set_value(ws, 'Y7', collateral_addr)  # 물건지
+                        # 우측 (고객 보관용) 데이터 입력
+                        safe_set_value(ws, 'U24', date_str)
+                        safe_set_value(ws, 'AG5', claim_amount)
+                        safe_set_value(ws, 'Y7', collateral_addr)
                         
-                        # 💡 우측 공과금 항목 (AH열)
+                        # 우측 공과금 항목
                         safe_set_value(ws, 'AH11', current_data["등록면허세"])
                         safe_set_value(ws, 'AH12', current_data["지방교육세"])
                         safe_set_value(ws, 'AH13', current_data["증지대"])
@@ -1016,37 +977,28 @@ with tab3:
                         safe_set_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
                         safe_set_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
                         safe_set_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
-                        
-                        # 💡 우측 공과금 소계 (AH21)
                         safe_set_value(ws, 'AH21', current_data["공과금 총액"])
-                        
-                        # 💡 우측 총계 (Y22) - 고객용은 공과금만 표시하므로 소계와 동일
                         safe_set_value(ws, 'Y22', current_data["공과금 총액"])
                         
-                        # 💡 하단 사무소 정보
-                        firm_name = "법무법인 시화"
+                        # 하단 사무소 정보
                         firm_addr = "서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)"
                         firm_ceo = "법무법인시화"
                         firm_business_num = "214-887-97287"
                         firm_corp_num = "1833-5482"
-                        firm_bank = "신한은행 100-035-852291"
-                        firm_depositor = "예금주: 법무법인 시화"
+                        firm_bank = "신한은행 100-035-852291 예금주: 법무법인 시화"
                         
-                        # 💡 좌측 사무소 정보
                         safe_set_value(ws, 'D25', firm_addr)
                         safe_set_value(ws, 'D26', firm_ceo)
                         safe_set_value(ws, 'D27', firm_business_num)
                         safe_set_value(ws, 'D28', firm_corp_num)
-                        safe_set_value(ws, 'D29', firm_bank + " " + firm_depositor)
+                        safe_set_value(ws, 'D29', firm_bank)
                         
-                        # 💡 우측 사무소 정보
                         safe_set_value(ws, 'X25', firm_addr)
                         safe_set_value(ws, 'X26', firm_ceo)
                         safe_set_value(ws, 'X27', firm_business_num)
                         safe_set_value(ws, 'X28', firm_corp_num)
-                        safe_set_value(ws, 'X29', firm_bank + " " + firm_depositor)
+                        safe_set_value(ws, 'X29', firm_bank)
 
-                        # Excel 파일 저장
                         excel_buffer = BytesIO()
                         wb.save(excel_buffer)
                         excel_buffer.seek(0)
@@ -1065,8 +1017,8 @@ with tab3:
                         st.exception(e)
                         import traceback
                         st.code(traceback.format_exc())
-
+            
             st.markdown("---")
             if st.session_state['missing_templates']:
-                 st.error(f"⚠️ **다음 템플릿 파일이 누락되었습니다:** {', '.join(st.session_state['missing_templates'])}")
+                st.error(f"⚠️ **다음 템플릿 파일이 누락되었습니다:** {', '.join(st.session_state['missing_templates'])}")
             st.caption("ℹ️ 참고: 웹 환경에서는 Excel을 PDF로 자동 변환하는 기능(win32com)은 지원하지 않습니다. Excel 파일로 다운로드됩니다.")

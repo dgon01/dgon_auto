@@ -913,13 +913,39 @@ with tab3:
                             except Exception as e:
                                 st.warning(f"셀 {cell_ref} 설정 실패: {e}")
                         
-                        # 데이터 입력
-                        safe_set_value(ws, 'B2', st.session_state['input_date'])
-                        safe_set_value(ws, 'B4', current_data['금융사'])
-                        safe_set_value(ws, 'V4', current_data['채무자'])
-                        safe_set_value(ws, 'AG5', parse_int_input(current_data["채권최고액"]))
-                        safe_set_value(ws, 'Y7', current_data['물건지'])
+                        # 💡 공통 정보
+                        date_str = st.session_state['input_date']
+                        creditor = current_data['금융사']
+                        debtor = current_data['채무자']
+                        claim_amount = parse_int_input(current_data["채권최고액"])
+                        collateral_addr = current_data['물건지']
                         
+                        # 💡 좌측 (사무소 보관용) 데이터 입력
+                        safe_set_value(ws, 'E5', date_str)  # 작성일
+                        safe_set_value(ws, 'C6', creditor)  # 근저당권설정
+                        safe_set_value(ws, 'E6', claim_amount)  # 채권최고액
+                        safe_set_value(ws, 'C8', collateral_addr)  # 물건지
+                        
+                        # 좌측 보수액 (B열 기준)
+                        safe_set_value(ws, 'C11', current_data["공급가액"])  # 기본료 또는 공급가액
+                        # 만약 다른 보수 항목이 있다면 추가
+                        
+                        # 좌측 부가가치세
+                        safe_set_value(ws, 'C20', current_data["부가세"])
+                        
+                        # 좌측 소계 (보수액)
+                        safe_set_value(ws, 'C21', current_data["보수총액"])
+                        
+                        # 좌측 총계
+                        safe_set_value(ws, 'C22', current_data["총 합계"])
+                        
+                        # 💡 우측 (고객 보관용) 데이터 입력
+                        safe_set_value(ws, 'AE5', date_str)  # 작성일
+                        safe_set_value(ws, 'AC6', creditor)  # 근저당권설정
+                        safe_set_value(ws, 'AE6', claim_amount)  # 채권최고액
+                        safe_set_value(ws, 'AC8', collateral_addr)  # 물건지
+                        
+                        # 우측 공과금 항목 (AH열)
                         safe_set_value(ws, 'AH11', current_data["등록면허세"])
                         safe_set_value(ws, 'AH12', current_data["지방교육세"])
                         safe_set_value(ws, 'AH13', current_data["증지대"])
@@ -930,12 +956,35 @@ with tab3:
                         safe_set_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
                         safe_set_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
                         safe_set_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
-                        safe_set_value(ws, 'AH21', current_data["공급가액"])
-                        safe_set_value(ws, 'AH22', current_data["부가세"])
-                        safe_set_value(ws, 'AH23', current_data["보수총액"])
-                        safe_set_value(ws, 'AH25', current_data["공과금 총액"])
-                        safe_set_value(ws, 'Y26', current_data["공과금 총액"])
-                        safe_set_value(ws, 'AG27', current_data["총 합계"])
+                        
+                        # 💡 우측 소계 (AH21) - AH11~AH20의 합계
+                        safe_set_value(ws, 'AH21', current_data["공과금 총액"])
+                        
+                        # 💡 우측 총계 (Y22) - 보수총액 + 공과금총액
+                        safe_set_value(ws, 'Y22', current_data["총 합계"])
+                        
+                        # 💡 하단 사무소 정보 (좌측/우측 동일하게)
+                        firm_name = "법무법인 시화"
+                        firm_addr = "서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)"
+                        firm_ceo = "법무법인시화"
+                        firm_business_num = "214-887-97287"
+                        firm_corp_num = "1833-5482"
+                        firm_bank = "신한은행 100-035-852291"
+                        firm_depositor = "예금주: 법무법인 시화"
+                        
+                        # 좌측 사무소 정보 (E24~E29 기준, 실제 위치 확인 필요)
+                        safe_set_value(ws, 'B25', firm_addr)
+                        safe_set_value(ws, 'B26', firm_ceo)
+                        safe_set_value(ws, 'B27', firm_business_num)
+                        safe_set_value(ws, 'B28', firm_corp_num)
+                        safe_set_value(ws, 'B29', firm_bank + " " + firm_depositor)
+                        
+                        # 우측 사무소 정보 (동일하게)
+                        safe_set_value(ws, 'AB25', firm_addr)
+                        safe_set_value(ws, 'AB26', firm_ceo)
+                        safe_set_value(ws, 'AB27', firm_business_num)
+                        safe_set_value(ws, 'AB28', firm_corp_num)
+                        safe_set_value(ws, 'AB29', firm_bank + " " + firm_depositor)
 
                         excel_buffer = BytesIO()
                         wb.save(excel_buffer)
@@ -951,7 +1000,7 @@ with tab3:
                     except Exception as e:
                         st.error(f"Excel 생성 중 오류 발생: {e}")
                         st.exception(e)
-            
+
             st.markdown("---")
             if st.session_state['missing_templates']:
                  st.error(f"⚠️ **다음 템플릿 파일이 누락되었습니다:** {', '.join(st.session_state['missing_templates'])}")

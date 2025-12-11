@@ -652,4 +652,593 @@ def handle_creditor_change():
     st.session_state.calc_data['교통비'] = format_number_with_comma(str(default_fees.get("교통비")))
     st.session_state.calc_data['원인증서'] = format_number_with_comma(str(default_fees.get("원인증서")))
     st.session_state.calc_data['creditor_key_check'] = creditor_key
-    st.session_state.calc_data['주소변경'] = forma
+    st.session_state.calc_data['주소변경'] = format_number_with_comma("0")
+    st.session_state.calc_data['확인서면'] = format_number_with_comma("0")
+    st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
+
+def calculate_all(data):
+    amount = parse_int_input(data['채권최고액']) 
+    parcels = parse_int_input(data['필지수'])
+    try:
+        rate = float(remove_commas(data['채권할인율'])) / 100
+    except ValueError:
+        rate = 0 
+    
+    base_fee = lookup_base_fee(amount)
+    data['기본료'] = base_fee
+    
+    add_fee = parse_int_input(data['추가보수_val'])
+    etc_fee = parse_int_input(data['기타보수_val'])
+    disc_fee = parse_int_input(data['할인금액'])
+
+    fee_total = 0
+    if st.session_state['show_fee']:
+        supply_val = base_fee + add_fee + etc_fee - disc_fee
+        vat = math.floor(max(0, supply_val) * 0.1)
+        fee_total = supply_val + vat
+        data['공급가액'] = supply_val
+        data['부가세'] = vat
+        data['보수총액'] = fee_total
+    else:
+        data['공급가액'] = 0; data['부가세'] = 0; data['보수총액'] = 0
+    
+    reg = floor_10(amount * 0.002)
+    edu = floor_10(reg * 0.2)
+    jeungji = 18000 * parcels
+    
+    if st.session_state['addr_change']:
+        count = st.session_state['addr_count']
+        reg += 6000 * count
+        edu += 1200 * count
+        jeungji += 3000 * count
+        data['주소변경'] = 20000 * count
+    else:
+        data['주소변경'] = st.session_state.calc_data.get('주소변경', "0")
+    
+    bond = 0
+    if amount >= 20_000_000: bond = math.ceil(amount * 0.01 / 10000) * 10000
+    bond_disc = floor_10(bond * rate)
+    
+    data["등록면허세"] = reg
+    data["지방교육세"] = edu
+    data["증지대"] = jeungji
+    data["채권할인금액"] = bond_disc
+    
+    cost_total = reg + edu + jeungji + bond_disc
+    
+    manual_cost_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
+    for k in manual_cost_keys:
+        cost_total += parse_int_input(data.get(k, 0))
+    
+    for i in range(1, 7):
+        label_key = f'custom_label_{i}'
+        value_key = f'custom_value_{i}'
+        if data.get(label_key):
+            cost_total += parse_int_input(data.get(value_key, 0))
+
+    data['공과금 총액'] = cost_total
+    data['총 합계'] = fee_total + cost_total
+    
+    st.session_state['calc_data'] = data
+    return data
+
+# 탭 구현
+tab1, tab2, tab3 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증"])
+
+# =============================================================================
+# Tab 1: 근저당권 설정 (입력)
+# =============================================================================
+with tab1:
+    col_header = st.columns([5, 1])
+    col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
+    
+    if col_header[1].button("🔄 초기화", type="secondary", help="모든 입력값을 초기 상태로 되돌립니다", key="reset_tab1"):
+        st.session_state['input_date'] = datetime.now().strftime("%Y년 %m월 %d일")
+        st.session_state['input_creditor'] = list(CREDITORS.keys())[0]
+        st.session_state['input_debtor'] = ""
+        st.session_state['input_debtor_addr'] = ""
+        st.session_state['input_owner'] = ""
+        st.session_state['input_owner_addr'] = ""
+        st.session_state['contract_type'] = "개인"
+        st.session_state['guarantee'] = "한정근담보"
+        st.session_state['input_amount'] = "0"
+        st.session_state['_amount_temp'] = "0"
+        st.session_state['input_collateral_addr'] = ""
+        st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
+        st.session_state['input_debtor_rrn'] = ""
+        st.session_state['input_owner_rrn'] = ""
+        st.rerun()
+    
+    st.markdown("---")
+    
+    col_l, col_r = st.columns([7, 3])
+    
+    with col_l:
+        # 1. 기본 정보
+        with st.expander("📌 기본 정보", expanded=True):
+            date_raw = st.text_input("작성일자", value=st.session_state.get('input_date'), help="YYYYMMDD 형식 입력 후 포맷 자동 변환")
+            st.session_state['input_date'] = format_date(date_raw)
+
+        # 2. 당사자 정보
+        with st.expander("👤 당사자 정보", expanded=True):
+            creditor_list = list(CREDITORS.keys())
+            selected_creditor = st.selectbox(
+                "채권자 선택", 
+                options=creditor_list, 
+                index=creditor_list.index(st.session_state.get('input_creditor')) if st.session_state.get('input_creditor') in creditor_list else 0,
+                key='t1_creditor_select', 
+                on_change=handle_creditor_change
+            )
+            st.session_state['input_creditor'] = selected_creditor
+            
+            creditor_info = CREDITORS.get(selected_creditor, {})
+            st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=True)
+            st.text_area("채권자 주소", value=creditor_info.get('addr', ''), disabled=True)
+            st.session_state['input_debtor'] = st.text_input("채무자 성명", value=st.session_state.get('input_debtor'), key='t1_debtor_name')
+            st.session_state['input_debtor_addr'] = st.text_area("채무자 주소", value=st.session_state.get('input_debtor_addr'), key='t1_debtor_addr')
+            st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
+            st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr')
+
+        # 3. 담보 및 계약 정보
+        with st.expander("🤝 담보 및 계약 정보", expanded=True):
+            st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
+            st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
+            
+            def format_amount_input():
+                raw_value = st.session_state['_amount_temp']
+                st.session_state['input_amount'] = format_number_with_comma(raw_value)
+            
+            if '_amount_temp' not in st.session_state:
+                st.session_state['_amount_temp'] = st.session_state.get('input_amount', "0")
+            
+            st.text_input(
+                "채권최고액 (콤마 포함 입력)", 
+                value=st.session_state.get('input_amount', "0"),
+                key='_amount_temp',
+                on_change=format_amount_input,
+                help="숫자 입력 후 Enter 또는 다른 필드 클릭 시 자동으로 콤마가 추가됩니다"
+            )
+            
+            col_addr1, col_addr2 = st.columns([4, 1])
+            with col_addr1:
+                collateral_addr_input = st.text_input(
+                    "물건지 주소 (수기 입력)", 
+                    value=st.session_state.get('input_collateral_addr', ""), 
+                    key='t1_collateral_addr_input'
+                )
+                st.session_state['input_collateral_addr'] = collateral_addr_input
+            
+            with col_addr2:
+                st.write("")
+                st.write("")
+                if st.button("📋 복사", help="채무자 주소를 물건지 주소로 복사", key='copy_addr_btn'):
+                    st.session_state['input_collateral_addr'] = st.session_state.get('input_debtor_addr', "")
+                    st.rerun()
+
+    with col_r:
+        st.markdown("### 🏠 부동산의 표시")
+        st.caption("※ 등기부등본 내용 입력")
+        st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=400, key='estate_text_area')
+        
+        st.markdown("### 📑 파일 생성")
+        
+        selected_template_path = st.session_state['template_status'].get(st.session_state['contract_type'])
+        
+        if selected_template_path:
+            st.success(f"✅ {st.session_state['contract_type']} 템플릿 준비 완료")
+            is_disabled = False
+        else:
+            st.warning(f"⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")
+            is_disabled = True
+        
+        if st.button("🚀 계약서 PDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK, use_container_width=True):
+            if not LIBS_OK: 
+                st.error("PDF 생성 라이브러리(reportlab/pypdf2/fpdf)가 설치되지 않았습니다.")
+            else:
+                debtor_name = st.session_state['input_debtor'] if st.session_state['input_debtor'] else "미지정"
+                
+                data = {
+                    "date": st.session_state['input_date'], 
+                    "creditor_name": st.session_state['input_creditor'], 
+                    "creditor_addr": creditor_info.get('addr', ''),
+                    "debtor_name": st.session_state['input_debtor'], 
+                    "debtor_addr": st.session_state['input_debtor_addr'],
+                    "owner_name": st.session_state['input_owner'], 
+                    "owner_addr": st.session_state['input_owner_addr'],
+                    "guarantee_type": st.session_state['guarantee'], 
+                    "claim_amount": convert_multiple_amounts_to_korean(remove_commas(st.session_state['input_amount'])),
+                    "estate_list": st.session_state['estate_text'].strip().split("\n"), 
+                    "contract_type": st.session_state['contract_type']
+                }
+                
+                try:
+                    pdf_buffer = make_pdf(selected_template_path, data)
+                    st.download_button(
+                        label="⬇️ PDF 다운로드",
+                        data=pdf_buffer,
+                        file_name=f"근저당권설정계약서_{debtor_name}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ PDF 파일 생성 완료!")
+                except Exception as e:
+                    st.error(f"PDF 생성 중 오류 발생: {e}")
+                    st.exception(e)
+
+# =============================================================================
+# Tab 2: 자필서명 정보
+# =============================================================================
+with tab2:
+    col_header2 = st.columns([5, 1])
+    col_header2[0].markdown("### ✍️ 자필서명정보 작성")
+    
+    if col_header2[1].button("🔄 초기화", type="secondary", help="자필서명정보 입력값을 초기화합니다", key="reset_tab2"):
+        st.session_state['sig_debtor'] = ""
+        st.session_state['input_debtor_rrn'] = ""
+        st.session_state['sig_owner'] = ""
+        st.session_state['input_owner_rrn'] = ""
+        st.rerun()
+    
+    st.markdown("---")
+    
+    col_l2, col_r2 = st.columns(2)
+    
+    with col_l2:
+        st.markdown("#### 의무자 정보 입력")
+        st.session_state['sig_date'] = st.text_input("작성일자", value=st.session_state.get('input_date'), key='sig_date_input', disabled=True)
+        st.session_state['sig_debtor'] = st.text_input("설정자(단독/채무자)", value=st.session_state.get('input_debtor'), key='sig_debtor_input')
+        st.session_state['input_debtor_rrn'] = st.text_input("주민등록번호(채무자)", value=st.session_state.get('input_debtor_rrn'), key='sig_debtor_rrn_input')
+        st.session_state['sig_owner'] = st.text_input("설정자(공동/물상보증인)", value=st.session_state.get('input_owner'), key='sig_owner_input')
+        st.session_state['input_owner_rrn'] = st.text_input("주민등록번호(설정자)", value=st.session_state.get('input_owner_rrn'), key='sig_owner_rrn_input')
+
+    with col_r2:
+        st.markdown("#### 🏠 부동산의 표시 (확인용)")
+        
+        st.session_state['sig_estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state.get('estate_text'), height=350, key='sig_estate_area', disabled=True)
+        st.info("내용은 1번 탭의 '부동산의 표시'와 동기화됩니다.")
+        
+        sig_template_path = st.session_state['template_status'].get("자필")
+
+        if sig_template_path:
+            st.success("✅ 자필서명 템플릿 준비 완료")
+            is_disabled = False
+        else:
+            st.warning("⚠️ 자필서명정보 템플릿 파일이 없습니다.")
+            is_disabled = True
+        
+        if st.button("📄 자필서명정보 PDF 생성", key="generate_sig_pdf", disabled=is_disabled or not LIBS_OK, use_container_width=True):
+            if not LIBS_OK: 
+                st.error("PDF 생성 라이브러리가 설치되지 않았습니다.")
+            else:
+                debtor_name = st.session_state['sig_debtor'] if st.session_state['sig_debtor'] else "미지정"
+                
+                data = {
+                    "date": st.session_state['sig_date'], 
+                    "debtor_name": st.session_state['sig_debtor'], 
+                    "debtor_rrn": st.session_state['input_debtor_rrn'],
+                    "owner_name": st.session_state['sig_owner'], 
+                    "owner_rrn": st.session_state['input_owner_rrn'], 
+                    "estate_text": st.session_state['sig_estate_text']
+                }
+                
+                try:
+                    pdf_buffer = make_signature_pdf(sig_template_path, data)
+                    st.download_button(
+                        label="⬇️ PDF 다운로드",
+                        data=pdf_buffer,
+                        file_name=f"자필서명정보_{debtor_name}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ PDF 파일 생성 완료!")
+                except Exception as e:
+                    st.error(f"자필서명 PDF 생성 중 오류 발생: {e}")
+                    st.exception(e)
+
+# =============================================================================
+# Tab 3: 비용 계산 및 영수증
+# =============================================================================
+with tab3:
+    col_header3 = st.columns([5, 1])
+    col_header3[0].markdown("### 🧾 등기비용 계산기")
+    
+    if col_header3[1].button("🔄 초기화", type="secondary", help="비용 계산 입력값을 초기화합니다", key="reset_tab3"):
+        st.session_state['calc_data'] = {}
+        st.session_state['show_fee'] = True
+        st.session_state['addr_change'] = False
+        st.session_state['addr_count'] = 1
+        st.session_state['input_parcels'] = 1
+        st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
+        st.rerun()
+    
+    st.markdown("---")
+    
+    with st.expander("📌 기초 계산 정보 (1번 탭과 연동)", expanded=True):
+        col_c1, col_c2, col_c3 = st.columns([2, 1, 2])
+        
+        col_c1.text_input("채권최고액", value=st.session_state.get('input_amount'), disabled=True)
+        
+        parcels = col_c2.text_input("필지수", value=st.session_state.get('input_parcels'), key='calc_parcels_input')
+        try: 
+            st.session_state['input_parcels'] = int(remove_commas(parcels))
+        except: 
+            st.session_state['input_parcels'] = 1
+        
+        rate_cols = col_c3.columns([3, 1])
+        st.session_state['input_rate'] = rate_cols[0].text_input("채권할인율(%)", value=st.session_state.get('input_rate'), key='calc_rate_input')
+        if rate_cols[1].button("🔄", help="현재 채권할인율로 업데이트"):
+            st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
+            st.rerun()
+            
+        st.text_input("금융사", value=st.session_state.get('input_creditor'), disabled=True)
+        st.text_input("채무자", value=st.session_state.get('input_debtor'), disabled=True)
+        st.text_input("물건지", value=extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'), disabled=True)
+    
+    creditor_key = st.session_state['input_creditor']
+    default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
+
+    if st.session_state.calc_data.get('creditor_key_check') != creditor_key:
+        st.session_state.calc_data['제증명'] = format_number_with_comma(str(default_fees.get("제증명")))
+        st.session_state.calc_data['교통비'] = format_number_with_comma(str(default_fees.get("교통비")))
+        st.session_state.calc_data['원인증서'] = format_number_with_comma(str(default_fees.get("원인증서")))
+        st.session_state.calc_data['주소변경'] = format_number_with_comma("0")
+        st.session_state.calc_data['확인서면'] = format_number_with_comma("0")
+        st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
+        st.session_state.calc_data['creditor_key_check'] = creditor_key
+        
+    calc_data = {
+        '채권최고액': st.session_state['input_amount'],
+        '필지수': st.session_state['input_parcels'],
+        '채권할인율': st.session_state['input_rate'],
+        '금융사': st.session_state['input_creditor'],
+        '채무자': st.session_state['input_debtor'],
+        '물건지': extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'),
+        '추가보수_label': "추가보수", 
+        '기타보수_label': "기타보수",
+        '추가보수_val': st.session_state.calc_data.get('추가보수_val', "0"),
+        '기타보수_val': st.session_state.calc_data.get('기타보수_val', "0"),
+        '할인금액': st.session_state.calc_data.get('할인금액', "0"),
+        '제증명': st.session_state.calc_data.get('제증명', "0"),
+        '교통비': st.session_state.calc_data.get('교통비', "0"),
+        '원인증서': st.session_state.calc_data.get('원인증서', "0"),
+        '주소변경': st.session_state.calc_data.get('주소변경', "0"),
+        '확인서면': st.session_state.calc_data.get('확인서면', "0"),
+        '선순위 말소': st.session_state.calc_data.get('선순위 말소', "0"),
+    }
+    
+    for i in range(1, 7):
+        calc_data[f'custom_label_{i}'] = st.session_state.calc_data.get(f'custom_label_{i}', "")
+        calc_data[f'custom_value_{i}'] = st.session_state.calc_data.get(f'custom_value_{i}', "0")
+
+    st.session_state['calc_data'] = calculate_all(calc_data)
+    current_data = st.session_state['calc_data']
+
+    col_f, col_c, col_t = st.columns(3)
+    
+    with col_f:
+        with st.container(border=True):
+            st.markdown("#### 💰 보수액")
+            
+            st.session_state.calc_data['추가보수_val'] = st.text_input("추가보수", value=current_data.get('추가보수_val'), key='add_fee_val')
+            st.session_state.calc_data['기타보수_val'] = st.text_input("기타보수", value=current_data.get('기타보수_val'), key='etc_fee_val')
+            st.session_state.calc_data['할인금액'] = st.text_input("할인금액", value=current_data.get('할인금액'), key='disc_fee_val')
+            
+            st.divider()
+            st.metric("기본료", format_number_with_comma(current_data.get('기본료')) + " 원")
+            st.metric("공급가액", format_number_with_comma(current_data.get('공급가액')) + " 원")
+            st.metric("부가세", format_number_with_comma(current_data.get('부가세')) + " 원")
+            st.markdown(f"**총 보수액:** <h3 style='color:#003d82;'>{format_number_with_comma(current_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
+
+    with col_c:
+        with st.container(border=True):
+            st.markdown("#### 🏛️ 공과금")
+            
+            st.markdown("##### 자동 계산")
+            st.text_input("등록면허세", value=format_number_with_comma(current_data.get('등록면허세')), disabled=True, key="auto_reg")
+            st.text_input("지방교육세", value=format_number_with_comma(current_data.get('지방교육세')), disabled=True, key="auto_edu")
+            st.text_input("증지대", value=format_number_with_comma(current_data.get('증지대')), disabled=True, key="auto_jeung")
+            st.text_input("채권할인금액", value=format_number_with_comma(current_data.get('채권할인금액')), disabled=True, key="auto_bond")
+            
+            st.divider()
+            
+            st.markdown("##### 수기 입력")
+            
+            for k in ["제증명", "교통비", "원인증서", "확인서면", "선순위 말소"]:
+                st.session_state.calc_data[k] = st.text_input(k, value=current_data.get(k), key=f'cost_manual_{k}')
+            
+            st.session_state.calc_data['주소변경'] = st.text_input("주소변경 (보수료)", value=current_data.get('주소변경'), key='cost_addr_change')
+            
+            st.divider()
+            st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(current_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)
+
+    with col_t:
+        with st.container(border=True):
+            st.markdown("#### 🧾 최종 결제")
+            st.markdown(f"## <span style='color:#dc3545; font-weight:700;'>총 청구금액: {format_number_with_comma(current_data.get('총 합계'))} 원</span>", unsafe_allow_html=True)
+            st.divider()
+
+            def toggle_show_fee():
+                st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
+            
+            def toggle_addr_change():
+                st.session_state['addr_change'] = st.session_state['addr_change_checkbox']
+            
+            st.checkbox(
+                "보수액 포함 표시", 
+                value=st.session_state['show_fee'],
+                key='show_fee_checkbox',
+                on_change=toggle_show_fee
+            )
+            
+            addr_cols = st.columns([3, 1])
+            addr_cols[0].checkbox(
+                "주소변경 포함 (공과금 및 보수료)", 
+                value=st.session_state['addr_change'],
+                key='addr_change_checkbox',
+                on_change=toggle_addr_change
+            )
+            st.session_state['addr_count'] = addr_cols[1].number_input("인원수", min_value=1, max_value=10, value=st.session_state['addr_count'], step=1)
+            
+            st.divider()
+
+            download_cols = st.columns(2)
+            
+            if download_cols[0].button("📄 비용내역 PDF", use_container_width=True):
+                if LIBS_OK:
+                    pdf_data = st.session_state.calc_data 
+                    data_for_pdf = {
+                        "date_input": st.session_state['input_date'], 
+                        'client': {
+                            '채권최고액': format_number_with_comma(pdf_data['채권최고액']), 
+                            '필지수': pdf_data['필지수'],
+                            '금융사': pdf_data['금융사'], 
+                            '채무자': pdf_data['채무자'], 
+                            '물건지': pdf_data['물건지']
+                        },
+                        'fee_items': {
+                            k: parse_int_input(pdf_data.get(k)) 
+                            for k in ['기본료', '추가보수_val', '기타보수_val', '할인금액']
+                        },
+                        'fee_totals': {
+                            '공급가액': pdf_data['공급가액'], 
+                            '부가세': pdf_data['부가세'], 
+                            '보수총액': pdf_data['보수총액']
+                        },
+                        'cost_items': {
+                            k: parse_int_input(pdf_data.get(k)) 
+                            for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", 
+                                      "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
+                        },
+                        'cost_totals': {'공과금 총액': pdf_data['공과금 총액']},
+                        'cost_section_title': '2. 공과금' if st.session_state['show_fee'] else '1. 공과금',
+                        'grand_total': pdf_data['총 합계'],
+                        'labels': {'추가보수_label': "추가보수", '기타보수_label': "기타보수"}
+                    }
+                    
+                    try:
+                        pdf = PDFConverter(show_fee=st.session_state['show_fee'])
+                        pdf_buffer = pdf.output_pdf(data_for_pdf, None) 
+                        
+                        download_cols[0].download_button(
+                            label="⬇️ 다운로드",
+                            data=pdf_buffer,
+                            file_name=f"비용내역_{pdf_data['채무자'] or '근저당권설정'}.pdf",
+                            mime="application/pdf",
+                            key="dl_client_pdf",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"PDF 생성 중 오류 발생: {e}")
+                else:
+                    st.error("PDF 라이브러리 미설치")
+
+            excel_template_path = st.session_state['template_status'].get("영수증")
+            if download_cols[1].button("🏦 영수증 Excel", disabled=not EXCEL_OK or not excel_template_path, use_container_width=True):
+                if not EXCEL_OK:
+                    st.error("Excel 라이브러리(openpyxl)가 설치되지 않았습니다.")
+                elif not excel_template_path:
+                    st.error("영수증 템플릿 파일이 준비되지 않았습니다.")
+                else:
+                    try:
+                        import openpyxl
+                        from openpyxl.cell.cell import MergedCell
+                        
+                        wb = openpyxl.load_workbook(excel_template_path)
+                        ws = wb.active
+                        
+                        def safe_set_value(sheet, cell_ref, value):
+                            try:
+                                cell = sheet[cell_ref]
+                                if isinstance(cell, MergedCell):
+                                    for merged_range in sheet.merged_cells.ranges:
+                                        if cell.coordinate in merged_range:
+                                            start_cell = merged_range.start_cell
+                                            sheet[start_cell.coordinate].value = value
+                                            return
+                                else:
+                                    cell.value = value
+                            except Exception as e:
+                                st.warning(f"셀 {cell_ref} 설정 실패: {e}")
+                        
+                        date_str = st.session_state['input_date']
+                        debtor = current_data['채무자']
+                        claim_amount = parse_int_input(current_data["채권최고액"])
+                        collateral_addr = current_data['물건지']
+                        
+                        # 좌측
+                        safe_set_value(ws, 'A24', date_str)
+                        safe_set_value(ws, 'M5', claim_amount)
+                        safe_set_value(ws, 'E7', collateral_addr)
+                        safe_set_value(ws, 'C11', current_data["공급가액"])
+                        safe_set_value(ws, 'C20', current_data["부가세"])
+                        safe_set_value(ws, 'C21', current_data["보수총액"])
+                        safe_set_value(ws, 'C22', current_data["총 합계"])
+                        
+                        # 우측
+                        safe_set_value(ws, 'U24', date_str)
+                        safe_set_value(ws, 'V4', debtor)  # 채무자 성명
+                        safe_set_value(ws, 'AG5', claim_amount)
+                        safe_set_value(ws, 'Y7', collateral_addr)
+                        
+                        safe_set_value(ws, 'AH11', current_data["등록면허세"])
+                        safe_set_value(ws, 'AH12', current_data["지방교육세"])
+                        safe_set_value(ws, 'AH13', current_data["증지대"])
+                        safe_set_value(ws, 'AH14', current_data["채권할인금액"])
+                        safe_set_value(ws, 'AH15', parse_int_input(current_data["제증명"]))
+                        safe_set_value(ws, 'AH16', parse_int_input(current_data["교통비"]))
+                        safe_set_value(ws, 'AH17', parse_int_input(current_data["원인증서"]))
+                        safe_set_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
+                        safe_set_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
+                        safe_set_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
+                        safe_set_value(ws, 'AH21', current_data["공과금 총액"])
+                        safe_set_value(ws, 'Y22', current_data["공과금 총액"])
+                        
+                        firm_addr = "서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)"
+                        firm_ceo = "법무법인시화"
+                        firm_business_num = "214-887-97287"
+                        firm_corp_num = "1833-5482"
+                        firm_bank = "신한은행 100-035-852291 예금주: 법무법인 시화"
+                        
+                        safe_set_value(ws, 'D25', firm_addr)
+                        safe_set_value(ws, 'D26', firm_ceo)
+                        safe_set_value(ws, 'D27', firm_business_num)
+                        safe_set_value(ws, 'D28', firm_corp_num)
+                        safe_set_value(ws, 'D29', firm_bank)
+                        
+                        safe_set_value(ws, 'X25', firm_addr)
+                        safe_set_value(ws, 'X26', firm_ceo)
+                        safe_set_value(ws, 'X27', firm_business_num)
+                        safe_set_value(ws, 'X28', firm_corp_num)
+                        safe_set_value(ws, 'X29', firm_bank)
+
+                        excel_buffer = BytesIO()
+                        wb.save(excel_buffer)
+                        excel_buffer.seek(0)
+                        
+                        download_cols[1].download_button(
+                            label="⬇️ 다운로드",
+                            data=excel_buffer,
+                            file_name=f"영수증_{current_data['채무자']}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key="dl_loan_excel",
+                            use_container_width=True
+                        )
+                        st.success("✅ Excel 파일 생성 완료!")
+                        
+                    except Exception as e:
+                        st.error(f"Excel 생성 중 오류 발생: {e}")
+                        st.exception(e)
+            
+            st.markdown("---")
+            if st.session_state['missing_templates']:
+                st.error(f"⚠️ **다음 템플릿 파일이 누락되었습니다:** {', '.join(st.session_state['missing_templates'])}")
+            st.caption("ℹ️ 웹 환경에서는 Excel을 PDF로 자동 변환하는 기능(win32com)은 지원하지 않습니다. Excel 파일로 다운로드됩니다.")
+
+# 푸터
+st.markdown("---")
+st.markdown("""
+<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px;'>
+    <p style='margin: 0; font-size: 0.9rem;'><strong>DG-Form</strong> | 등기온 전자설정 자동화 시스템</p>
+    <p style='margin: 5px 0 0 0; font-size: 0.8rem;'>법무법인 시화 | 부동산 등기는 등기온</p>
+</div>
+""", unsafe_allow_html=True)

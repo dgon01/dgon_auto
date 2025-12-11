@@ -512,7 +512,26 @@ with tab1:
     col_l, col_r = st.columns([7, 3])
     
     with col_l:
+        # 💡 초기화 버튼 추가
         st.header("입력 정보")
+        
+        if st.button("🔄 전체 초기화", type="secondary", help="모든 입력값을 초기 상태로 되돌립니다"):
+            # 모든 입력 필드 초기화
+            st.session_state['input_date'] = datetime.now().strftime("%Y년 %m월 %d일")
+            st.session_state['input_creditor'] = list(CREDITORS.keys())[0]
+            st.session_state['input_debtor'] = ""
+            st.session_state['input_debtor_addr'] = ""
+            st.session_state['input_owner'] = ""
+            st.session_state['input_owner_addr'] = ""
+            st.session_state['contract_type'] = "개인"
+            st.session_state['guarantee'] = "한정근담보"
+            st.session_state['input_amount'] = "0"
+            st.session_state['_amount_temp'] = "0"
+            st.session_state['input_collateral_addr'] = ""
+            st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
+            st.session_state['input_debtor_rrn'] = ""
+            st.session_state['input_owner_rrn'] = ""
+            st.rerun()
         
         # 1. 기본 정보
         with st.expander("📌 기본 정보", expanded=True):
@@ -540,33 +559,46 @@ with tab1:
             st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
             st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr')
 
-       # 3. 담보 및 계약 정보
+        # 3. 담보 및 계약 정보
         with st.expander("🤝 담보 및 계약 정보", expanded=True):
             st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
             st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
             
-            # 💡 채권최고액 입력 콜백
-            def update_amount():
-                raw = st.session_state['_amount_temp']
-                st.session_state['input_amount'] = format_number_with_comma(raw)
+            # 💡 채권최고액 입력 콜백 함수
+            def format_amount_input():
+                """입력값을 자동으로 콤마 포맷팅"""
+                raw_value = st.session_state['_amount_temp']
+                st.session_state['input_amount'] = format_number_with_comma(raw_value)
             
             # 초기값 설정
             if '_amount_temp' not in st.session_state:
                 st.session_state['_amount_temp'] = st.session_state.get('input_amount', "0")
             
+            # 💡 채권최고액 입력 - 콤마 자동 추가
             st.text_input(
                 "채권최고액 (콤마 포함 입력)", 
                 value=st.session_state.get('input_amount', "0"),
                 key='_amount_temp',
-                on_change=update_amount,
+                on_change=format_amount_input,
                 help="숫자 입력 후 Enter 또는 다른 필드 클릭 시 자동으로 콤마가 추가됩니다"
             )
             
-            st.session_state['input_collateral_addr'] = st.text_input("물건지 주소 (수기 입력)", value=st.session_state.get('input_collateral_addr'), key='t1_collateral_addr')
+            # 💡 물건지 주소 복사 버튼 수정
+            col_addr1, col_addr2 = st.columns([4, 1])
+            with col_addr1:
+                collateral_addr_input = st.text_input(
+                    "물건지 주소 (수기 입력)", 
+                    value=st.session_state.get('input_collateral_addr', ""), 
+                    key='t1_collateral_addr_input'
+                )
+                st.session_state['input_collateral_addr'] = collateral_addr_input
             
-            if st.button("물건지 주소 = 채무자 주소 복사"):
-                 st.session_state['input_collateral_addr'] = st.session_state['input_debtor_addr']
-                 st.rerun()
+            with col_addr2:
+                st.write("")  # 정렬을 위한 공백
+                st.write("")  # 정렬을 위한 공백
+                if st.button("📋 복사", help="채무자 주소를 물건지 주소로 복사", key='copy_addr_btn'):
+                    st.session_state['input_collateral_addr'] = st.session_state.get('input_debtor_addr', "")
+                    st.rerun()
 
     with col_r:
         st.header("🏠 부동산의 표시")
@@ -581,7 +613,7 @@ with tab1:
             st.success(f"✅ {st.session_state['contract_type']} 템플릿 준비 완료")
             is_disabled = False
         else:
-            st.warning(f"⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")
+            st.warning(f⚠️ {st.session_state['contract_type']} 템플릿 파일이 없습니다.")
             is_disabled = True
         
         if st.button("🚀 계약서 PDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK):
@@ -616,8 +648,6 @@ with tab1:
                 except Exception as e:
                     st.error(f"PDF 생성 중 오류 발생: {e}")
                     st.exception(e)
-
-
 # =============================================================================
 # Tab 2: 자필서명 정보
 # =============================================================================
@@ -913,6 +943,41 @@ with tab3:
                             except Exception as e:
                                 st.warning(f"셀 {cell_ref} 설정 실패: {e}")
                         
+                        # 대부업 영수증 (Excel) 다운로드
+            excel_template_path = st.session_state['template_status'].get("영수증")
+            if download_cols[1].button("🏦 대부업 영수증 Excel", disabled=not EXCEL_OK or not excel_template_path):
+                if not EXCEL_OK:
+                    st.error("Excel 라이브러리(openpyxl)가 설치되지 않았습니다.")
+                elif not excel_template_path:
+                    st.error("영수증 템플릿 파일이 준비되지 않았습니다.")
+                else:
+                    try:
+                        import openpyxl
+                        from openpyxl.cell.cell import MergedCell
+                        
+                        wb = openpyxl.load_workbook(excel_template_path)
+                        ws = wb.active
+                        
+                        # 💡 병합된 셀 안전하게 처리하는 함수
+                        def safe_set_value(sheet, cell_ref, value):
+                            """병합된 셀의 경우 왼쪽 상단 셀에 값 설정"""
+                            try:
+                                cell = sheet[cell_ref]
+                                
+                                # MergedCell인 경우 병합 범위의 시작 셀 찾기
+                                if isinstance(cell, MergedCell):
+                                    for merged_range in sheet.merged_cells.ranges:
+                                        if cell.coordinate in merged_range:
+                                            # 병합 범위의 시작 셀(왼쪽 상단)에 값 설정
+                                            start_cell = merged_range.start_cell
+                                            sheet[start_cell.coordinate].value = value
+                                            return
+                                else:
+                                    # 일반 셀은 그냥 값 설정
+                                    cell.value = value
+                            except Exception as e:
+                                st.warning(f"셀 {cell_ref} 설정 실패: {e}")
+                        
                         # 💡 공통 정보
                         date_str = st.session_state['input_date']
                         creditor = current_data['금융사']
@@ -921,33 +986,42 @@ with tab3:
                         collateral_addr = current_data['물건지']
                         
                         # 💡 좌측 (사무소 보관용) 데이터 입력
-                        safe_set_value(ws, 'a24', date_str)  # 작성일
-                        safe_set_value(ws, 'm5', claim_amount)  # 채권최고액
-                        safe_set_value(ws, 'e7', collateral_addr)  # 물건지
+                        safe_set_value(ws, 'A24', date_str)  # 작성일
+                        safe_set_value(ws, 'M5', claim_amount)  # 채권최고액
+                        safe_set_value(ws, 'E7', collateral_addr)  # 물건지
                         
-                          
+                        # 좌측 보수액 영역
+                        safe_set_value(ws, 'C11', current_data["공급가액"])  # 기본료/공급가액
+                        safe_set_value(ws, 'C20', current_data["부가세"])  # 부가가치세
+                        safe_set_value(ws, 'C21', current_data["보수총액"])  # 보수 소계
+                        
+                        # 좌측 총계 (보수 + 공과금)
+                        safe_set_value(ws, 'C22', current_data["총 합계"])
+                        
                         # 💡 우측 (고객 보관용) 데이터 입력
-                        safe_set_value(ws, 'u24', date_str)  # 작성일
-                        safe_set_value(ws, 'Ag5', claim_amount)  # 채권최고액
-                        safe_set_value(ws, 'y7', collateral_addr)  # 물건지
+                        safe_set_value(ws, 'U24', date_str)  # 작성일
+                        safe_set_value(ws, 'AG5', claim_amount)  # 채권최고액
+                        safe_set_value(ws, 'Y7', collateral_addr)  # 물건지
                         
-                        # 우측 공과금 항목 (AH열)
+                        # 💡 우측 공과금 항목 (AH열)
                         safe_set_value(ws, 'AH11', current_data["등록면허세"])
                         safe_set_value(ws, 'AH12', current_data["지방교육세"])
                         safe_set_value(ws, 'AH13', current_data["증지대"])
                         safe_set_value(ws, 'AH14', current_data["채권할인금액"])
                         safe_set_value(ws, 'AH15', parse_int_input(current_data["제증명"]))
-                        safe_set_value(ws, 'AH16', parse_int_input(current_data["원인증서"]))
-                        safe_set_value(ws, 'AH17', parse_int_input(current_data["주소변경"]))
-                        safe_set_value(ws, 'AH18', parse_int_input(current_data["선순위 말소"]))
+                        safe_set_value(ws, 'AH16', parse_int_input(current_data["교통비"]))
+                        safe_set_value(ws, 'AH17', parse_int_input(current_data["원인증서"]))
+                        safe_set_value(ws, 'AH18', parse_int_input(current_data["주소변경"]))
+                        safe_set_value(ws, 'AH19', parse_int_input(current_data["확인서면"]))
+                        safe_set_value(ws, 'AH20', parse_int_input(current_data["선순위 말소"]))
                         
-                        # 💡 우측 소계 (AH21) - AH11~AH20의 합계
+                        # 💡 우측 공과금 소계 (AH21)
                         safe_set_value(ws, 'AH21', current_data["공과금 총액"])
                         
-                        # 💡 우측 총계 (Y22) - 보수총액 + 공과금총액
-                        safe_set_value(ws, 'AH21', current_data["공과금 총액"])
+                        # 💡 우측 총계 (Y22) - 고객용은 공과금만 표시하므로 소계와 동일
+                        safe_set_value(ws, 'Y22', current_data["공과금 총액"])
                         
-                        # 💡 하단 사무소 정보 (좌측/우측 동일하게)
+                        # 💡 하단 사무소 정보
                         firm_name = "법무법인 시화"
                         firm_addr = "서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)"
                         firm_ceo = "법무법인시화"
@@ -956,34 +1030,39 @@ with tab3:
                         firm_bank = "신한은행 100-035-852291"
                         firm_depositor = "예금주: 법무법인 시화"
                         
-                        # 좌측 사무소 정보 (E24~E29 기준, 실제 위치 확인 필요)
-                        safe_set_value(ws, 'B25', firm_addr)
-                        safe_set_value(ws, 'B26', firm_ceo)
-                        safe_set_value(ws, 'B27', firm_business_num)
-                        safe_set_value(ws, 'B28', firm_corp_num)
-                        safe_set_value(ws, 'B29', firm_bank + " " + firm_depositor)
+                        # 💡 좌측 사무소 정보
+                        safe_set_value(ws, 'D25', firm_addr)
+                        safe_set_value(ws, 'D26', firm_ceo)
+                        safe_set_value(ws, 'D27', firm_business_num)
+                        safe_set_value(ws, 'D28', firm_corp_num)
+                        safe_set_value(ws, 'D29', firm_bank + " " + firm_depositor)
                         
-                        # 우측 사무소 정보 (동일하게)
-                        safe_set_value(ws, 'AB25', firm_addr)
-                        safe_set_value(ws, 'AB26', firm_ceo)
-                        safe_set_value(ws, 'AB27', firm_business_num)
-                        safe_set_value(ws, 'AB28', firm_corp_num)
-                        safe_set_value(ws, 'AB29', firm_bank + " " + firm_depositor)
+                        # 💡 우측 사무소 정보
+                        safe_set_value(ws, 'X25', firm_addr)
+                        safe_set_value(ws, 'X26', firm_ceo)
+                        safe_set_value(ws, 'X27', firm_business_num)
+                        safe_set_value(ws, 'X28', firm_corp_num)
+                        safe_set_value(ws, 'X29', firm_bank + " " + firm_depositor)
 
+                        # Excel 파일 저장
                         excel_buffer = BytesIO()
                         wb.save(excel_buffer)
                         excel_buffer.seek(0)
                         
                         download_cols[1].download_button(
-                            label="⬇️ Excel 다운로드 (클릭)",
+                            label=⬇️ Excel 다운로드 (클릭)",
                             data=excel_buffer,
                             file_name=f"영수증_{current_data['채무자']}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             key="dl_loan_excel"
                         )
+                        st.success("✅ Excel 파일이 생성되었습니다!")
+                        
                     except Exception as e:
                         st.error(f"Excel 생성 중 오류 발생: {e}")
                         st.exception(e)
+                        import traceback
+                        st.code(traceback.format_exc())
 
             st.markdown("---")
             if st.session_state['missing_templates']:

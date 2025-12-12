@@ -36,91 +36,41 @@ logo_base64 = get_base64_image(LOGO_PATH)
 # 💡 등기온 공식 브랜드 컬러 및 스타일 적용
 st.markdown(f"""
 <style>
-    /* Noto Sans KR 폰트 임포트 */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+    .stApp {{ font-family: 'Noto Sans KR', sans-serif !important; }}
+    input, textarea, select, button {{ font-family: 'Noto Sans KR', sans-serif !important; }}
     
-    /* 앱 전체 폰트 적용 */
-    .stApp {{
-        font-family: 'Noto Sans KR', sans-serif !important;
-    }}
-    
-    /* 입력 필드 스타일 강화 */
-    input, textarea, select, button {{
-        font-family: 'Noto Sans KR', sans-serif !important;
-    }}
-    
-    /* 헤더 스타일 */
     .header-container {{
-        background: white;
-        border: 3px solid #00428B;
-        padding: 20px 40px;
-        border-radius: 15px;
-        margin-bottom: 20px;
+        background: white; border: 3px solid #00428B; padding: 20px 40px;
+        border-radius: 15px; margin-bottom: 20px;
         box-shadow: 0 4px 15px rgba(0, 66, 139, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        display: flex; align-items: center; justify-content: space-between;
     }}
-    
     .logo-title-container {{ display: flex; align-items: center; gap: 20px; }}
     .header-logo {{ width: 120px; height: auto; }}
-    
     .header-title {{ margin: 0; font-size: 2.5rem; font-weight: 700; }}
     .title-dg {{ color: #00428B; }}
     .title-form {{ color: #FDD000; }}
     .header-subtitle {{ color: #00428B; font-size: 1.2rem; font-weight: 500; margin: 0; }}
     
-    /* 탭 스타일 */
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }}
-    .stTabs [data-baseweb="tab"] {{
-        background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px;
-        font-weight: 600; color: #495057; border: 1px solid #dee2e6;
-    }}
-    .stTabs [aria-selected="true"] {{
-        background-color: #00428B; color: white; border-color: #00428B;
-    }}
+    .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
+    .stTabs [data-baseweb="tab"] {{ background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: 600; color: #495057; border: 1px solid #dee2e6; }}
+    .stTabs [aria-selected="true"] {{ background-color: #00428B; color: white; border-color: #00428B; }}
 
-    /* 입력창 디자인 */
-    .stTextInput > div > div > input,
-    .stNumberInput > div > div > input,
-    .stSelectbox > div > div > select {{
-        border-radius: 6px;
-        border: 1px solid #ced4da;
-        padding: 8px 12px;
-        font-size: 0.95rem;
+    .stTextInput > div > div > input, .stNumberInput > div > div > input, .stSelectbox > div > div > select {{
+        border-radius: 6px; border: 1px solid #ced4da; padding: 8px 12px; font-size: 0.95rem;
     }}
-    .stTextInput > div > div > input:focus {{
-        border-color: #00428B; box-shadow: 0 0 0 0.2rem rgba(0, 66, 139, 0.15);
-    }}
+    .stTextInput > div > div > input:focus {{ border-color: #00428B; box-shadow: 0 0 0 0.2rem rgba(0, 66, 139, 0.15); }}
 
-    /* 3탭 커스텀 레이아웃용 클래스 */
-    .section-header {{
-        font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid;
-    }}
+    /* 3탭 커스텀 레이아웃 */
+    .section-header {{ font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid; }}
     .income-header {{ color: #28a745; border-color: #28a745; }}
     .tax-header {{ color: #fd7e14; border-color: #fd7e14; }}
     .total-header {{ color: #dc3545; border-color: #dc3545; }}
-    
-    /* 라벨과 인풋 정렬 */
-    .row-label {{
-        font-weight: 500; color: #495057; display: flex; align-items: center; height: 100%; font-size: 0.9rem;
-    }}
-    
-    /* 총 청구금액 박스 */
-    .total-box {{
-        background-color: #ff0033; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0;
-        box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3);
-    }}
+    .row-label {{ font-weight: 500; color: #495057; display: flex; align-items: center; height: 100%; font-size: 0.9rem; }}
+    .total-box {{ background-color: #ff0033; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3); }}
     .total-amount {{ font-size: 2rem; font-weight: 800; }}
-
-    /* 컨테이너 배경 */
-    [data-testid="stContainer"] {{
-        background-color: white; padding: 20px; border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9ecef;
-    }}
+    [data-testid="stContainer"] {{ background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9ecef; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -156,7 +106,6 @@ else:
 # =============================================================================
 # 1. 라이브러리 및 환경 설정
 # =============================================================================
-
 try:
     import openpyxl
     from openpyxl.cell.cell import MergedCell
@@ -215,20 +164,16 @@ if 'template_status' not in st.session_state:
 # 3. 유틸리티 및 계산 로직
 # =============================================================================
 def format_date_korean(date_obj):
-    if isinstance(date_obj, date):
-        return f"{date_obj.year}년 {date_obj.month:02d}월 {date_obj.day:02d}일"
+    if isinstance(date_obj, date): return f"{date_obj.year}년 {date_obj.month:02d}월 {date_obj.day:02d}일"
     return str(date_obj)
 
 def format_number_with_comma(num_str):
     if num_str is None: return ""
-    if isinstance(num_str, (int, float)):
-        return "{:,}".format(int(num_str))
+    if isinstance(num_str, (int, float)): return "{:,}".format(int(num_str))
     numbers = re.sub(r'[^\d]', '', str(num_str))
     if not numbers: return ""
-    try:
-        return "{:,}".format(int(numbers))
-    except ValueError:
-        return num_str
+    try: return "{:,}".format(int(numbers))
+    except ValueError: return num_str
 
 def remove_commas(v):
     if v is None: return ""
@@ -252,8 +197,7 @@ def get_rate():
         response = requests.get(url, headers=headers, timeout=3)
         response.encoding = 'EUC-KR'
         match = re.search(r"오늘 채권할인율\s*=\s*([\d\.]+) %", response.text)
-        if match:
-            return math.ceil(float(match.group(1)) * 10) / 10 / 100
+        if match: return math.ceil(float(match.group(1)) * 10) / 10 / 100
     except: pass
     return 0.0913459
 
@@ -292,9 +236,7 @@ def extract_address_from_estate(estate_text):
                 return line.strip()
     return ""
 
-# =============================================================================
-# 4. PDF 생성 로직 (생략 - 기존 동일)
-# =============================================================================
+# PDF 생성 관련 (기존 코드 유지)
 def draw_fit_text(c, text, x, y, max_width, font_name='Korean', max_size=11, min_size=6):
     if not text: return
     current_size = max_size
@@ -452,7 +394,12 @@ def make_pdf(template_path, data):
     output_buffer.seek(0)
     return output_buffer
 
-def create_signature_overlay_pdf(data, font_path):
+def make_signature_pdf(template_path, data):
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
     try: 
         pdfmetrics.registerFont(TTFont('Korean', font_path)); font_name = 'Korean'
@@ -470,11 +417,8 @@ def create_signature_overlay_pdf(data, font_path):
         c.setFont(font_name, 11); text = data["date"]; tw = c.stringWidth(text, font_name, 11)
         c.drawString((width - tw) / 2, 150, text)
     c.showPage(); c.save(); packet.seek(0)
-    return packet
-
-def make_signature_pdf(template_path, data):
-    overlay_packet = create_signature_overlay_pdf(data, FONT_PATH)
-    overlay_pdf = PdfReader(overlay_packet); template_pdf = PdfReader(template_path); writer = PdfWriter()
+    
+    overlay_pdf = PdfReader(packet); template_pdf = PdfReader(template_path); writer = PdfWriter()
     output_buffer = BytesIO() 
     template_page = template_pdf.pages[0]; overlay_page = overlay_pdf.pages[0]
     template_page.merge_page(overlay_page); writer.add_page(template_page)
@@ -569,6 +513,7 @@ def calculate_all(data):
     try: rate = float(remove_commas(data.get('채권할인율', '0'))) / 100
     except ValueError: rate = 0 
     
+    # 1. 기본료 계산
     base_fee = lookup_base_fee(amount)
     data['기본료'] = base_fee
     
@@ -587,6 +532,7 @@ def calculate_all(data):
     else:
         data['공급가액'] = 0; data['부가세'] = 0; data['보수총액'] = 0
     
+    # 2. 공과금 (주소변경 포함)
     use_addr_change = st.session_state.get('use_address_change', False)
     addr_count = st.session_state.get('address_change_count', 1)
     
@@ -595,14 +541,27 @@ def calculate_all(data):
         addr_reg = 6000 * addr_count
         addr_edu = 1200 * addr_count
         addr_jeungji = 3000 * addr_count
+        
+        # [수정] 주소변경 시 수기입력 비용(Service Fee) 자동 반영
+        current_creditor_name = str(data.get('금융사', ''))
+        # 유노스 또는 드림앤캐쉬: 20,000 / 그외: 50,000
+        if "유노스" in current_creditor_name or "드림" in current_creditor_name:
+            addr_service_fee = 20000 * addr_count
+        else:
+            addr_service_fee = 50000 * addr_count
+        
+        # 수기입력 값 업데이트 (화면 반영을 위해)
+        st.session_state['cost_manual_주소변경'] = format_number_with_comma(addr_service_fee)
+    else:
+        # 체크 해제 시 수기입력 값 유지 혹은 초기화 (여기서는 0으로 초기화하지 않고 그대로 둠 or 필요시 0)
+        # st.session_state['cost_manual_주소변경'] = "0" # 필요 시 주석 해제
+        pass
 
+    # 등록면허세, 지방교육세 등 계산
     basic_reg = floor_10(amount * 0.002)
     basic_edu = floor_10(basic_reg * 0.2)
     final_reg = basic_reg + addr_reg
     final_edu = basic_edu + addr_edu
-    jeungji = (15000 * parcels) + addr_jeungji # 증지대 계산 수정 (18000 -> 15000 확인필요, 요청대로 유지하려면 18000 사용)
-    # 코드에서는 기본 18000원 + 주소변경 3000원 이었음. 
-    # 하지만 일반적 e-form 증지대는 15000원이 많음. 기존 코드 18000 유지.
     jeungji = (18000 * parcels) + addr_jeungji 
 
     bond = 0
@@ -616,9 +575,10 @@ def calculate_all(data):
     
     cost_total = final_reg + final_edu + jeungji + bond_disc
     
+    # 수기 입력 항목 합산 (위에서 자동 업데이트된 '주소변경' 포함)
     manual_cost_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
     for k in manual_cost_keys:
-        cost_total += parse_int_input(data.get(k, 0))
+        cost_total += parse_int_input(st.session_state.get('cost_manual_' + k, 0)) # session_state에서 직접 가져옴
     
     data['공과금 총액'] = cost_total
     data['총 합계'] = fee_total + cost_total
@@ -799,9 +759,6 @@ with tab3:
     # =========================================================
     # 1. 통합 기본 정보 섹션 (1탭 데이터 연동)
     # =========================================================
-    # 1탭의 데이터를 불러와서 기본값으로 설정하되, 수정 시에는 독립적으로 동작하거나 연결
-    
-    # 금융사, 물건지 정보 가져오기
     creditor_display = st.session_state.get('input_creditor', '')
     if creditor_display == "🖊️ 직접입력": creditor_display = st.session_state.get('input_creditor_name', '직접입력')
     
@@ -809,12 +766,18 @@ with tab3:
     if st.session_state.get('input_collateral_addr'): estate_display = st.session_state.get('input_collateral_addr')
 
     # 상단 3단 배열 (채권최고액, 필지수, 할인율)
-    row1_c1, row1_c2, row1_c3, row1_c4 = st.columns([2, 0.5, 1, 1.2]) # 비율 조정
+    row1_c1, row1_c2, row1_c3, row1_c4 = st.columns([2, 0.5, 1, 1.2]) 
     
     with row1_c1:
-        # 1탭 데이터가 있으면 그걸 value로 사용
-        st.text_input("채권최고액", value=st.session_state.get('input_amount'), key='calc_amount_input')
-        st.session_state['input_amount'] = st.session_state['calc_amount_input'] # 역방향 동기화
+        # [수정] 3탭에서도 즉시 콤마 적용되도록 on_change 추가
+        def on_tab3_amount_change():
+            val = st.session_state['calc_amount_input']
+            st.session_state['input_amount'] = format_number_with_comma(val)
+        
+        st.text_input("채권최고액", value=st.session_state.get('input_amount'), key='calc_amount_input', on_change=on_tab3_amount_change)
+        # 역방향 동기화 (입력값이 없으면 기본값 유지)
+        if st.session_state['calc_amount_input']:
+             st.session_state['input_amount'] = format_number_with_comma(st.session_state['calc_amount_input'])
 
     with row1_c3:
         # 필지수 처리
@@ -849,22 +812,16 @@ with tab3:
         val = st.session_state[key]
         st.session_state[key] = format_number_with_comma(val)
 
-    # 현재 입력값 수집
     creditor_for_calc = creditor_display
     calc_input_values = {
         '추가보수_val': st.session_state.get('add_fee_val', "0"),
         '기타보수_val': st.session_state.get('etc_fee_val', "0"),
         '할인금액': st.session_state.get('disc_fee_val', "0"),
-        '제증명': st.session_state['cost_manual_제증명'],
-        '교통비': st.session_state['cost_manual_교통비'],
-        '원인증서': st.session_state['cost_manual_원인증서'],
-        '주소변경': st.session_state['cost_manual_주소변경'],
-        '확인서면': st.session_state['cost_manual_확인서면'],
-        '선순위 말소': st.session_state['cost_manual_선순위 말소']
+        # 나머지 manual cost는 calculate_all 내부에서 session_state로 참조
     }
     
     calc_input_data = {
-        '채권최고액': st.session_state['input_amount'],
+        '채권최고액': st.session_state['input_amount'], # 콤마 적용된 최신값 전달
         '필지수': st.session_state['input_parcels'],
         '채권할인율': st.session_state['input_rate'],
         '금융사': creditor_for_calc,
@@ -878,24 +835,21 @@ with tab3:
     st.session_state['calc_data'] = final_data 
 
     # =========================================================
-    # 3. 3단 레이아웃 (보수액 / 공과금 / 결제) - 커스텀 레이아웃
+    # 3. 3단 레이아웃 (보수액 / 공과금 / 결제)
     # =========================================================
     
-    # 헬퍼 함수: 라벨 + 인풋을 한 줄에 배치
     def make_row(label, value, key, on_change=None, disabled=False):
-        c1, c2 = st.columns([1, 1.8]) # 라벨:인풋 비율
-        with c1:
-            st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
+        c1, c2 = st.columns([1, 1.8])
+        with c1: st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
         with c2:
             if on_change:
                 st.text_input(label, value=str(value), key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
             else:
                 st.text_input(label, value=str(value), key=key, label_visibility="collapsed", disabled=disabled)
 
-    # 메인 3컬럼
     col_income, col_tax, col_payment = st.columns([1, 1, 1])
 
-    # [1] 보수액 (Income) - 초록색 테마
+    # [1] 보수액 (Income)
     with col_income:
         st.markdown("<div class='section-header income-header'>💰 보수액 (Income)</div>", unsafe_allow_html=True)
         with st.container(border=True):
@@ -905,19 +859,16 @@ with tab3:
             make_row("할인금액", st.session_state['disc_fee_val'], "disc_fee_val", format_cost_input)
             
             st.markdown("---")
-            # 결과 표시 (텍스트로 깔끔하게)
             c_label, c_val = st.columns([1, 1])
             c_label.markdown("**공급가액**")
             c_val.markdown(f"<div style='text-align:right; color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액'))} 원</div>", unsafe_allow_html=True)
-            
             c_label.markdown("**부가세**")
             c_val.markdown(f"<div style='text-align:right; color:#28a745;'>{format_number_with_comma(final_data.get('부가세'))} 원</div>", unsafe_allow_html=True)
-            
             st.markdown("---")
             c_label.markdown("#### 보수 총액")
             c_val.markdown(f"<div style='text-align:right; color:#28a745; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('보수총액'))} 원</div>", unsafe_allow_html=True)
 
-    # [2] 공과금 (Tax) - 주황색 테마
+    # [2] 공과금 (Tax)
     with col_tax:
         st.markdown("<div class='section-header tax-header'>🏛️ 공과금 (Tax)</div>", unsafe_allow_html=True)
         with st.container(border=True):
@@ -941,7 +892,7 @@ with tab3:
             c_label.markdown("#### 공과금 소계")
             c_val.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</div>", unsafe_allow_html=True)
 
-    # [3] 결제 및 청구 - 빨간색 테마
+    # [3] 결제 및 청구
     with col_payment:
         st.markdown("<div class='section-header total-header'>🧾 결제 및 청구</div>", unsafe_allow_html=True)
         with st.container(border=True):
@@ -954,14 +905,13 @@ with tab3:
             
             st.markdown("---")
             
-            # 옵션 토글
             def toggle_show_fee():
                 st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             
             st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'], key='show_fee_checkbox', on_change=toggle_show_fee)
             
             st.markdown("#### ➕ 주소변경 추가")
-            st.caption("체크 시 1인당 10,200원 자동 합산")
+            st.caption("체크 시 공과금 + 수기비용 자동 합산")
             
             cp1, cp2 = st.columns([1, 1])
             with cp1:
@@ -971,12 +921,12 @@ with tab3:
             
             st.markdown("---")
             st.info("""
-            **ℹ️ 참고 기준**
-            * 유노스/드림앤캐쉬: 원인증서 2만, 주소변경 2만, 말소 10만
-            * 마젤란/티플레인: 확인 필요
+            **ℹ️ 참고 기준 (주소변경비용)**
+            * 유노스/드림앤캐쉬: 20,000원/인
+            * 기타 금융사: 50,000원/인
+            * (체크 시 수기입력란에 자동반영)
             """)
 
-    # 하단 다운로드 버튼 존
     st.markdown("---")
     d_col1, d_col2 = st.columns(2)
     if d_col1.button("📄 비용내역 PDF 다운로드", use_container_width=True):
@@ -987,7 +937,7 @@ with tab3:
                 'client': {'채권최고액': format_number_with_comma(final_data['채권최고액']), '필지수': final_data['필지수'], '금융사': creditor_for_pdf, '채무자': final_data['채무자'], '물건지': final_data['물건지']},
                 'fee_items': {k: parse_int_input(final_data.get(k)) for k in ['기본료', '추가보수_val', '기타보수_val', '할인금액']},
                 'fee_totals': {'공급가액': final_data['공급가액'], '부가세': final_data['부가세'], '보수총액': final_data['보수총액']},
-                'cost_items': {k: parse_int_input(final_data.get(k)) for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]},
+                'cost_items': {k: parse_int_input(st.session_state.get('cost_manual_' + k, 0)) if k in manual_cost_keys else parse_int_input(final_data.get(k)) for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]},
                 'cost_totals': {'공과금 총액': final_data['공과금 총액']},
                 'cost_section_title': '2. 공과금' if st.session_state['show_fee'] else '1. 공과금', 'grand_total': final_data['총 합계'],
                 'labels': {'추가보수_label': "추가보수", '기타보수_label': "기타보수"}
@@ -1023,9 +973,9 @@ with tab3:
                 safe_set('U24', date_str); safe_set('V4', final_data['채무자']); safe_set('AG5', claim_amt); safe_set('Y7', final_data['물건지'])
                 safe_set('AH11', final_data["등록면허세"]); safe_set('AH12', final_data["지방교육세"])
                 safe_set('AH13', final_data["증지대"]); safe_set('AH14', final_data["채권할인금액"])
-                safe_set('AH15', parse_int_input(final_data["제증명"])); safe_set('AH16', parse_int_input(final_data["원인증서"]))
-                safe_set('AH17', parse_int_input(final_data["주소변경"])); safe_set('AH18', parse_int_input(final_data["선순위 말소"]))
-                safe_set('AH19', parse_int_input(final_data["교통비"])); safe_set('AH21', final_data["공과금 총액"]); safe_set('Y22', final_data["공과금 총액"])
+                safe_set('AH15', parse_int_input(st.session_state['cost_manual_제증명'])); safe_set('AH16', parse_int_input(st.session_state['cost_manual_원인증서']))
+                safe_set('AH17', parse_int_input(st.session_state['cost_manual_주소변경'])); safe_set('AH18', parse_int_input(st.session_state['cost_manual_선순위 말소']))
+                safe_set('AH19', parse_int_input(st.session_state['cost_manual_교통비'])); safe_set('AH21', final_data["공과금 총액"]); safe_set('Y22', final_data["공과금 총액"])
 
                 firm_info = ["서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)", "법무법인시화", "214-887-97287", "1833-5482", "신한은행 100-035-852291 예금주: 법무법인 시화"]
                 for i, txt in enumerate(firm_info):

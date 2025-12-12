@@ -80,12 +80,13 @@ st.markdown(f"""
         border-radius: 10px;
     }}
     
+    /* [수정] 타이틀 색상 변경 (가독성 개선: 흰색) */
     .header-title {{
-        color: white;
+        color: #FFFFFF; 
         margin: 0;
         font-size: 2.5rem;
         font-weight: 700;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        text-shadow: 0px 2px 4px rgba(0,0,0,0.3);
     }}
     
     .header-subtitle {{
@@ -262,7 +263,7 @@ TEMPLATE_FILENAMES = {
 
 CREDITORS = {
     "(주)티플레인대부 대표이사 윤웅원": {"addr": "서울특별시 마포구 삼개로16, 2신관1층103호(도화동,근신빌딩)", "corp_num": "110111-7350161", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
-    "(주)유노스프레스티지대부 사내이사 한은수": {"addr": "서울특별시 강남구 압구정로28길24, 5층 501호(신사동,디앤씨빌딩)", "corp_num": "110111-4138560", "fee": {"제증명": 20000, "교통비": 0, "원인증서": 0}},
+    "(주)유노스프레스티지대부 사내이사 한은수": {"addr": "서울특별시 강남구 압구정로28길24, 5층 501호(신사동,디앤씨빌딩)", "corp_num": "110111-4138560", "fee": {"제증명": 20000, "교통비": 0, "원인증서": 0, "확인서면": 0, "선순위 말소": 0}},
     "(주)파트너스대부 사내이사 허성": {"addr": "부산광역시 부산진구 서면문화로 43, 2층(부전동)", "corp_num": "180111-1452175", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
     "(주)드림앤캐쉬대부 대표이사 김재섭": {"addr": "서울특별시 강남구 압구정로28길24, 6층 601호(신사동,디앤씨빌딩)", "corp_num": "110111-4176552", "fee": {"제증명": 20000, "교통비": 0, "원인증서": 0}},
     "(주)마젤란트러스트대부 대표이사 김병수": {"addr": "서울특별시 서초구 강남대로34길 7, 7층(양재동,이안빌딩)", "corp_num": "110111-6649979", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
@@ -295,17 +296,18 @@ def format_date(text):
     return text
 
 def format_number_with_comma(num_str):
-    if not num_str: return ""
-    if isinstance(num_str, int): num_str = str(num_str)
-    has_comma = ',' in num_str
-    numbers = re.sub(r'[^\d]', '', num_str)
+    """숫자를 천단위 콤마 문자열로 변환 (입력값 정제 포함)"""
+    if num_str is None: return ""
+    # 이미 int라면 바로 변환
+    if isinstance(num_str, (int, float)):
+        return "{:,}".format(int(num_str))
+    
+    # 문자열에서 숫자만 추출
+    numbers = re.sub(r'[^\d]', '', str(num_str))
     if not numbers: return ""
+    
     try:
-        num_int = int(numbers)
-        if num_int > 0 and len(numbers) < 4 and not has_comma:
-             numbers = numbers + '000'
-             num_int = int(numbers)
-        return "{:,}".format(num_int)
+        return "{:,}".format(int(numbers))
     except ValueError:
         return num_str
 
@@ -586,6 +588,7 @@ if 'calc_data' not in st.session_state:
     st.session_state['addr_change'] = False
     st.session_state['addr_count'] = 1
     st.session_state['input_amount'] = ""
+    st.session_state['amount_raw_input'] = ""
     st.session_state['input_parcels'] = 1
     st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
     st.session_state['input_debtor'] = ""
@@ -601,6 +604,22 @@ if 'calc_data' not in st.session_state:
     st.session_state['input_debtor_rrn'] = ""
     st.session_state['input_owner_rrn'] = ""
 
+# 3탭 수기 입력값 초기 상태 설정 (키가 없을 경우 기본값 세팅)
+manual_keys = ["cost_manual_제증명", "cost_manual_교통비", "cost_manual_원인증서", "cost_manual_확인서면", "cost_manual_선순위 말소", "cost_manual_주소변경"]
+for key in manual_keys:
+    if key not in st.session_state:
+        # 초기값은 첫 번째 채권자 기준
+        first_creditor = list(CREDITORS.keys())[0]
+        fees = CREDITORS[first_creditor]["fee"]
+        
+        if "제증명" in key: val = fees.get("제증명", 50000)
+        elif "교통비" in key: val = fees.get("교통비", 100000)
+        elif "원인증서" in key: val = fees.get("원인증서", 50000)
+        elif "주소변경" in key: val = 0
+        else: val = 0
+        
+        st.session_state[key] = format_number_with_comma(str(val))
+
 def parse_int_input(text_input):
     try:
         if isinstance(text_input, int): return text_input
@@ -609,19 +628,22 @@ def parse_int_input(text_input):
         return 0
 
 def handle_creditor_change():
-    """금융사 변경 시 수수료 기본값을 세션 상태에 즉시 반영"""
+    """금융사 변경 시 수수료 기본값을 세션 상태 및 3탭 입력창에 즉시 반영"""
     creditor_key = st.session_state['t1_creditor_select']
+    # 유노스 등 특정 금융사 로직 적용을 위해 CREDITORS 딕셔너리 값 참조
     default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
     
-    st.session_state.calc_data['제증명'] = format_number_with_comma(str(default_fees.get("제증명")))
-    st.session_state.calc_data['교통비'] = format_number_with_comma(str(default_fees.get("교통비")))
-    st.session_state.calc_data['원인증서'] = format_number_with_comma(str(default_fees.get("원인증서")))
+    # 3탭의 수기 입력란(Widget Key) 값을 직접 업데이트
+    st.session_state['cost_manual_제증명'] = format_number_with_comma(str(default_fees.get("제증명", 0)))
+    st.session_state['cost_manual_교통비'] = format_number_with_comma(str(default_fees.get("교통비", 0)))
+    st.session_state['cost_manual_원인증서'] = format_number_with_comma(str(default_fees.get("원인증서", 0)))
+    st.session_state['cost_manual_확인서면'] = format_number_with_comma(str(default_fees.get("확인서면", 0)))
+    st.session_state['cost_manual_선순위 말소'] = format_number_with_comma(str(default_fees.get("선순위 말소", 0)))
+    
+    # 계산 데이터용 상태 업데이트
     st.session_state.calc_data['creditor_key_check'] = creditor_key
-    st.session_state.calc_data['확인서면'] = format_number_with_comma("0")
-    st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
 
 def calculate_all(data):
-    # [수정] Session State에 직접 쓰지 않고 계산된 dict만 리턴하도록 변경 (오류 방지)
     amount = parse_int_input(data.get('채권최고액')) 
     parcels = parse_int_input(data.get('필지수'))
     try:
@@ -651,20 +673,6 @@ def calculate_all(data):
     edu = floor_10(reg * 0.2)
     jeungji = 18000 * parcels
     
-    # 💡 주소변경 로직
-    if st.session_state['addr_change']:
-        count = st.session_state['addr_count']
-        # 공과금 증가
-        reg += 6000 * count
-        edu += 1200 * count
-        jeungji += 3000 * count
-        # 주소변경 보수료
-        addr_svc_fee = 20000 * count
-        data['주소변경'] = addr_svc_fee
-    else:
-        # 체크 해제시 수기 입력값 보존
-        data['주소변경'] = parse_int_input(data.get('주소변경', 0))
-    
     bond = 0
     if amount >= 20_000_000: bond = math.ceil(amount * 0.01 / 10000) * 10000
     bond_disc = floor_10(bond * rate)
@@ -676,16 +684,11 @@ def calculate_all(data):
     
     cost_total = reg + edu + jeungji + bond_disc
     
+    # 3탭 수기 입력 항목 합산 (주소변경 포함)
     manual_cost_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
     for k in manual_cost_keys:
         cost_total += parse_int_input(data.get(k, 0))
     
-    for i in range(1, 7):
-        label_key = f'custom_label_{i}'
-        value_key = f'custom_value_{i}'
-        if data.get(label_key):
-            cost_total += parse_int_input(data.get(value_key, 0))
-
     data['공과금 총액'] = cost_total
     data['총 합계'] = fee_total + cost_total
     
@@ -710,11 +713,10 @@ with tab1:
         st.session_state['input_owner_addr'] = ""
         st.session_state['contract_type'] = "개인"
         st.session_state['guarantee'] = "한정근담보"
-        # 💡 초기화 시 빈 문자열로 변경
         st.session_state['input_amount'] = ""
-        st.session_state['amount_raw_input'] = "" # [수정] 위젯 키값도 초기화
+        st.session_state['amount_raw_input'] = "" 
         st.session_state['input_collateral_addr'] = ""
-        st.session_state['collateral_addr_input'] = "" # [수정] 위젯 키값도 초기화
+        st.session_state['collateral_addr_input'] = "" 
         st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
         st.session_state['input_debtor_rrn'] = ""
         st.session_state['input_owner_rrn'] = ""
@@ -752,28 +754,16 @@ with tab1:
         st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
         st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
         
-        # 💡 [수정] 채권최고액 - on_change 콜백 (위젯 키 직접 업데이트)
+        # 💡 [수정] 채권최고액 - 실시간 콤마 적용 on_change 콜백
         def format_amount_on_change():
-            # 입력된 값(amount_raw_input)을 가져옴
             raw_val = st.session_state.get('amount_raw_input', '')
-            clean_val = re.sub(r'[^\d]', '', raw_val)
-            
-            if not clean_val:
-                st.session_state['input_amount'] = ""
-                st.session_state['amount_raw_input'] = "" # 입력창도 비움
-                return
-            
-            int_val = int(clean_val)
-            formatted = "{:,}".format(int_val)
-            
-            # 세션 상태에 저장 (데이터용)
+            formatted = format_number_with_comma(raw_val)
             st.session_state['input_amount'] = formatted
-            # 위젯 상태에 저장 (화면 표시용)
             st.session_state['amount_raw_input'] = formatted
         
         st.text_input(
             "채권최고액", 
-            key='amount_raw_input',  # value=... 대신 key로 관리
+            key='amount_raw_input', 
             on_change=format_amount_on_change,
             placeholder="숫자만 입력하면 자동으로 콤마가 생깁니다"
         )
@@ -784,25 +774,22 @@ with tab1:
             korean_amt = number_to_korean(clean_amt)
             st.info(f"💰 **{korean_amt}**")
         
-        # 💡 [수정] 물건지 주소 복사 - 위젯 Key(collateral_addr_input) 직접 타겟팅
+        # 물건지 주소 복사
         st.markdown("#### 물건지 주소")
         col_addr1, col_addr2 = st.columns([5, 1])
         
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
-                # 입력창(text_area)의 key에 값을 넣어야 즉시 반영됨
                 st.session_state['collateral_addr_input'] = st.session_state['t1_debtor_addr']
-                # 데이터 변수도 같이 업데이트
                 st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
         
         with col_addr1:
             st.text_area(
                 "물건지 주소 (수기 입력)", 
-                key='collateral_addr_input', # 이 key를 통해 값을 넣음
+                key='collateral_addr_input',
                 height=100,
                 label_visibility="collapsed"
             )
-            # 입력값 변경 시 변수에 저장 (동기화)
             if 'collateral_addr_input' in st.session_state:
                 st.session_state['input_collateral_addr'] = st.session_state['collateral_addr_input']
         
@@ -900,7 +887,6 @@ with tab2:
 
     with col_r2:
         st.markdown("#### 🏠 부동산의 표시 (확인용)")
-        
         st.session_state['sig_estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state.get('estate_text'), height=350, key='sig_estate_area', disabled=True)
         st.info("내용은 1번 탭의 '부동산의 표시'와 동기화됩니다.")
         
@@ -940,10 +926,9 @@ with tab2:
                     st.success("✅ PDF 파일 생성 완료!")
                 except Exception as e:
                     st.error(f"자필서명 PDF 생성 중 오류 발생: {e}")
-                    st.exception(e)
 
 # =============================================================================
-# Tab 3: 비용 계산 및 영수증 (실시간 계산 수정 완료)
+# Tab 3: 비용 계산 및 영수증
 # =============================================================================
 with tab3:
     col_header3 = st.columns([5, 1])
@@ -956,88 +941,106 @@ with tab3:
         st.session_state['addr_count'] = 1
         st.session_state['input_parcels'] = 1
         st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
+        handle_creditor_change() # 수기 입력값도 리셋
         st.rerun()
     
     st.markdown("---")
     
     with st.expander("📌 기초 계산 정보 (1번 탭과 연동)", expanded=True):
         col_c1, col_c2, col_c3 = st.columns([2, 1, 2])
-        
         col_c1.text_input("채권최고액", value=st.session_state.get('input_amount'), disabled=True)
-        
         parcels = col_c2.text_input("필지수", value=st.session_state.get('input_parcels'), key='calc_parcels_input')
         try: 
             st.session_state['input_parcels'] = int(remove_commas(parcels))
         except: 
             st.session_state['input_parcels'] = 1
-        
         rate_cols = col_c3.columns([3, 1])
         st.session_state['input_rate'] = rate_cols[0].text_input("채권할인율(%)", value=st.session_state.get('input_rate'), key='calc_rate_input')
         if rate_cols[1].button("🔄", help="현재 채권할인율로 업데이트"):
             st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
             st.rerun()
-            
         st.text_input("금융사", value=st.session_state.get('input_creditor'), disabled=True)
         st.text_input("채무자", value=st.session_state.get('input_debtor'), disabled=True)
         st.text_input("물건지", value=extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'), disabled=True)
     
-    # 금융사 정보 업데이트 (세션 상태 유지)
-    creditor_key = st.session_state['input_creditor']
-    default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
-
-    if st.session_state.calc_data.get('creditor_key_check') != creditor_key:
-        st.session_state.calc_data['제증명'] = format_number_with_comma(str(default_fees.get("제증명")))
-        st.session_state.calc_data['교통비'] = format_number_with_comma(str(default_fees.get("교통비")))
-        st.session_state.calc_data['원인증서'] = format_number_with_comma(str(default_fees.get("원인증서")))
-        st.session_state.calc_data['확인서면'] = format_number_with_comma("0")
-        st.session_state.calc_data['선순위 말소'] = format_number_with_comma("0")
-        st.session_state.calc_data['creditor_key_check'] = creditor_key
-
-    # 1. UI 및 입력 먼저 렌더링 (여기서 값을 받아야 계산 가능)
+    # 1. UI 및 입력
     col_f, col_c, col_t = st.columns(3)
     
-    # 입력값 임시 저장을 위한 딕셔너리
-    temp_inputs = {}
+    # 공통 콜백 함수: 수기 입력값 실시간 콤마 적용
+    def format_cost_input(key):
+        val = st.session_state[key]
+        st.session_state[key] = format_number_with_comma(val)
+
+    # 입력값을 담을 딕셔너리
+    calc_input_values = {}
 
     with col_f:
         with st.container(border=True):
             st.markdown("#### 💰 보수액")
-            # 기존 값 가져오기
-            val_add = st.session_state.calc_data.get('추가보수_val', "0")
-            val_etc = st.session_state.calc_data.get('기타보수_val', "0")
-            val_disc = st.session_state.calc_data.get('할인금액', "0")
+            # 보수액 입력란도 실시간 콤마 적용
+            st.text_input("추가보수", key='add_fee_val', on_change=format_cost_input, args=('add_fee_val',))
+            st.text_input("기타보수", key='etc_fee_val', on_change=format_cost_input, args=('etc_fee_val',))
+            st.text_input("할인금액", key='disc_fee_val', on_change=format_cost_input, args=('disc_fee_val',))
             
-            # 입력 필드 생성 (즉시 반영을 위해)
-            temp_inputs['추가보수_val'] = st.text_input("추가보수", value=val_add, key='add_fee_val')
-            temp_inputs['기타보수_val'] = st.text_input("기타보수", value=val_etc, key='etc_fee_val')
-            temp_inputs['할인금액'] = st.text_input("할인금액", value=val_disc, key='disc_fee_val')
+            calc_input_values['추가보수_val'] = st.session_state.get('add_fee_val', "0")
+            calc_input_values['기타보수_val'] = st.session_state.get('etc_fee_val', "0")
+            calc_input_values['할인금액'] = st.session_state.get('disc_fee_val', "0")
             
             st.divider()
-            # 메트릭은 계산 후 표시해야 하므로 placeholder 사용 혹은 나중에 채움
             metric_placeholder_f = st.empty()
 
     with col_c:
         with st.container(border=True):
             st.markdown("#### 🏛️ 공과금")
             st.markdown("##### 자동 계산")
-            # [수정] 자동 계산 항목에 value 직접 바인딩 (key 제거 혹은 Read-only로 사용)
-            # 여기서는 placeholder를 만들고 아래에서 'value'를 채운 위젯을 다시 그림
             metric_placeholder_c_auto = st.empty()
             
             st.divider()
             st.markdown("##### 수기 입력")
             
-            # 수기 입력 필드
-            manual_keys = ["제증명", "교통비", "원인증서", "확인서면", "선순위 말소"]
-            for k in manual_keys:
-                default_v = st.session_state.calc_data.get(k, "0")
-                temp_inputs[k] = st.text_input(k, value=default_v, key=f'cost_manual_{k}')
+            # [수정] 수기 입력 섹션 (세션 상태 키를 바로 사용)
+            # 1. 제증명
+            st.text_input("제증명", key='cost_manual_제증명', on_change=format_cost_input, args=('cost_manual_제증명',))
+            calc_input_values['제증명'] = st.session_state['cost_manual_제증명']
             
+            # 2. 교통비
+            st.text_input("교통비", key='cost_manual_교통비', on_change=format_cost_input, args=('cost_manual_교통비',))
+            calc_input_values['교통비'] = st.session_state['cost_manual_교통비']
+            
+            # 3. 원인증서
+            st.text_input("원인증서", key='cost_manual_원인증서', on_change=format_cost_input, args=('cost_manual_원인증서',))
+            calc_input_values['원인증서'] = st.session_state['cost_manual_원인증서']
+            
+            # 4. 확인서면
+            st.text_input("확인서면", key='cost_manual_확인서면', on_change=format_cost_input, args=('cost_manual_확인서면',))
+            calc_input_values['확인서면'] = st.session_state['cost_manual_확인서면']
+            
+            # 5. 선순위 말소
+            st.text_input("선순위 말소", key='cost_manual_선순위 말소', on_change=format_cost_input, args=('cost_manual_선순위 말소',))
+            calc_input_values['선순위 말소'] = st.session_state['cost_manual_선순위 말소']
+            
+            # 6. [수정] 주소변경 로직 (체크박스 + 입력란)
+            def update_addr_cost():
+                if st.session_state['addr_change_check']:
+                    cnt = st.session_state['addr_count_num']
+                    cost = cnt * 20000
+                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(str(cost))
+                else:
+                    st.session_state['cost_manual_주소변경'] = "0"
+
+            addr_cols = st.columns([1, 1.5])
+            with addr_cols[0]:
+                st.checkbox("주소변경", key='addr_change_check', on_change=update_addr_cost)
+                st.number_input("인원", min_value=1, max_value=10, value=1, step=1, key='addr_count_num', label_visibility="collapsed", on_change=update_addr_cost)
+            with addr_cols[1]:
+                st.text_input("주소변경비용", key='cost_manual_주소변경', on_change=format_cost_input, args=('cost_manual_주소변경',))
+            
+            calc_input_values['주소변경'] = st.session_state['cost_manual_주소변경']
+
             st.divider()
             metric_placeholder_c_total = st.empty()
 
-    # 2. 데이터 취합 및 계산 수행
-    # 기존 데이터 복사 후 현재 입력값으로 업데이트
+    # 2. 데이터 취합 및 계산
     calc_input_data = {
         '채권최고액': st.session_state['input_amount'],
         '필지수': st.session_state['input_parcels'],
@@ -1048,21 +1051,18 @@ with tab3:
         '추가보수_label': "추가보수", 
         '기타보수_label': "기타보수",
     }
-    # 위에서 받은 입력값 병합
-    calc_input_data.update(temp_inputs)
+    calc_input_data.update(calc_input_values)
     
-    # 계산 실행 (실시간 반영)
     final_data = calculate_all(calc_input_data)
-    st.session_state['calc_data'] = final_data # 세션 상태 업데이트
+    st.session_state['calc_data'] = final_data 
 
-    # 3. 계산된 결과 화면에 표시 (Metric & Input)
+    # 3. 결과 표시
     with metric_placeholder_f.container():
         st.metric("기본료", format_number_with_comma(final_data.get('기본료')) + " 원")
         st.metric("공급가액", format_number_with_comma(final_data.get('공급가액')) + " 원")
         st.metric("부가세", format_number_with_comma(final_data.get('부가세')) + " 원")
         st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
     
-    # [수정] 여기가 핵심입니다. calculate_all 결과값을 'value'에 직접 넣어서 표시
     with metric_placeholder_c_auto.container():
         st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=True)
         st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=True)
@@ -1081,9 +1081,6 @@ with tab3:
             def toggle_show_fee():
                 st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             
-            def toggle_addr_change():
-                st.session_state['addr_change'] = st.session_state['addr_change_checkbox']
-            
             st.checkbox(
                 "보수액 포함 표시", 
                 value=st.session_state['show_fee'],
@@ -1091,21 +1088,11 @@ with tab3:
                 on_change=toggle_show_fee
             )
             
-            addr_cols = st.columns([3, 1])
-            addr_cols[0].checkbox(
-                "주소변경 포함 (공과금)", 
-                value=st.session_state['addr_change'],
-                key='addr_change_checkbox',
-                on_change=toggle_addr_change
-            )
-            st.session_state['addr_count'] = addr_cols[1].number_input("인원수", min_value=1, max_value=10, value=st.session_state['addr_count'], step=1)
-            
-            st.caption(f"💡 주소변경 보수료: {format_number_with_comma(final_data.get('주소변경', 0))} 원")
-            
             st.divider()
 
             download_cols = st.columns(2)
             
+            # PDF 다운로드 (기존 로직 유지)
             if download_cols[0].button("📄 비용내역 PDF", use_container_width=True):
                 if LIBS_OK:
                     pdf_data = st.session_state.calc_data 
@@ -1137,11 +1124,9 @@ with tab3:
                         'grand_total': pdf_data['총 합계'],
                         'labels': {'추가보수_label': "추가보수", '기타보수_label': "기타보수"}
                     }
-                    
                     try:
                         pdf = PDFConverter(show_fee=st.session_state['show_fee'])
                         pdf_buffer = pdf.output_pdf(data_for_pdf, None) 
-                        
                         download_cols[0].download_button(
                             label="⬇️ 다운로드",
                             data=pdf_buffer,
@@ -1155,6 +1140,7 @@ with tab3:
                 else:
                     st.error("PDF 라이브러리 미설치")
 
+            # Excel 영수증 다운로드
             excel_template_path = st.session_state['template_status'].get("영수증")
             if download_cols[1].button("🏦 영수증 Excel", disabled=not EXCEL_OK or not excel_template_path, use_container_width=True):
                 if not EXCEL_OK:
@@ -1183,13 +1169,12 @@ with tab3:
                             except Exception as e:
                                 st.warning(f"셀 {cell_ref} 설정 실패: {e}")
                         
-                        # 💡 1번 탭의 날짜 사용
                         date_str = st.session_state['input_date']
                         debtor = final_data['채무자']
                         claim_amount = parse_int_input(final_data["채권최고액"])
                         collateral_addr = final_data['물건지']
                         
-                        # 좌측 (사무소 보관용) - 💡 C열에서 E열로 변경
+                        # 사무소 보관용 (좌측)
                         safe_set_value(ws, 'A24', date_str)
                         safe_set_value(ws, 'M5', claim_amount)
                         safe_set_value(ws, 'E7', collateral_addr)
@@ -1198,9 +1183,9 @@ with tab3:
                         safe_set_value(ws, 'E21', final_data["보수총액"])
                         safe_set_value(ws, 'E22', final_data["총 합계"])
                         
-                        # 우측 (고객 보관용)
+                        # 고객 보관용 (우측)
                         safe_set_value(ws, 'U24', date_str)
-                        safe_set_value(ws, 'V4', debtor)  # 💡 채무자 성명
+                        safe_set_value(ws, 'V4', debtor)
                         safe_set_value(ws, 'AG5', claim_amount)
                         safe_set_value(ws, 'Y7', collateral_addr)
                         
@@ -1208,15 +1193,18 @@ with tab3:
                         safe_set_value(ws, 'AH12', final_data["지방교육세"])
                         safe_set_value(ws, 'AH13', final_data["증지대"])
                         safe_set_value(ws, 'AH14', final_data["채권할인금액"])
-                        safe_set_value(ws, 'AH15', parse_int_input(final_data["제증명"]))
-                        safe_set_value(ws, 'AH16', parse_int_input(final_data["교통비"]))
-                        safe_set_value(ws, 'AH17', parse_int_input(final_data["원인증서"]))
-                        safe_set_value(ws, 'AH18', parse_int_input(final_data["주소변경"]))
-                        safe_set_value(ws, 'AH19', parse_int_input(final_data["확인서면"]))
-                        safe_set_value(ws, 'AH20', parse_int_input(final_data["선순위 말소"]))
-                        safe_set_value(ws, 'AH21', final_data["공과금 총액"])
+                        
+                        # [수정] 엑셀 매핑 변경 (요청사항 반영)
+                        safe_set_value(ws, 'AH15', parse_int_input(final_data["제증명"]))     # 제증명
+                        safe_set_value(ws, 'AH16', parse_int_input(final_data["원인증서"]))   # 원인증서
+                        safe_set_value(ws, 'AH17', parse_int_input(final_data["주소변경"]))   # 주소변경
+                        safe_set_value(ws, 'AH18', parse_int_input(final_data["선순위 말소"])) # 선순위 말소
+                        safe_set_value(ws, 'AH19', parse_int_input(final_data["교통비"]))     # 교통비
+                        # AH20은 공란 혹은 기타 항목 (현재 매핑 없음)
+                        safe_set_value(ws, 'AH21', final_data["공과금 총액"])                 # 소계/총계
                         safe_set_value(ws, 'Y22', final_data["공과금 총액"])
                         
+                        # 법무법인 정보
                         firm_addr = "서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)"
                         firm_ceo = "법무법인시화"
                         firm_business_num = "214-887-97287"
@@ -1251,18 +1239,16 @@ with tab3:
                         
                     except Exception as e:
                         st.error(f"Excel 생성 중 오류 발생: {e}")
-                        st.exception(e)
             
             st.markdown("---")
             if st.session_state['missing_templates']:
                 st.error(f"⚠️ **다음 템플릿 파일이 누락되었습니다:** {', '.join(st.session_state['missing_templates'])}")
-            st.caption("ℹ️ 웹 환경에서는 Excel을 PDF로 자동 변환하는 기능(win32com)은 지원하지 않습니다. Excel 파일로 다운로드됩니다.")
 
-# 푸터
+# [수정] 푸터 문구 통합 및 간소화
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px;'>
-    <p style='margin: 0; font-size: 0.9rem;'><strong>DG-Form</strong> | 등기온 전자설정 자동화 시스템</p>
-    <p style='margin: 5px 0 0 0; font-size: 0.8rem;'>법무법인 시화 | 부동산 등기는 등기온</p>
+    <p style='margin: 0; font-size: 0.9rem;'><strong>DG-Form 등기온 전자설정 자동화 시스템</strong> | 법무법인 시화</p>
+    <p style='margin: 5px 0 0 0; font-size: 0.8rem;'>부동산 등기는 등기온</p>
 </div>
 """, unsafe_allow_html=True)

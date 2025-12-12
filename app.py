@@ -106,23 +106,45 @@ else:
 # =============================================================================
 # 1. 라이브러리 및 환경 설정
 # =============================================================================
+
+# Excel (영수증)
 try:
     import openpyxl
     from openpyxl.cell.cell import MergedCell
     EXCEL_OK = True
-except ImportError:
+except Exception:
+    openpyxl = None
+    MergedCell = None
     EXCEL_OK = False
 
+# 계약서/자필서명정보 PDF (템플릿 위에 오버레이)
 try:
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from PyPDF2 import PdfReader, PdfWriter
+    PDF_OK = True
+except Exception:
+    canvas = None
+    A4 = None
+    pdfmetrics = None
+    TTFont = None
+    PdfReader = None
+    PdfWriter = None
+    PDF_OK = False
+
+# 비용내역 PDF (FPDF)
+try:
     from fpdf import FPDF
-    LIBS_OK = True
-except ImportError:
-    LIBS_OK = False
+    FPDF_OK = True
+except Exception:
+    FPDF = None
+    FPDF_OK = False
+
+# (기존 코드 호환) 계약서/자필서명정보 생성 여부 체크에 사용
+LIBS_OK = PDF_OK
+
 
 # =============================================================================
 # 2. 상수 및 데이터
@@ -236,119 +258,187 @@ def extract_address_from_estate(estate_text):
                 return line.strip()
     return ""
 
-# PDF 생성 관련 (기존 코드 유지)
+# PDF 생성 관련
+
 def draw_fit_text(c, text, x, y, max_width, font_name='Korean', max_size=11, min_size=6):
-    if not text: return
+    """주어진 폭(max_width)에 맞춰 폰트 크기를 줄여가며 텍스트를 출력"""
+    if not text or not PDF_OK:
+        return
     current_size = max_size
-    text_width = pdfmetrics.stringWidth(text, font_name, current_size)
-    while text_width > max_width and current_size > min_size:
-        current_size -= 0.5
+    try:
         text_width = pdfmetrics.stringWidth(text, font_name, current_size)
-    c.setFont(font_name, current_size)
-    c.drawString(x, y, text)
+        while text_width > max_width and current_size > min_size:
+            current_size -= 0.5
+            text_width = pdfmetrics.stringWidth(text, font_name, current_size)
+        c.setFont(font_name, current_size)
+        c.drawString(x, y, text)
+    except Exception:
+        # 폰트 문제 등 발생 시 그냥 기본 출력 시도
+        try:
+            c.setFont('Helvetica', 10)
+            c.drawString(x, y, str(text))
+        except Exception:
+            pass
 
-class PDFConverter(FPDF):
-    def __init__(self, show_fee=True):
-        super().__init__()
-        self.show_fee = show_fee
-        self.line_height = 6.5
-        self.col_width1 = 150; self.col_width2 = 30
-        if FONT_PATH and os.path.exists(FONT_PATH):
-            try:
-                self.add_font('Malgun', '', FONT_PATH, uni=True)
-                self.add_font('Malgun', 'B', FONT_PATH, uni=True) 
-                self.set_font('Malgun', '', 11)
-            except: 
+
+# 비용내역 PDF 생성기 (fpdf2 필요)
+if FPDF_OK:
+    class PDFConverter(FPDF):
+        def __init__(self, show_fee=True):
+            super().__init__()
+            self.show_fee = show_fee
+            self.line_height = 6.5
+            self.col_width1 = 150
+            self.col_width2 = 30
+
+            # 한글 폰트 세팅
+            if FONT_PATH and os.path.exists(FONT_PATH):
+                try:
+                    self.add_font('Malgun', '', FONT_PATH, uni=True)
+                    # Bold는 별도 파일이 없으면 동일 파일로 등록 (그래도 대부분 동작)
+                    self.add_font('Malgun', 'B', FONT_PATH, uni=True)
+                    self.set_font('Malgun', '', 11)
+                except Exception:
+                    self.set_font('Arial', '', 11)
+            else:
                 self.set_font('Arial', '', 11)
-        else: 
-            self.set_font('Arial', '', 11)
-    
-    def draw_labelframe_box(self, title, content_func):
-        self.set_font(self.font_family, 'B', 11)
-        start_y = self.get_y(); start_x = self.l_margin
-        box_width = self.w - self.l_margin * 2
-        self.set_y(start_y + self.line_height)
-        content_func()
-        content_end_y = self.get_y()
-        box_height = (content_end_y - start_y) + self.line_height + 4
-        self.set_draw_color(211, 211, 211)
-        self.rect(start_x, start_y + self.font_size / 2, box_width, box_height)
-        title_width = self.get_string_width(title)
-        self.set_fill_color(255, 255, 255)
-        self.rect(start_x + 9, start_y, title_width + 4, self.font_size, 'F')
-        self.set_xy(start_x + 11, start_y)
-        self.cell(0, self.font_size, title)
-        self.set_y(content_end_y + 4)
-    
-    def output_pdf(self, data, save_path):
-        self.add_page(); self.set_font(self.font_family, 'B', 20)
-        self.cell(0, 12, "근저당권설정 비용내역", ln=True, align="C"); self.ln(2)
-        self.set_font(self.font_family, '', 9)
-        self.cell(0, 5, f"작성일: {data['date_input']}", ln=True, align="R"); self.ln(2) 
-        self.set_font(self.font_family, '', 10)
-        client = data['client']
-        self.cell(95, self.line_height, f"채권최고액: {client['채권최고액']} 원")
-        self.cell(0, self.line_height, f"|  필지수: {client['필지수']}", ln=True)
-        if client.get('금융사'): self.cell(0, self.line_height, f"금  융  사: {client['금융사']}", ln=1)
-        if client.get('채무자'): self.cell(0, self.line_height, f"채  무  자: {client['채무자']}", ln=1)
-        if client.get('물건지'): self.multi_cell(0, self.line_height, f"물  건  지: {client['물건지']}")
-        self.ln(3)
-        if self.show_fee:
-            def fee_content():
-                self.set_font(self.font_family, '', 10)
-                items = data['fee_items']
-                subtotal = items.get('기본료', 0) + items.get(data['labels']['추가보수_label'], 0) + items.get(data['labels']['기타보수_label'], 0)
-                self.set_x(self.l_margin + 5)
-                self.cell(self.col_width1, self.line_height, "보수액 소계")
-                self.cell(self.col_width2, self.line_height, f"{subtotal:,} 원", ln=1, align="R")
-                self.set_x(self.l_margin + 5)
-                self.cell(self.col_width1, self.line_height, "할인금액")
-                self.cell(self.col_width2, self.line_height, f"{items.get('할인금액', 0):,} 원", ln=1, align="R")
-                self.ln(1); self.line(self.get_x() + 5, self.get_y(), self.w - self.r_margin - 5, self.get_y()); self.ln(1)
-                self.set_font(self.font_family, 'B', 10); self.set_x(self.l_margin + 5)
-                self.cell(self.col_width1, self.line_height, "보수 소계")
-                self.cell(self.col_width2, self.line_height, f"{data['fee_totals']['보수총액']:,} 원", ln=1, align="R")
-            self.draw_labelframe_box("1. 보수액", fee_content)
-            self.ln(5)
-        def costs_content():
-            self.set_font(self.font_family, '', 10)
-            items = data['cost_items']
-            for name, val in items.items():
-                if val != 0:
-                    self.set_x(self.l_margin + 5); self.cell(self.col_width1, self.line_height, name)
-                    self.cell(self.col_width2, self.line_height, f"{int(val):,} 원", ln=1, align="R")
-            self.ln(1); self.line(self.get_x() + 5, self.get_y(), self.w - self.r_margin - 5, self.get_y()); self.ln(1)
-            self.set_font(self.font_family, 'B', 10); self.set_x(self.l_margin + 5)
-            self.cell(self.col_width1, self.line_height, "공과금소계")
-            self.cell(self.col_width2, self.line_height, f"{data['cost_totals']['공과금 총액']:,} 원", ln=1, align="R")
-        self.draw_labelframe_box(data['cost_section_title'], costs_content)
-        self.ln(5)
-        self.set_font(self.font_family, 'B', 12)
-        self.cell(self.col_width1 - 10, 10, "등기비용 합계")
-        self.cell(self.col_width2 + 10, 10, f"{data['grand_total']:,} 원", ln=True, align="R")
-        self.ln(5)
-        def notes_content():
-            self.set_font(self.font_family, '', 10); self.set_x(self.l_margin + 5)
-            self.cell(0, self.line_height, "• 원활한 확인을 위해 입금자는 소유자명(또는 채무자명)으로 기재해 주세요.", ln=1)
-            self.set_x(self.l_margin + 5)
-            self.cell(0, self.line_height, "• 입금 완료 후, 메시지를 남겨주시면 더욱 빠르게 처리됩니다.", ln=1)
-            self.set_x(self.l_margin + 5)
-            self.cell(0, self.line_height, "• 업무는 입금이 확인된 후에 진행됩니다.", ln=1)
-        self.draw_labelframe_box("안내사항", notes_content)
-        self.ln(5)
-        def bank_content():
-            self.set_font(self.font_family, '', 10); self.set_x(self.l_margin + 5)
-            self.cell(0, self.line_height, "• 신한은행 100-035-852291", ln=1)
-            self.set_x(self.l_margin + 5)
-            self.cell(0, self.line_height, "• 예금주 : 법무법인 시화", ln=1)
-        self.draw_labelframe_box("입금 계좌 정보", bank_content)
-        pdf_buffer = BytesIO()
-        pdf_bytes = self.output(dest='S')
-        if isinstance(pdf_bytes, str): pdf_buffer.write(pdf_bytes.encode('latin-1'))
-        else: pdf_buffer.write(pdf_bytes)
-        pdf_buffer.seek(0)
-        return pdf_buffer 
 
+        def draw_labelframe_box(self, title, content_func):
+            self.set_font(self.font_family, 'B', 11)
+            start_y = self.get_y()
+            start_x = self.l_margin
+            box_width = self.w - self.l_margin * 2
+
+            self.set_y(start_y + self.line_height)
+            content_func()
+            content_end_y = self.get_y()
+
+            box_height = (content_end_y - start_y) + self.line_height + 4
+            self.set_draw_color(211, 211, 211)
+            self.rect(start_x, start_y + self.font_size / 2, box_width, box_height)
+
+            title_width = self.get_string_width(title)
+            self.set_fill_color(255, 255, 255)
+            self.rect(start_x + 9, start_y, title_width + 4, self.font_size, 'F')
+            self.set_xy(start_x + 11, start_y)
+            self.cell(0, self.font_size, title)
+            self.set_y(content_end_y + 4)
+
+        def output_pdf(self, data):
+            self.add_page()
+            self.set_font(self.font_family, 'B', 20)
+            self.cell(0, 12, "근저당권설정 비용내역", ln=True, align="C")
+            self.ln(2)
+
+            self.set_font(self.font_family, '', 9)
+            self.cell(0, 5, f"작성일: {data['date_input']}", ln=True, align="R")
+            self.ln(2)
+
+            self.set_font(self.font_family, '', 10)
+            client = data['client']
+            self.cell(95, self.line_height, f"채권최고액: {client['채권최고액']} 원")
+            self.cell(0, self.line_height, f"|  필지수: {client['필지수']}", ln=True)
+            if client.get('금융사'):
+                self.cell(0, self.line_height, f"금  융  사: {client['금융사']}", ln=1)
+            if client.get('채무자'):
+                self.cell(0, self.line_height, f"채  무  자: {client['채무자']}", ln=1)
+            if client.get('물건지'):
+                self.multi_cell(0, self.line_height, f"물  건  지: {client['물건지']}")
+
+            self.ln(3)
+
+            if self.show_fee:
+                def fee_content():
+                    self.set_font(self.font_family, '', 10)
+                    items = data['fee_items']
+
+                    # 키 호환 (추가보수/기타보수 vs *_val)
+                    add_key = data.get('labels', {}).get('추가보수_label', '추가보수')
+                    etc_key = data.get('labels', {}).get('기타보수_label', '기타보수')
+                    add_val = items.get(add_key, items.get('추가보수_val', 0))
+                    etc_val = items.get(etc_key, items.get('기타보수_val', 0))
+
+                    subtotal = items.get('기본료', 0) + add_val + etc_val
+
+                    self.set_x(self.l_margin + 5)
+                    self.cell(self.col_width1, self.line_height, "보수액 소계")
+                    self.cell(self.col_width2, self.line_height, f"{subtotal:,} 원", ln=1, align="R")
+
+                    self.set_x(self.l_margin + 5)
+                    self.cell(self.col_width1, self.line_height, "할인금액")
+                    self.cell(self.col_width2, self.line_height, f"{items.get('할인금액', 0):,} 원", ln=1, align="R")
+
+                    self.ln(1)
+                    self.line(self.get_x() + 5, self.get_y(), self.w - self.r_margin - 5, self.get_y())
+                    self.ln(1)
+
+                    self.set_font(self.font_family, 'B', 10)
+                    self.set_x(self.l_margin + 5)
+                    self.cell(self.col_width1, self.line_height, "보수 소계")
+                    self.cell(self.col_width2, self.line_height, f"{data['fee_totals']['보수총액']:,} 원", ln=1, align="R")
+
+                self.draw_labelframe_box("1. 보수액", fee_content)
+                self.ln(5)
+
+            def costs_content():
+                self.set_font(self.font_family, '', 10)
+                items = data['cost_items']
+                for name, val in items.items():
+                    if val != 0:
+                        self.set_x(self.l_margin + 5)
+                        self.cell(self.col_width1, self.line_height, name)
+                        self.cell(self.col_width2, self.line_height, f"{int(val):,} 원", ln=1, align="R")
+
+                self.ln(1)
+                self.line(self.get_x() + 5, self.get_y(), self.w - self.r_margin - 5, self.get_y())
+                self.ln(1)
+
+                self.set_font(self.font_family, 'B', 10)
+                self.set_x(self.l_margin + 5)
+                self.cell(self.col_width1, self.line_height, "공과금소계")
+                self.cell(self.col_width2, self.line_height, f"{data['cost_totals']['공과금 총액']:,} 원", ln=1, align="R")
+
+            self.draw_labelframe_box(data['cost_section_title'], costs_content)
+            self.ln(5)
+
+            self.set_font(self.font_family, 'B', 12)
+            self.cell(self.col_width1 - 10, 10, "등기비용 합계")
+            self.cell(self.col_width2 + 10, 10, f"{data['grand_total']:,} 원", ln=True, align="R")
+            self.ln(5)
+
+            def notes_content():
+                self.set_font(self.font_family, '', 10)
+                self.set_x(self.l_margin + 5)
+                self.cell(0, self.line_height, "• 원활한 확인을 위해 입금자는 소유자명(또는 채무자명)으로 기재해 주세요.", ln=1)
+                self.set_x(self.l_margin + 5)
+                self.cell(0, self.line_height, "• 입금 완료 후, 메시지를 남겨주시면 더욱 빠르게 처리됩니다.", ln=1)
+                self.set_x(self.l_margin + 5)
+                self.cell(0, self.line_height, "• 업무는 입금이 확인된 후에 진행됩니다.", ln=1)
+
+            self.draw_labelframe_box("안내사항", notes_content)
+            self.ln(5)
+
+            def bank_content():
+                self.set_font(self.font_family, '', 10)
+                self.set_x(self.l_margin + 5)
+                self.cell(0, self.line_height, "• 신한은행 100-035-852291", ln=1)
+                self.set_x(self.l_margin + 5)
+                self.cell(0, self.line_height, "• 예금주 : 법무법인 시화", ln=1)
+
+            self.draw_labelframe_box("입금 계좌 정보", bank_content)
+
+            # BytesIO로 반환
+            from io import BytesIO
+            pdf_buffer = BytesIO()
+            pdf_bytes = self.output(dest='S')
+            if isinstance(pdf_bytes, str):
+                pdf_buffer.write(pdf_bytes.encode('latin-1'))
+            else:
+                pdf_buffer.write(pdf_bytes)
+            pdf_buffer.seek(0)
+            return pdf_buffer
+else:
+    PDFConverter = None
 def create_overlay_pdf(data, font_path):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
     try: 
@@ -394,34 +484,62 @@ def make_pdf(template_path, data):
     output_buffer.seek(0)
     return output_buffer
 
-def make_signature_pdf(template_path, data):
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    
-    packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
-    try: 
-        pdfmetrics.registerFont(TTFont('Korean', font_path)); font_name = 'Korean'
-    except: 
+def make_signature_pdf(template_path, data, font_path=FONT_PATH):
+    # reportlab/PyPDF2가 없으면 안내
+    if not PDF_OK:
+        raise RuntimeError("PDF 라이브러리(reportlab/PyPDF2)가 설치되지 않았습니다.")
+
+    packet = BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    width, height = A4
+
+    # 폰트 등록 (한글)
+    try:
+        if font_path and os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('Korean', font_path))
+            font_name = 'Korean'
+        else:
+            font_name = 'Helvetica'
+    except Exception:
         font_name = 'Helvetica'
-    c.setFont(font_name, 10); estate_x = 150; estate_y = height - 170; line_h = 14
+
+    c.setFont(font_name, 10)
+    estate_x = 150
+    estate_y = height - 170
+    line_h = 14
+
     if data.get("estate_text"):
-        for i, line in enumerate(data["estate_text"].split("\n")[:17]):
+        for i, line in enumerate(str(data["estate_text"]).split("\n")[:17]):
             c.drawString(estate_x, estate_y - (i * line_h), line)
-    if data.get("debtor_name"): c.drawString(250, 322, data["debtor_name"])
-    if data.get("debtor_rrn"): c.drawString(250, 298, data["debtor_rrn"])
-    if data.get("owner_name"): c.drawString(400, 322, data["owner_name"])
-    if data.get("owner_rrn"): c.drawString(400, 298, data["owner_rrn"])
+
+    if data.get("debtor_name"):
+        c.drawString(250, 322, str(data["debtor_name"]))
+    if data.get("debtor_rrn"):
+        c.drawString(250, 298, str(data["debtor_rrn"]))
+    if data.get("owner_name"):
+        c.drawString(400, 322, str(data["owner_name"]))
+    if data.get("owner_rrn"):
+        c.drawString(400, 298, str(data["owner_rrn"]))
+
     if data.get("date"):
-        c.setFont(font_name, 11); text = data["date"]; tw = c.stringWidth(text, font_name, 11)
-        c.drawString((width - tw) / 2, 150, text)
-    c.showPage(); c.save(); packet.seek(0)
-    
-    overlay_pdf = PdfReader(packet); template_pdf = PdfReader(template_path); writer = PdfWriter()
-    output_buffer = BytesIO() 
-    template_page = template_pdf.pages[0]; overlay_page = overlay_pdf.pages[0]
-    template_page.merge_page(overlay_page); writer.add_page(template_page)
+        c.setFont(font_name, 11)
+        text_date = str(data["date"])
+        tw = c.stringWidth(text_date, font_name, 11)
+        c.drawString((width - tw) / 2, 150, text_date)
+
+    c.showPage()
+    c.save()
+    packet.seek(0)
+
+    overlay_pdf = PdfReader(packet)
+    template_pdf = PdfReader(template_path)
+    writer = PdfWriter()
+
+    output_buffer = BytesIO()
+    template_page = template_pdf.pages[0]
+    overlay_page = overlay_pdf.pages[0]
+    template_page.merge_page(overlay_page)
+    writer.add_page(template_page)
     writer.write(output_buffer)
     output_buffer.seek(0)
     return output_buffer
@@ -507,6 +625,8 @@ def handle_creditor_change():
         st.session_state['cost_manual_선순위 말소'] = format_number_with_comma(str(default_fees.get("선순위 말소", 0)))
     st.session_state.calc_data['creditor_key_check'] = creditor_key
 
+MANUAL_COST_NAMES = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
+
 def calculate_all(data):
     amount = parse_int_input(data.get('채권최고액')) 
     parcels = parse_int_input(data.get('필지수'))
@@ -553,8 +673,9 @@ def calculate_all(data):
         # 수기입력 값 업데이트 (화면 반영을 위해)
         st.session_state['cost_manual_주소변경'] = format_number_with_comma(addr_service_fee)
     else:
-        # [수정] 체크 해제 시 수기입력 값 초기화
-        st.session_state['cost_manual_주소변경'] = "0" 
+        # 체크 해제 시 수기입력 값 유지 혹은 초기화 (여기서는 0으로 초기화하지 않고 그대로 둠 or 필요시 0)
+        # st.session_state['cost_manual_주소변경'] = "0" # 필요 시 주석 해제
+        pass
 
     # 등록면허세, 지방교육세 등 계산
     basic_reg = floor_10(amount * 0.002)
@@ -575,8 +696,7 @@ def calculate_all(data):
     cost_total = final_reg + final_edu + jeungji + bond_disc
     
     # 수기 입력 항목 합산 (위에서 자동 업데이트된 '주소변경' 포함)
-    manual_cost_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
-    for k in manual_cost_keys:
+    for k in MANUAL_COST_NAMES:
         cost_total += parse_int_input(st.session_state.get('cost_manual_' + k, 0)) # session_state에서 직접 가져옴
     
     data['공과금 총액'] = cost_total
@@ -756,13 +876,6 @@ with tab3:
     st.markdown("---")
 
     # =========================================================
-    # [수정] 0. 1탭 데이터 동기화 (Sync Data)
-    # =========================================================
-    # 3탭 진입 시, 1탭의 주요 정보(채권최고액, 채무자 등)가 있다면 3탭 변수와 동기화
-    if 'input_amount' in st.session_state and st.session_state['input_amount']:
-        st.session_state['calc_amount_input'] = st.session_state['input_amount']
-    
-    # =========================================================
     # 1. 통합 기본 정보 섹션 (1탭 데이터 연동)
     # =========================================================
     creditor_display = st.session_state.get('input_creditor', '')
@@ -777,8 +890,10 @@ with tab3:
     with row1_c1:
         # [수정] 3탭에서도 즉시 콤마 적용되도록 on_change 추가
         def on_tab3_amount_change():
-            val = st.session_state['calc_amount_input']
-            st.session_state['input_amount'] = format_number_with_comma(val)
+            val = st.session_state.get('calc_amount_input', '')
+            formatted = format_number_with_comma(val)
+            st.session_state['calc_amount_input'] = formatted
+            st.session_state['input_amount'] = formatted
         
         st.text_input("채권최고액", value=st.session_state.get('input_amount'), key='calc_amount_input', on_change=on_tab3_amount_change)
         # 역방향 동기화 (입력값이 없으면 기본값 유지)
@@ -804,11 +919,11 @@ with tab3:
     # 하단 2단 배열 (금융사, 물건지)
     row2_c1, row2_c2 = st.columns([1, 1])
     with row2_c1:
-        st.text_input("금융사", value=creditor_display, key="calc_creditor_view")
+        st.text_input("금융사", value=creditor_display, key="calc_creditor_view", disabled=True)
     with row2_c2:
-        st.text_input("채무자", value=st.session_state.get('input_debtor'), key="calc_debtor_view")
+        st.text_input("채무자", value=st.session_state.get('input_debtor'), key="calc_debtor_view", disabled=True)
         
-    st.text_input("물건지", value=estate_display, key="calc_estate_view")
+    st.text_input("물건지", value=estate_display, key="calc_estate_view", disabled=True)
     st.markdown("---")
 
     # =========================================================
@@ -859,7 +974,7 @@ with tab3:
     with col_income:
         st.markdown("<div class='section-header income-header'>💰 보수액 (Income)</div>", unsafe_allow_html=True)
         with st.container(border=True):
-            make_row("기본료", format_number_with_comma(final_data.get('기본료')), "disp_base", disabled=False)
+            make_row("기본료", format_number_with_comma(final_data.get('기본료')), "disp_base", disabled=True)
             make_row("추가보수", st.session_state['add_fee_val'], "add_fee_val", format_cost_input)
             make_row("기타보수", st.session_state['etc_fee_val'], "etc_fee_val", format_cost_input)
             make_row("할인금액", st.session_state['disc_fee_val'], "disc_fee_val", format_cost_input)
@@ -879,10 +994,10 @@ with tab3:
         st.markdown("<div class='section-header tax-header'>🏛️ 공과금 (Tax)</div>", unsafe_allow_html=True)
         with st.container(border=True):
             st.caption("[자동 계산]")
-            make_row("등록면허세", format_number_with_comma(final_data.get("등록면허세")), "disp_reg", disabled=False)
-            make_row("지방교육세", format_number_with_comma(final_data.get("지방교육세")), "disp_edu", disabled=False)
-            make_row("증지대", format_number_with_comma(final_data.get("증지대")), "disp_stamp", disabled=False)
-            make_row("채권할인", format_number_with_comma(final_data.get("채권할인금액")), "disp_bond", disabled=False)
+            make_row("등록면허세", format_number_with_comma(final_data.get("등록면허세")), "disp_reg", disabled=True)
+            make_row("지방교육세", format_number_with_comma(final_data.get("지방교육세")), "disp_edu", disabled=True)
+            make_row("증지대", format_number_with_comma(final_data.get("증지대")), "disp_stamp", disabled=True)
+            make_row("채권할인", format_number_with_comma(final_data.get("채권할인금액")), "disp_bond", disabled=True)
             
             st.markdown("---")
             st.caption("[수기 입력]")
@@ -936,24 +1051,62 @@ with tab3:
     st.markdown("---")
     d_col1, d_col2 = st.columns(2)
     if d_col1.button("📄 비용내역 PDF 다운로드", use_container_width=True):
-        if LIBS_OK:
+        if True:
             creditor_for_pdf = creditor_display
-            data_for_pdf = {
-                "date_input": format_date_korean(st.session_state['input_date']), 
-                'client': {'채권최고액': format_number_with_comma(final_data['채권최고액']), '필지수': final_data['필지수'], '금융사': creditor_for_pdf, '채무자': final_data['채무자'], '물건지': final_data['물건지']},
-                'fee_items': {k: parse_int_input(final_data.get(k)) for k in ['기본료', '추가보수_val', '기타보수_val', '할인금액']},
-                'fee_totals': {'공급가액': final_data['공급가액'], '부가세': final_data['부가세'], '보수총액': final_data['보수총액']},
-                'cost_items': {k: parse_int_input(st.session_state.get('cost_manual_' + k, 0)) if k in manual_cost_keys else parse_int_input(final_data.get(k)) for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]},
-                'cost_totals': {'공과금 총액': final_data['공과금 총액']},
-                'cost_section_title': '2. 공과금' if st.session_state['show_fee'] else '1. 공과금', 'grand_total': final_data['총 합계'],
-                'labels': {'추가보수_label': "추가보수", '기타보수_label': "기타보수"}
-            }
-            try:
-                pdf = PDFConverter(show_fee=st.session_state['show_fee'])
-                pdf_buffer = pdf.output_pdf(data_for_pdf, None) 
-                d_col1.download_button(label="⬇️ PDF 저장", data=pdf_buffer, file_name=f"비용내역_{final_data['채무자']}.pdf", mime="application/pdf", key="dl_pdf_final")
-            except Exception as e: st.error(f"오류: {e}")
-        else: st.error("PDF 라이브러리 없음")
+            if not FPDF_OK or PDFConverter is None:
+                st.error("비용내역 PDF 생성 라이브러리(fpdf2)가 설치되지 않았습니다.")
+            else:
+                data_for_pdf = {
+                    "date_input": format_date_korean(st.session_state['input_date']),
+                    "client": {
+                        "채권최고액": format_number_with_comma(final_data['채권최고액']),
+                        "필지수": final_data['필지수'],
+                        "금융사": creditor_for_pdf,
+                        "채무자": final_data['채무자'],
+                        "물건지": final_data['물건지'],
+                    },
+                    "fee_items": {
+                        "기본료": parse_int_input(final_data.get('기본료')),
+                        "추가보수": parse_int_input(final_data.get('추가보수_val')),
+                        "기타보수": parse_int_input(final_data.get('기타보수_val')),
+                        "할인금액": parse_int_input(final_data.get('할인금액')),
+                    },
+                    "fee_totals": {
+                        "공급가액": final_data['공급가액'],
+                        "부가세": final_data['부가세'],
+                        "보수총액": final_data['보수총액'],
+                    },
+                    "cost_items": {
+                        "등록면허세": parse_int_input(final_data.get('등록면허세')),
+                        "지방교육세": parse_int_input(final_data.get('지방교육세')),
+                        "증지대": parse_int_input(final_data.get('증지대')),
+                        "채권할인금액": parse_int_input(final_data.get('채권할인금액')),
+                        "제증명": parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
+                        "교통비": parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
+                        "원인증서": parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
+                        "주소변경": parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
+                        "확인서면": parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
+                        "선순위 말소": parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0)),
+                    },
+                    "cost_totals": {"공과금 총액": final_data['공과금 총액']},
+                    "cost_section_title": '2. 공과금' if st.session_state['show_fee'] else '1. 공과금',
+                    "grand_total": final_data['총 합계'],
+                    "labels": {"추가보수_label": "추가보수", "기타보수_label": "기타보수"},
+                }
+
+                try:
+                    pdf = PDFConverter(show_fee=st.session_state['show_fee'])
+                    pdf_buffer = pdf.output_pdf(data_for_pdf)
+                    d_col1.download_button(
+                        label="⬇️ PDF 저장",
+                        data=pdf_buffer,
+                        file_name=f"비용내역_{final_data['채무자']}.pdf",
+                        mime="application/pdf",
+                        key="dl_pdf_final",
+                    )
+                except Exception as e:
+                    st.error(f"오류: {e}")
+        
 
     if d_col2.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True):
         if EXCEL_OK and st.session_state['template_status'].get("영수증"):

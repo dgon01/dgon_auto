@@ -659,13 +659,18 @@ def handle_creditor_change():
     """[수정2] 금융사 변경 시 수수료 기본값을 세션 상태 및 3탭 입력창에 즉시 반영"""
     creditor_key = st.session_state['t1_creditor_select']
     
-    # 직접입력 모드인 경우 수수료를 0으로 설정
+    # 직접입력 모드인 경우 수수료를 0으로 설정하고 채권자 정보 초기화
     if creditor_key == "🖊️ 직접입력":
         st.session_state['cost_manual_제증명'] = "0"
         st.session_state['cost_manual_교통비'] = "0"
         st.session_state['cost_manual_원인증서'] = "0"
         st.session_state['cost_manual_확인서면'] = "0"
         st.session_state['cost_manual_선순위 말소'] = "0"
+        
+        # 채권자 정보 초기화
+        st.session_state['input_creditor_name'] = ""
+        st.session_state['input_creditor_corp_num'] = ""
+        st.session_state['input_creditor_addr'] = ""
     else:
         default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
         

@@ -662,21 +662,10 @@ def calculate_all(data):
         addr_edu = 1200 * addr_count
         addr_jeungji = 3000 * addr_count
         
-        # [수정] 주소변경 시 수기입력 비용(Service Fee) 자동 반영
-        current_creditor_name = str(data.get('금융사', ''))
-        # 유노스 또는 드림앤캐쉬: 20,000 / 그외: 50,000
-        if "유노스" in current_creditor_name or "드림" in current_creditor_name:
-            addr_service_fee = 20000 * addr_count
-        else:
-            addr_service_fee = 50000 * addr_count
-        
-        # 수기입력 값 업데이트 (화면 반영을 위해)
-        st.session_state['cost_manual_주소변경'] = format_number_with_comma(addr_service_fee)
-    else:
-        # 체크 해제 시 수기입력 값 유지 혹은 초기화 (여기서는 0으로 초기화하지 않고 그대로 둠 or 필요시 0)
-        # st.session_state['cost_manual_주소변경'] = "0" # 필요 시 주석 해제
-        pass
-
+        # [중요] calculate_all 함수에서는 "계산"만 담당하고
+        # UI 입력값(st.session_state)을 여기서 직접 바꾸지 않습니다.
+        # 입력값 변경은 'on_change' 콜백에서 처리합니다.
+    
     # 등록면허세, 지방교육세 등 계산
     basic_reg = floor_10(amount * 0.002)
     basic_edu = floor_10(basic_reg * 0.2)
@@ -876,6 +865,15 @@ with tab3:
     st.markdown("---")
 
     # =========================================================
+    # [수정됨] 0. 1탭 데이터 동기화 (Sync Data)
+    # 반드시 위젯을 그리기 전에 값을 맞춰줘야 합니다.
+    # =========================================================
+    if 'input_amount' in st.session_state and st.session_state['input_amount']:
+        # 만약 1탭 값(input_amount)과 3탭 값(calc_amount_input)이 다르면, 1탭 값으로 덮어씀
+        if st.session_state.get('calc_amount_input') != st.session_state['input_amount']:
+            st.session_state['calc_amount_input'] = st.session_state['input_amount']
+    
+    # =========================================================
     # 1. 통합 기본 정보 섹션 (1탭 데이터 연동)
     # =========================================================
     creditor_display = st.session_state.get('input_creditor', '')
@@ -896,9 +894,6 @@ with tab3:
             st.session_state['input_amount'] = formatted
         
         st.text_input("채권최고액", value=st.session_state.get('input_amount'), key='calc_amount_input', on_change=on_tab3_amount_change)
-        # 역방향 동기화 (입력값이 없으면 기본값 유지)
-        if st.session_state['calc_amount_input']:
-             st.session_state['input_amount'] = format_number_with_comma(st.session_state['calc_amount_input'])
 
     with row1_c3:
         # 필지수 처리
@@ -938,7 +933,6 @@ with tab3:
         '추가보수_val': st.session_state.get('add_fee_val', "0"),
         '기타보수_val': st.session_state.get('etc_fee_val', "0"),
         '할인금액': st.session_state.get('disc_fee_val', "0"),
-        # 나머지 manual cost는 calculate_all 내부에서 session_state로 참조
     }
     
     calc_input_data = {
@@ -1034,11 +1028,33 @@ with tab3:
             st.markdown("#### ➕ 주소변경 추가")
             st.caption("체크 시 공과금 + 수기비용 자동 합산")
             
+            # [수정됨] 주소변경 체크 시 즉시 반영되는 콜백 함수
+            def update_address_cost():
+                # 체크 상태 확인
+                if st.session_state.get('use_address_change', False):
+                    # 금융사 이름 가져오기
+                    cur_creditor = st.session_state.get('input_creditor', '')
+                    if cur_creditor == "🖊️ 직접입력":
+                        cur_creditor = st.session_state.get('input_creditor_name', '')
+                    
+                    count = st.session_state.get('address_change_count', 1)
+                    # 유노스/드림앤캐쉬: 20,000 / 그외: 50,000
+                    if "유노스" in cur_creditor or "드림" in cur_creditor:
+                        fee = 20000 * count
+                    else:
+                        fee = 50000 * count
+                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
+                else:
+                    # 체크 해제 시 0원으로 초기화
+                    st.session_state['cost_manual_주소변경'] = "0"
+
             cp1, cp2 = st.columns([1, 1])
             with cp1:
-                st.checkbox("주소변경 포함", key='use_address_change')
+                # on_change에 update_address_cost 함수 연결
+                st.checkbox("주소변경 포함", key='use_address_change', on_change=update_address_cost)
             with cp2:
-                st.number_input("인원수", min_value=1, value=1, key='address_change_count', label_visibility="collapsed")
+                # 인원수가 바뀌어도 비용 다시 계산
+                st.number_input("인원수", min_value=1, value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
             
             st.markdown("---")
             st.info("""

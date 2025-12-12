@@ -36,29 +36,29 @@ KAKAO_PATH = os.path.join(APP_ROOT, "kakaotalk.png")
 
 logo_base64 = get_base64_image(LOGO_PATH)
 
-# 💡 등기온 공식 브랜드 컬러 및 Noto Sans KR 폰트 적용
-st.markdown(f"""
+# 💡 [수정됨] f-string 제거하여 CSS 중괄호 충돌 방지
+st.markdown("""
 <style>
     /* Noto Sans KR 폰트 임포트 */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
     
     /* 앱 전체 폰트 적용 */
-    .stApp {{
+    .stApp {
         font-family: 'Noto Sans KR', sans-serif !important;
-    }}
+    }
     
     /* 입력 필드 등 내부 요소 폰트 강제 적용 */
-    input, textarea, select, button {{
+    input, textarea, select, button {
         font-family: 'Noto Sans KR', sans-serif !important;
-    }}
+    }
     
     /* 메인 컨테이너 배경 */
-    .main {{
+    .main {
         background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
-    }}
+    }
     
     /* 헤더 타이틀 가독성 개선 (흰색 텍스트) */
-    .header-container {{
+    .header-container {
         background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
         padding: 20px 40px;
         border-radius: 15px;
@@ -67,47 +67,47 @@ st.markdown(f"""
         display: flex;
         align-items: center;
         justify-content: space-between;
-    }}
+    }
     
-    .logo-title-container {{
+    .logo-title-container {
         display: flex;
         align-items: center;
         gap: 20px;
-    }}
+    }
     
-    .header-logo {{
+    .header-logo {
         width: 120px;
         height: auto;
         background: white;
         padding: 10px;
         border-radius: 10px;
-    }}
+    }
     
-    .header-title {{
+    .header-title {
         color: #FFFFFF;
         margin: 0;
         font-size: 2.5rem;
         font-weight: 700;
         text-shadow: 0px 2px 4px rgba(0,0,0,0.3);
-    }}
+    }
     
-    .header-subtitle {{
+    .header-subtitle {
         color: #FDD000;
         font-size: 1.2rem;
         font-weight: 500;
         margin: 0;
-    }}
+    }
     
     /* 탭 스타일 */
-    .stTabs [data-baseweb="tab-list"] {{
+    .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
         background-color: #ffffff;
         padding: 15px;
         border-radius: 12px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }}
+    }
     
-    .stTabs [data-baseweb="tab"] {{
+    .stTabs [data-baseweb="tab"] {
         background-color: #f0f4f8;
         border-radius: 10px;
         padding: 12px 24px;
@@ -115,68 +115,68 @@ st.markdown(f"""
         color: #00428B;
         border: 2px solid transparent;
         transition: all 0.3s;
-    }}
+    }
     
-    .stTabs [data-baseweb="tab"]:hover {{
+    .stTabs [data-baseweb="tab"]:hover {
         background-color: #e1e8ed;
         transform: translateY(-2px);
-    }}
+    }
     
-    .stTabs [aria-selected="true"] {{
+    .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
         color: white;
         border-color: #FDD000;
-    }}
+    }
     
     /* 버튼 스타일 */
-    .stButton > button {{
+    .stButton > button {
         border-radius: 10px;
         font-weight: 600;
         transition: all 0.3s;
         border: 2px solid #00428B;
         background-color: white;
         color: #00428B;
-    }}
+    }
     
-    .stButton > button:hover {{
+    .stButton > button:hover {
         background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(0, 66, 139, 0.4);
-    }}
+    }
     
     /* 다운로드 버튼 - 등기온 옐로우 */
-    .stDownloadButton > button {{
+    .stDownloadButton > button {
         background: linear-gradient(135deg, #FDD000 0%, #ffd966 100%);
         color: #00428B;
         border: none;
         font-weight: 700;
         border-radius: 10px;
-    }}
+    }
     
-    .stDownloadButton > button:hover {{
+    .stDownloadButton > button:hover {
         background: linear-gradient(135deg, #ffd966 0%, #FDD000 100%);
         transform: translateY(-3px);
         box-shadow: 0 8px 25px rgba(253, 208, 0, 0.5);
-    }}
+    }
     
     /* 입력 필드 스타일 통합 */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stSelectbox > div > div > select,
-    .stNumberInput > div > div > input {{
+    .stNumberInput > div > div > input {
         border-radius: 10px;
         border: 2px solid #e1e8ed;
         background-color: white;
-    }}
+    }
     
     .stTextInput > div > div > input:focus,
     .stTextArea > div > div > textarea:focus,
     .stSelectbox > div > div > select:focus,
-    .stNumberInput > div > div > input:focus {{
+    .stNumberInput > div > div > input:focus {
         border-color: #00428B;
         box-shadow: 0 0 0 3px rgba(0, 66, 139, 0.1);
-    }}
+    }
 
     /* [중요] st.number_input의 화살표(Spinner) 숨기기 */
     input[type=number]::-webkit-inner-spin-button, 
@@ -186,25 +186,25 @@ st.markdown(f"""
     }
     
     /* 컨테이너 스타일 */
-    [data-testid="stContainer"] {{
+    [data-testid="stContainer"] {
         background-color: white;
         padding: 25px;
         border-radius: 15px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
         border: 1px solid #e1e8ed;
-    }}
+    }
     
     /* 메트릭 스타일 */
-    [data-testid="stMetricValue"] {{
+    [data-testid="stMetricValue"] {
         font-size: 32px;
         font-weight: 700;
         color: #00428B;
-    }}
+    }
     
-    [data-testid="stMetricLabel"] {{
+    [data-testid="stMetricLabel"] {
         color: #0055b8;
         font-weight: 600;
-    }}
+    }
 </style>
 """, unsafe_allow_html=True)
 

@@ -323,6 +323,18 @@ def remove_commas(v):
     except:
         return 0
 
+# [수정] 소수점(.)을 살려서 실수로 변환하는 함수 (채권할인금액 오류 해결)
+def parse_float(v):
+    if v is None: return 0.0
+    if isinstance(v, (int, float)): return float(v)
+    try:
+        # 숫자와 점(.)만 남기고 제거
+        clean = re.sub(r'[^\d.]', '', str(v))
+        if not clean: return 0.0
+        return float(clean)
+    except:
+        return 0.0
+
 def floor_10(v): return math.floor(v / 10) * 10
 
 def lookup_base_fee(amount):
@@ -367,7 +379,6 @@ def number_to_korean(num_str):
 
 def convert_multiple_amounts_to_korean(amount_input):
     if not amount_input: return ""
-    # 숫자인 경우 바로 변환
     if isinstance(amount_input, (int, float)):
         return number_to_korean(str(amount_input))
     
@@ -376,18 +387,23 @@ def convert_multiple_amounts_to_korean(amount_input):
         return ', '.join([number_to_korean(p.strip()) for p in amount_str.split('/') if number_to_korean(p.strip())])
     return number_to_korean(amount_str)
 
-def extract_address_from_estate(estate_text):
-    if not estate_text: return ""
-    lines = [line.strip() for line in estate_text.strip().split('\n')]
+# [수정] 주소 추출 로직 개선 (더 유연하게)
+def extract_address_from_estate(text):
+    if not text: return ""
+    lines = [line.strip() for line in text.strip().split('\n') if line.strip()]
+    
+    # 1. '시/군/구'가 포함된 첫 번째 줄 찾기 (단, '표시'라는 단어 없는 줄)
     for line in lines:
-        if "1동의 건물의 표시" in line or "건물의 표시" in line: continue
-        if any(region in line for region in ['특별시', '광역시', '시 ', '군 ', '구 ']):
-            if '대 ' not in line and '도로명주소' not in line and '[' not in line:
-                return line.strip()
+        if any(x in line for x in ['시 ', '군 ', '구 ', '읍 ', '면 ', '동 ', '리 ']) and '표시' not in line:
+            return line
+            
+    # 2. 없으면 그냥 첫 번째 줄 반환 (fallback)
+    if lines:
+        return lines[0]
     return ""
 
 # =============================================================================
-# 4. PDF 생성 로직 (견적서 업그레이드)
+# 4. PDF 생성 로직 (견적서)
 # =============================================================================
 
 class PDFConverter(FPDF):
@@ -416,22 +432,21 @@ class PDFConverter(FPDF):
         
         # 2. 기본 정보
         self.set_font(self.font_family, '', 10)
-        self.cell(0, 6, f"작성일: {data['date_input']}", ln=True, align="R")
+        self.cell(0, 6, f"작성일: {data.get('date_input', '')}", ln=True, align="R")
         self.ln(5)
 
-        client = data['client']
+        client = data.get('client', {})
         
-        # 정보 테이블 그리기
         def draw_info_row(label, value):
             self.set_font(self.font_family, 'B', 10)
             self.cell(30, 8, label, border=0)
             self.set_font(self.font_family, '', 10)
             self.cell(0, 8, f":  {value}", ln=True, border=0)
 
-        draw_info_row("채 권 자", client['금융사'])
-        draw_info_row("채 무 자", client['채무자'])
-        draw_info_row("채권최고액", f"{client['채권최고액']} 원")
-        draw_info_row("물 건 지", client['물건지'])
+        draw_info_row("채 권 자", client.get('금융사', ''))
+        draw_info_row("채 무 자", client.get('채무자', ''))
+        draw_info_row("채권최고액", f"{client.get('채권최고액', '0')} 원")
+        draw_info_row("물 건 지", client.get('물건지', ''))
         self.ln(5)
         
         # 3. 비용 테이블 헤더
@@ -440,16 +455,15 @@ class PDFConverter(FPDF):
         self.cell(self.col_width1, 10, "항 목", 1, 0, 'C', True)
         self.cell(self.col_width2, 10, "금 액", 1, 1, 'C', True)
         
-        # 4. 보수액 섹션
+        # 4. 보수액
+        fee_totals = data.get('fee_totals', {'보수총액': 0})
         if self.show_fee:
             self.set_font(self.font_family, '', 10)
-            fee_totals = data['fee_totals']
             self.cell(self.col_width1, 8, "  법무비용 (보수료)", 1, 0, 'L')
-            self.cell(self.col_width2, 8, f"{fee_totals['보수총액']:,} 원", 1, 1, 'R')
+            self.cell(self.col_width2, 8, f"{fee_totals.get('보수총액', 0):,} 원", 1, 1, 'R')
         
-        # 5. 공과금 섹션 (상세 내역)
-        cost_items = data['cost_items']
-        
+        # 5. 공과금
+        cost_items = data.get('cost_items', {})
         def draw_row(name, val):
             if val > 0:
                 self.cell(self.col_width1, 8, f"  {name}", 1, 0, 'L')
@@ -460,7 +474,6 @@ class PDFConverter(FPDF):
         draw_row("등기신청수수료(증지)", cost_items.get("증지대", 0))
         draw_row("국민주택채권할인금액", cost_items.get("채권할인금액", 0))
         
-        # 기타 비용 합산
         etc_cost = 0
         manual_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
         for k in manual_keys:
@@ -471,12 +484,12 @@ class PDFConverter(FPDF):
 
         # 6. 합계
         self.set_font(self.font_family, 'B', 12)
-        self.set_fill_color(255, 255, 204) # 연한 노랑
+        self.set_fill_color(255, 255, 204)
         self.cell(self.col_width1, 12, "총 청구 금액", 1, 0, 'C', True)
-        self.cell(self.col_width2, 12, f"{data['grand_total']:,} 원", 1, 1, 'R', True)
+        self.cell(self.col_width2, 12, f"{data.get('grand_total', 0):,} 원", 1, 1, 'R', True)
         self.ln(10)
 
-        # 7. 계좌 및 안내
+        # 7. 계좌
         self.set_font(self.font_family, 'B', 11)
         self.cell(0, 8, "[입금계좌]", ln=True)
         self.set_font(self.font_family, '', 11)
@@ -488,32 +501,25 @@ class PDFConverter(FPDF):
         self.cell(0, 6, "• 채권할인금액은 당일 시세에 따라 변동됩니다.", ln=True)
         self.ln(15)
 
-        # 8. 하단 정보 및 QR/카카오톡
         y_pos = self.get_y()
-        
-        # 발행인 정보
         self.set_font(self.font_family, 'B', 12)
         self.cell(0, 6, "법무법인 시화", ln=True, align='C')
         self.set_font(self.font_family, '', 10)
         self.cell(0, 6, "부동산 등기는 등기온", ln=True, align='C')
         
-        # 이미지 추가 (QR, Kakao)
-        # QR 코드 (오른쪽 하단)
         if os.path.exists(QR_PATH):
             self.image(QR_PATH, x=150, y=y_pos, w=30)
         
-        # 카카오톡 (QR 옆)
         if os.path.exists(KAKAO_PATH):
             self.image(KAKAO_PATH, x=140, y=y_pos + 12, w=8)
             
-        # 상담 문구
         self.set_xy(135, y_pos + 32)
         self.set_font(self.font_family, 'B', 9)
         self.cell(50, 5, "카카오톡 채널상담", align='C')
 
         return self.output(dest='S') 
 
-# PDF 관련 기타 함수 (make_pdf 등) 생략 없이 포함
+# PDF 관련 함수들 (기존 유지)
 def draw_fit_text(c, text, x, y, max_width, font_name='Korean', max_size=11, min_size=6):
     if not text: return
     current_size = max_size
@@ -675,7 +681,6 @@ def handle_creditor_change():
 
     # 직접입력 시 초기화, 그 외엔 프리셋 적용
     if creditor_key == "직접입력":
-        # 값 초기화하지 않고 사용자 입력을 기다림 (또는 공란으로 두기)
         pass 
     else:
         # 프리셋 값 가져오기
@@ -702,7 +707,8 @@ def calculate_all(data):
     amount = parse_int_input(data.get('채권최고액')) 
     parcels = parse_int_input(data.get('필지수'))
     try:
-        rate = float(remove_commas(data.get('채권할인율', '0'))) / 100
+        # [수정] parse_float 사용하여 소수점 버그 해결
+        rate = parse_float(data.get('채권할인율', '0')) / 100
     except ValueError:
         rate = 0 
     
@@ -724,18 +730,12 @@ def calculate_all(data):
     else:
         data['공급가액'] = 0; data['부가세'] = 0; data['보수총액'] = 0
     
-    # 주소변경 비용 계산 (체크된 경우)
     addr_change_count = 0
     if st.session_state.get('addr_change_check', False):
         addr_change_count = st.session_state.get('addr_count_num', 1)
 
-    # 등록면허세: 기본 + 주소변경(6000 * 인원)
     reg = floor_10(amount * 0.002) + (6000 * addr_change_count)
-    
-    # 지방교육세: 기본 + 주소변경(1200 * 인원)
     edu = floor_10(amount * 0.002 * 0.2) + (1200 * addr_change_count)
-    
-    # 증지대: 필지수 * 15000(대략) + 주소변경(3000 * 인원)
     jeungji = (18000 * parcels) + (3000 * addr_change_count)
     
     bond = 0
@@ -784,7 +784,6 @@ with tab1:
         st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
         st.session_state['input_debtor_rrn'] = ""
         st.session_state['input_owner_rrn'] = ""
-        # 3탭 오버라이드도 초기화
         st.session_state['calc_amount_override'] = ""
         st.session_state['calc_creditor_override'] = list(CREDITORS.keys())[0]
         st.session_state['calc_debtor_override'] = ""
@@ -797,7 +796,6 @@ with tab1:
     with st.expander("📌 기본 정보", expanded=True):
         # [수정] 달력 입력 (st.date_input)
         d = st.date_input("작성일자", value=datetime.now())
-        # 날짜를 선택하면 자동으로 yyyy/mm/dd 포맷으로 변환되어 저장됨
         st.session_state['input_date'] = d.strftime("%Y/%m/%d")
 
     # 2. 당사자 정보
@@ -819,7 +817,7 @@ with tab1:
         st.text_input("법인번호", value=default_corp_num)
         st.text_area("채권자 주소", value=default_addr)
         
-        # [연동] on_change=sync_debtor 추가
+        # [연동] on_change=sync_debtor
         st.session_state['input_debtor'] = st.text_input("채무자 성명", value=st.session_state.get('input_debtor'), key='t1_debtor_name', on_change=sync_debtor)
         st.session_state['input_debtor_addr'] = st.text_area("채무자 주소", value=st.session_state.get('input_debtor_addr'), key='t1_debtor_addr', height=100)
         st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
@@ -830,13 +828,12 @@ with tab1:
         st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
         st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
         
-        # 채권최고액 - 콤마 및 한글 금액 하단 표시
         def format_amount_on_change():
             raw_val = st.session_state.get('amount_raw_input', '')
             formatted = format_number_with_comma(raw_val)
             st.session_state['input_amount'] = formatted
             st.session_state['amount_raw_input'] = formatted
-            # [연동] 3탭에도 금액 반영
+            # [연동]
             st.session_state['calc_amount_override'] = formatted
         
         st.text_input(
@@ -846,13 +843,11 @@ with tab1:
             placeholder="숫자만 입력 (엔터 입력 시 콤마 적용)"
         )
         
-        # 한글 금액 표시
         if st.session_state.get('input_amount') and st.session_state['input_amount'] != "0":
             clean_amt = remove_commas(st.session_state['input_amount'])
             korean_amt = number_to_korean(clean_amt)
             st.info(f"💰 **{korean_amt}** (금액: {st.session_state['input_amount']}원)")
         
-        # 물건지 주소 복사
         st.markdown("#### 물건지 주소")
         col_addr1, col_addr2 = st.columns([5, 1])
         
@@ -884,7 +879,7 @@ with tab1:
     col_estate, col_pdf = st.columns([3, 1])
     
     with col_estate:
-        # [연동] 부동산 표시 변경 시 물건지 주소 추출하여 3탭에 반영
+        # [연동] on_change=sync_addr
         st.session_state['estate_text'] = st.text_area(
             "부동산 표시 내용", 
             value=st.session_state['estate_text'], 
@@ -971,14 +966,41 @@ with tab2:
         st.info("내용은 1번 탭의 '부동산의 표시'와 동기화됩니다.")
         
         sig_template_path = st.session_state['template_status'].get("자필")
+
+        if sig_template_path:
+            st.success("✅ 자필서명 템플릿 준비 완료")
+            is_disabled = False
+        else:
+            st.warning("⚠️ 자필서명정보 템플릿 파일이 없습니다.")
+            is_disabled = True
         
-        # 버튼 로직... (생략 없이 위와 동일한 구조)
-        if st.button("📄 자필서명정보 PDF 생성", key="generate_sig_pdf", disabled=not sig_template_path or not LIBS_OK, use_container_width=True):
-            if not LIBS_OK: st.error("PDF 라이브러리 미설치")
+        if st.button("📄 자필서명정보 PDF 생성", key="generate_sig_pdf", disabled=is_disabled or not LIBS_OK, use_container_width=True):
+            if not LIBS_OK: 
+                st.error("PDF 생성 라이브러리가 설치되지 않았습니다.")
             else:
-                 # PDF 생성 로직 (make_signature_pdf)
-                 # ... (위 코드와 동일)
-                 pass
+                debtor_name = st.session_state['sig_debtor'] if st.session_state['sig_debtor'] else "미지정"
+                
+                data = {
+                    "date": st.session_state['sig_date'], 
+                    "debtor_name": st.session_state['sig_debtor'], 
+                    "debtor_rrn": st.session_state['input_debtor_rrn'],
+                    "owner_name": st.session_state['sig_owner'], 
+                    "owner_rrn": st.session_state['input_owner_rrn'], 
+                    "estate_text": st.session_state['sig_estate_text']
+                }
+                
+                try:
+                    pdf_buffer = make_signature_pdf(sig_template_path, data)
+                    st.download_button(
+                        label="⬇️ PDF 다운로드",
+                        data=pdf_buffer,
+                        file_name=f"자필서명정보_{debtor_name}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ PDF 파일 생성 완료!")
+                except Exception as e:
+                    st.error(f"자필서명 PDF 생성 중 오류 발생: {e}")
 
 # =============================================================================
 # Tab 3: 비용 계산 및 영수증
@@ -1169,12 +1191,6 @@ with tab3:
                     'grand_total': pdf_data['총 합계']
                 }
                 
-                # 버튼을 누르면 다운로드 버튼이 생기는 구조는 UX상 두번 클릭해야 하므로 
-                # 미리 생성하거나, 버튼 누를때 생성해서 다운로드 버튼 보여주기
-                # 여기서는 '견적서 PDF 생성' 버튼을 누르면 다운로드 버튼을 렌더링하는 방식 (안보이는 문제 해결)
-                # 만약 바로 다운로드 버튼을 원하시면 st.download_button을 직접 쓰면 되지만, 매번 리로드됨.
-                # 사용자 요청 "버튼 클릭 시 출력 아무것도 안보임" 해결을 위해 아래와 같이 로직 수정
-                
                 try:
                     pdf = PDFConverter(show_fee=st.session_state['show_fee'])
                     pdf_buffer = pdf.output_pdf(data_for_pdf, None) 
@@ -1194,7 +1210,6 @@ with tab3:
             # Excel 영수증 다운로드
             excel_template_path = st.session_state['template_status'].get("영수증")
             if download_cols[1].button("🏦 영수증 Excel", disabled=not EXCEL_OK or not excel_template_path, use_container_width=True):
-                 # ... (엑셀 로직 동일, 생략)
                  if not EXCEL_OK:
                     st.error("Excel 라이브러리 미설치")
                  elif not excel_template_path:
@@ -1226,7 +1241,6 @@ with tab3:
                         claim_amount = parse_int_input(final_data["채권최고액"])
                         collateral_addr = final_data['물건지']
                         
-                        # (좌측)
                         safe_set_value(ws, 'A24', date_str)
                         safe_set_value(ws, 'M5', claim_amount)
                         safe_set_value(ws, 'E7', collateral_addr)
@@ -1234,7 +1248,6 @@ with tab3:
                         safe_set_value(ws, 'E20', final_data["부가세"])
                         safe_set_value(ws, 'E21', final_data["보수총액"])
                         safe_set_value(ws, 'E22', final_data["총 합계"])
-                        # (우측)
                         safe_set_value(ws, 'U24', date_str)
                         safe_set_value(ws, 'V4', debtor)
                         safe_set_value(ws, 'AG5', claim_amount)

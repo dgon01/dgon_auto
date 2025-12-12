@@ -684,9 +684,17 @@ def calculate_all(data):
     else:
         data['공급가액'] = 0; data['부가세'] = 0; data['보수총액'] = 0
     
+    # 기본 세금 계산
     reg = floor_10(amount * 0.002)
     edu = floor_10(reg * 0.2)
     jeungji = 18000 * parcels
+    
+    # 주소변경 추가 비용 계산
+    addr_count = st.session_state.get('addr_count_num', 0)
+    if st.session_state.get('addr_change_check', False) and addr_count > 0:
+        reg += 6000 * addr_count
+        edu += 1200 * addr_count
+        jeungji += 3000 * addr_count
     
     bond = 0
     if amount >= 20_000_000: bond = math.ceil(amount * 0.01 / 10000) * 10000
@@ -699,8 +707,8 @@ def calculate_all(data):
     
     cost_total = reg + edu + jeungji + bond_disc
     
-    # [수정2] 3탭 수기 입력 항목 합산 (주소변경 포함)
-    manual_cost_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
+    # 수기 입력 항목 합산 (주소변경 제거됨)
+    manual_cost_keys = ["제증명", "교통비", "원인증서", "확인서면", "선순위 말소"]
     for k in manual_cost_keys:
         cost_total += parse_int_input(data.get(k, 0))
     
@@ -757,19 +765,55 @@ with tab1:
 
     # 2. 당사자 정보
     with st.expander("👤 당사자 정보", expanded=True):
-        creditor_list = list(CREDITORS.keys())
+        creditor_list = list(CREDITORS.keys()) + ["🖊️ 직접입력"]
+        
+        # 현재 선택된 채권자 인덱스 찾기
+        current_creditor = st.session_state.get('input_creditor', creditor_list[0])
+        if current_creditor in creditor_list:
+            default_index = creditor_list.index(current_creditor)
+        else:
+            default_index = 0
+        
         selected_creditor = st.selectbox(
             "채권자 선택", 
             options=creditor_list, 
-            index=creditor_list.index(st.session_state.get('input_creditor')) if st.session_state.get('input_creditor') in creditor_list else 0,
+            index=default_index,
             key='t1_creditor_select', 
             on_change=handle_creditor_change
         )
         st.session_state['input_creditor'] = selected_creditor
         
-        creditor_info = CREDITORS.get(selected_creditor, {})
-        st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=True)
-        st.text_area("채권자 주소", value=creditor_info.get('addr', ''), disabled=True)
+        # 직접입력 모드 확인
+        is_direct_input = (selected_creditor == "🖊️ 직접입력")
+        
+        if is_direct_input:
+            # 직접입력 모드: 모든 필드 활성화
+            st.session_state['input_creditor_name'] = st.text_input(
+                "채권자 성명/상호", 
+                value=st.session_state.get('input_creditor_name', ''),
+                key='direct_creditor_name'
+            )
+            st.session_state['input_creditor_corp_num'] = st.text_input(
+                "법인번호", 
+                value=st.session_state.get('input_creditor_corp_num', ''),
+                key='direct_corp_num'
+            )
+            st.session_state['input_creditor_addr'] = st.text_area(
+                "채권자 주소", 
+                value=st.session_state.get('input_creditor_addr', ''),
+                key='direct_creditor_addr',
+                height=100
+            )
+        else:
+            # 기존 채권자 선택 모드
+            creditor_info = CREDITORS.get(selected_creditor, {})
+            st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=True)
+            st.text_area("채권자 주소", value=creditor_info.get('addr', ''), disabled=True)
+            
+            # 직접입력 값 초기화
+            st.session_state['input_creditor_name'] = selected_creditor
+            st.session_state['input_creditor_corp_num'] = creditor_info.get('corp_num', '')
+            st.session_state['input_creditor_addr'] = creditor_info.get('addr', '')
         st.session_state['input_debtor'] = st.text_input("채무자 성명", value=st.session_state.get('input_debtor'), key='t1_debtor_name')
         st.session_state['input_debtor_addr'] = st.text_area("채무자 주소", value=st.session_state.get('input_debtor_addr'), key='t1_debtor_addr', height=100)
         st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
@@ -1040,24 +1084,6 @@ with tab3:
             
             st.text_input("선순위 말소", key='cost_manual_선순위 말소', on_change=format_cost_input, args=('cost_manual_선순위 말소',))
             calc_input_values['선순위 말소'] = st.session_state['cost_manual_선순위 말소']
-            
-            # [수정2] 주소변경 로직 (체크박스 + 인원수 + 비용 입력)
-            def update_addr_cost():
-                if st.session_state['addr_change_check']:
-                    cnt = st.session_state['addr_count_num']
-                    cost = cnt * 20000
-                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(str(cost))
-                else:
-                    st.session_state['cost_manual_주소변경'] = "0"
-
-            addr_cols = st.columns([1, 1.5])
-            with addr_cols[0]:
-                st.checkbox("주소변경", key='addr_change_check', on_change=update_addr_cost)
-                st.number_input("인원", min_value=1, max_value=10, value=1, step=1, key='addr_count_num', label_visibility="collapsed", on_change=update_addr_cost)
-            with addr_cols[1]:
-                st.text_input("주소변경비용", key='cost_manual_주소변경', on_change=format_cost_input, args=('cost_manual_주소변경',))
-            
-            calc_input_values['주소변경'] = st.session_state['cost_manual_주소변경']
 
             st.divider()
             metric_placeholder_c_total = st.empty()
@@ -1073,10 +1099,7 @@ with tab3:
         '추가보수_label': "추가보수", 
         '기타보수_label': "기타보수",
     }
-    calc_input_data.update(calc_input_values)
-    
-    final_data = calculate_all(calc_input_data)
-    st.session_state['calc_data'] = final_data 
+    calc_input_data.update(calc_input_values) 
 
     # 3. 결과 표시
     with metric_placeholder_f.container():
@@ -1110,6 +1133,31 @@ with tab3:
                 on_change=toggle_show_fee
             )
             
+            # 주소변경 체크박스 추가
+            st.markdown("##### 📝 주소변경 신청")
+            addr_check_col1, addr_check_col2 = st.columns([1, 2])
+            with addr_check_col1:
+                addr_change_enabled = st.checkbox(
+                    "주소변경", 
+                    value=st.session_state.get('addr_change_check', False),
+                    key='addr_change_checkbox'
+                )
+                st.session_state['addr_change_check'] = addr_change_enabled
+            
+            with addr_check_col2:
+                if addr_change_enabled:
+                    addr_person_count = st.number_input(
+                        "인원수", 
+                        min_value=1, 
+                        max_value=10, 
+                        value=st.session_state.get('addr_count_num', 1),
+                        step=1,
+                        key='addr_count_input'
+                    )
+                    st.session_state['addr_count_num'] = addr_person_count
+                else:
+                    st.session_state['addr_count_num'] = 0
+            
             st.divider()
 
             download_cols = st.columns(2)
@@ -1140,7 +1188,7 @@ with tab3:
                         'cost_items': {
                             k: parse_int_input(pdf_data.get(k)) 
                             for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", 
-                                      "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
+                                      "제증명", "교통비", "원인증서", "확인서면", "선순위 말소"]
                         },
                         'cost_totals': {'공과금 총액': pdf_data['공과금 총액']},
                         'cost_section_title': '2. 공과금' if st.session_state['show_fee'] else '1. 공과금',

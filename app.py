@@ -606,12 +606,30 @@ def make_signature_pdf(template_path, data):
 # 5. Streamlit UI 및 상태 관리
 # =============================================================================
 
+# 3탭 수기 입력 필드 초기화
+if 'add_fee_val' not in st.session_state:
+    st.session_state['add_fee_val'] = "0"
+if 'etc_fee_val' not in st.session_state:
+    st.session_state['etc_fee_val'] = "0"
+if 'disc_fee_val' not in st.session_state:
+    st.session_state['disc_fee_val'] = "0"
+if 'cost_manual_제증명' not in st.session_state:
+    st.session_state['cost_manual_제증명'] = "0"
+if 'cost_manual_교통비' not in st.session_state:
+    st.session_state['cost_manual_교통비'] = "0"
+if 'cost_manual_원인증서' not in st.session_state:
+    st.session_state['cost_manual_원인증서'] = "0"
+if 'cost_manual_주소변경' not in st.session_state:
+    st.session_state['cost_manual_주소변경'] = "0"
+if 'cost_manual_확인서면' not in st.session_state:
+    st.session_state['cost_manual_확인서면'] = "0"
+if 'cost_manual_선순위 말소' not in st.session_state:
+    st.session_state['cost_manual_선순위 말소'] = "0"
+
 # Streamlit 상태 초기화
 if 'calc_data' not in st.session_state:
     st.session_state['calc_data'] = {}
     st.session_state['show_fee'] = True
-    st.session_state['addr_change_check'] = False
-    st.session_state['addr_count_num'] = 1  # 기본값 1로 설정
     st.session_state['input_amount'] = ""
     st.session_state['amount_raw_input'] = ""
     st.session_state['input_parcels'] = 1
@@ -664,6 +682,7 @@ def handle_creditor_change():
         st.session_state['cost_manual_제증명'] = "0"
         st.session_state['cost_manual_교통비'] = "0"
         st.session_state['cost_manual_원인증서'] = "0"
+        st.session_state['cost_manual_주소변경'] = "0"
         st.session_state['cost_manual_확인서면'] = "0"
         st.session_state['cost_manual_선순위 말소'] = "0"
         
@@ -677,6 +696,7 @@ def handle_creditor_change():
         st.session_state['cost_manual_제증명'] = format_number_with_comma(str(default_fees.get("제증명", 0)))
         st.session_state['cost_manual_교통비'] = format_number_with_comma(str(default_fees.get("교통비", 0)))
         st.session_state['cost_manual_원인증서'] = format_number_with_comma(str(default_fees.get("원인증서", 0)))
+        st.session_state['cost_manual_주소변경'] = "0"
         st.session_state['cost_manual_확인서면'] = format_number_with_comma(str(default_fees.get("확인서면", 0)))
         st.session_state['cost_manual_선순위 말소'] = format_number_with_comma(str(default_fees.get("선순위 말소", 0)))
     
@@ -713,14 +733,6 @@ def calculate_all(data):
     edu = floor_10(reg * 0.2)
     jeungji = 18000 * parcels
     
-    # 주소변경 추가 비용 계산 (체크된 경우만)
-    if st.session_state.get('addr_change_check', False):
-        addr_count = st.session_state.get('addr_count_num', 0)
-        if addr_count > 0:
-            reg += 6000 * addr_count
-            edu += 1200 * addr_count
-            jeungji += 3000 * addr_count
-    
     bond = 0
     if amount >= 20_000_000: bond = math.ceil(amount * 0.01 / 10000) * 10000
     bond_disc = floor_10(bond * rate)
@@ -733,7 +745,7 @@ def calculate_all(data):
     cost_total = reg + edu + jeungji + bond_disc
     
     # 수기 입력 항목 합산 (주소변경 제거됨)
-    manual_cost_keys = ["제증명", "교통비", "원인증서", "확인서면", "선순위 말소"]
+    manual_cost_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
     for k in manual_cost_keys:
         cost_total += parse_int_input(data.get(k, 0))
     
@@ -1043,8 +1055,6 @@ with tab3:
     if col_header3[1].button("🔄 초기화", type="secondary", help="비용 계산 입력값을 초기화합니다", key="reset_tab3"):
         st.session_state['calc_data'] = {}
         st.session_state['show_fee'] = True
-        st.session_state['addr_change_check'] = False
-        st.session_state['addr_count_num'] = 1  # 기본값 1로 설정
         st.session_state['input_parcels'] = 1
         st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
         handle_creditor_change()
@@ -1074,86 +1084,63 @@ with tab3:
         st.text_input("채무자", value=st.session_state.get('input_debtor'), disabled=True)
         st.text_input("물건지", value=extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'), disabled=True)
     
-    # 1. UI 및 입력
-    # [수정2] 공통 콜백 함수: 수기 입력값 실시간 콤마 적용
+    # 3탭 UI - 간결하고 가독성 높은 레이아웃
     def format_cost_input(key):
         val = st.session_state[key]
         st.session_state[key] = format_number_with_comma(val)
 
     calc_input_values = {}
     
-    # 먼저 주소변경 입력받기
-    with st.container(border=True):
-        st.markdown("#### 📝 주소변경 신청")
-        addr_check_col1, addr_check_col2 = st.columns([1, 2])
-        with addr_check_col1:
-            addr_change_enabled = st.checkbox(
-                "주소변경", 
-                value=st.session_state.get('addr_change_check', False),
-                key='addr_change_checkbox'
-            )
-            st.session_state['addr_change_check'] = addr_change_enabled
-        
-        with addr_check_col2:
-            if addr_change_enabled:
-                # 이전 값이 0이거나 없으면 1로 초기화
-                current_count = st.session_state.get('addr_count_num', 1)
-                if current_count < 1:
-                    current_count = 1
-                
-                addr_person_count = st.number_input(
-                    "인원수", 
-                    min_value=1, 
-                    max_value=10, 
-                    value=current_count,
-                    step=1,
-                    key='addr_count_input'
-                )
-                st.session_state['addr_count_num'] = addr_person_count
-            else:
-                # 체크 해제 시에도 값은 1로 유지
-                if st.session_state.get('addr_count_num', 1) == 0:
-                    st.session_state['addr_count_num'] = 1
-    
-    st.markdown("---")
+    # 입력 섹션
+    col1, col2, col3 = st.columns([1, 1, 1])
 
-    col_f, col_c, col_t = st.columns(3)
-
-    with col_f:
+    # 💰 보수액
+    with col1:
+        st.markdown("### 💰 보수액 (Income)")
         with st.container(border=True):
-            st.markdown("#### 💰 보수액")
-            st.text_input("추가보수", key='add_fee_val', on_change=format_cost_input, args=('add_fee_val',))
-            st.text_input("기타보수", key='etc_fee_val', on_change=format_cost_input, args=('etc_fee_val',))
-            st.text_input("할인금액", key='disc_fee_val', on_change=format_cost_input, args=('disc_fee_val',))
+            st.text_input("기본료", value="150,000", disabled=True, key="display_base_fee")
+            st.text_input("추가보수", value="0", key='add_fee_val', on_change=format_cost_input, args=('add_fee_val',))
+            st.text_input("기타보수", value="0", key='etc_fee_val', on_change=format_cost_input, args=('etc_fee_val',))
+            st.text_input("할인금액", value="0", key='disc_fee_val', on_change=format_cost_input, args=('disc_fee_val',))
             
             calc_input_values['추가보수_val'] = st.session_state.get('add_fee_val', "0")
             calc_input_values['기타보수_val'] = st.session_state.get('etc_fee_val', "0")
             calc_input_values['할인금액'] = st.session_state.get('disc_fee_val', "0")
 
-    with col_c:
+    # 🏛️ 공과금
+    with col2:
+        st.markdown("### 🏛️ 공과금 (Tax)")
         with st.container(border=True):
-            st.markdown("#### 🏛️ 공과금")
-            st.markdown("##### 수기 입력")
+            st.markdown("**[자동 계산]**")
+            st.text_input("등록면허세", value="0", disabled=True, key='temp_reg_tax')
+            st.text_input("지방교육세", value="0", disabled=True, key='temp_edu_tax')
+            st.text_input("증지대", value="0", disabled=True, key='temp_stamp')
+            st.text_input("채권할인금액", value="0", disabled=True, key='temp_bond_disc')
             
-            # [수정2] 수기 입력 섹션 (실시간 콤마 적용)
+            st.markdown("---")
+            st.markdown("**[수기 입력]**")
             st.text_input("제증명", key='cost_manual_제증명', on_change=format_cost_input, args=('cost_manual_제증명',))
-            calc_input_values['제증명'] = st.session_state['cost_manual_제증명']
-            
             st.text_input("교통비", key='cost_manual_교통비', on_change=format_cost_input, args=('cost_manual_교통비',))
-            calc_input_values['교통비'] = st.session_state['cost_manual_교통비']
-            
             st.text_input("원인증서", key='cost_manual_원인증서', on_change=format_cost_input, args=('cost_manual_원인증서',))
-            calc_input_values['원인증서'] = st.session_state['cost_manual_원인증서']
-            
+            st.text_input("주소변경", key='cost_manual_주소변경', on_change=format_cost_input, args=('cost_manual_주소변경',))
             st.text_input("확인서면", key='cost_manual_확인서면', on_change=format_cost_input, args=('cost_manual_확인서면',))
-            calc_input_values['확인서면'] = st.session_state['cost_manual_확인서면']
-            
             st.text_input("선순위 말소", key='cost_manual_선순위 말소', on_change=format_cost_input, args=('cost_manual_선순위 말소',))
+            
+            calc_input_values['제증명'] = st.session_state['cost_manual_제증명']
+            calc_input_values['교통비'] = st.session_state['cost_manual_교통비']
+            calc_input_values['원인증서'] = st.session_state['cost_manual_원인증서']
+            calc_input_values['주소변경'] = st.session_state['cost_manual_주소변경']
+            calc_input_values['확인서면'] = st.session_state['cost_manual_확인서면']
             calc_input_values['선순위 말소'] = st.session_state['cost_manual_선순위 말소']
 
-    with col_t:
+    # 🧾 결제 및 청구
+    with col3:
+        st.markdown("### 🧾 결제 및 청구")
         with st.container(border=True):
-            st.markdown("#### 🧾 최종 결제")
+            st.markdown("#### 총 청구금액")
+            st.markdown("### 0 원", unsafe_allow_html=True)
+            
+            st.markdown("---")
             
             def toggle_show_fee():
                 st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
@@ -1165,8 +1152,7 @@ with tab3:
                 on_change=toggle_show_fee
             )
 
-    # 2. 데이터 취합 및 계산
-    # 금융사 표시 (직접입력 고려)
+    # 계산 수행
     creditor_for_calc = st.session_state.get('input_creditor', '')
     if creditor_for_calc == "🖊️ 직접입력":
         creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
@@ -1186,36 +1172,34 @@ with tab3:
     final_data = calculate_all(calc_input_data)
     st.session_state['calc_data'] = final_data 
 
-    # 3. 결과 표시 - 컬럼별로 다시 접근하여 표시
+    # 결과 업데이트
     st.markdown("---")
-    st.markdown("### 📊 계산 결과")
     
-    result_col_f, result_col_c, result_col_t = st.columns(3)
+    result_col1, result_col2, result_col3 = st.columns([1, 1, 1])
     
-    with result_col_f:
+    with result_col1:
         with st.container(border=True):
-            st.markdown("#### 💰 보수액 결과")
-            st.metric("기본료", format_number_with_comma(final_data.get('기본료')) + " 원")
-            st.metric("공급가액", format_number_with_comma(final_data.get('공급가액')) + " 원")
-            st.metric("부가세", format_number_with_comma(final_data.get('부가세')) + " 원")
-            st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
+            st.markdown("**공급가액:** " + format_number_with_comma(final_data.get('공급가액')) + " 원")
+            st.markdown("**부가세:** " + format_number_with_comma(final_data.get('부가세')) + " 원")
+            st.markdown(f"### 보수 총액")
+            st.markdown(f"## <span style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</span>", unsafe_allow_html=True)
     
-    with result_col_c:
+    with result_col2:
         with st.container(border=True):
-            st.markdown("#### 🏛️ 공과금 결과")
-            st.markdown("##### 자동 계산")
-            st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=True, key='display_reg_tax')
-            st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=True, key='display_edu_tax')
-            st.text_input("증지대", value=format_number_with_comma(final_data.get("증지대")), disabled=True, key='display_stamp')
-            st.text_input("채권할인금액", value=format_number_with_comma(final_data.get("채권할인금액")), disabled=True, key='display_bond_disc')
-            st.divider()
-            st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)
+            st.markdown("**등록면허세:** " + format_number_with_comma(final_data.get("등록면허세")) + " 원")
+            st.markdown("**지방교육세:** " + format_number_with_comma(final_data.get("지방교육세")) + " 원")
+            st.markdown("**증지대:** " + format_number_with_comma(final_data.get("증지대")) + " 원")
+            st.markdown("**채권할인금액:** " + format_number_with_comma(final_data.get("채권할인금액")) + " 원")
+            st.markdown("---")
+            st.markdown(f"### 공과금 소계")
+            st.markdown(f"## <span style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</span>", unsafe_allow_html=True)
 
-    with result_col_t:
+    with result_col3:
         with st.container(border=True):
-            st.markdown("#### 🧾 최종 금액")
-            st.markdown(f"## <span style='color:#dc3545; font-weight:700;'>총 청구금액: {format_number_with_comma(final_data.get('총 합계'))} 원</span>", unsafe_allow_html=True)
-            st.divider()
+            st.markdown(f"## <span style='color:#dc3545; font-weight:700;'>총 청구금액</span>", unsafe_allow_html=True)
+            st.markdown(f"# <span style='color:#dc3545; font-weight:700;'>{format_number_with_comma(final_data.get('총 합계'))} 원</span>", unsafe_allow_html=True)
+            
+            st.markdown("---")
             
             download_cols = st.columns(2)
             
@@ -1251,7 +1235,7 @@ with tab3:
                         'cost_items': {
                             k: parse_int_input(pdf_data.get(k)) 
                             for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", 
-                                      "제증명", "교통비", "원인증서", "확인서면", "선순위 말소"]
+                                      "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
                         },
                         'cost_totals': {'공과금 총액': pdf_data['공과금 총액']},
                         'cost_section_title': '2. 공과금' if st.session_state['show_fee'] else '1. 공과금',
@@ -1332,6 +1316,7 @@ with tab3:
                         # [수정3] Excel 매핑 (요청사항대로)
                         safe_set_value(ws, 'AH15', parse_int_input(final_data["제증명"]))     # 제증명(등본제증명)
                         safe_set_value(ws, 'AH16', parse_int_input(final_data["원인증서"]))   # 원인증서
+                        safe_set_value(ws, 'AH17', parse_int_input(final_data["주소변경"]))   # 주소변경
                         safe_set_value(ws, 'AH18', parse_int_input(final_data["선순위 말소"])) # 선순위 말소
                         safe_set_value(ws, 'AH19', parse_int_input(final_data["교통비"]))     # 교통비
                         safe_set_value(ws, 'AH21', final_data["공과금 총액"])                 # 소계/총계

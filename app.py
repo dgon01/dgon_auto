@@ -33,7 +33,7 @@ def get_base64_image(image_path):
 LOGO_PATH = os.path.join(APP_ROOT, "my_icon.ico")
 logo_base64 = get_base64_image(LOGO_PATH)
 
-# 💡 등기온 공식 브랜드 컬러 및 Noto Sans KR 폰트 적용
+# 💡 등기온 공식 브랜드 컬러 및 스타일 적용
 st.markdown(f"""
 <style>
     /* Noto Sans KR 폰트 임포트 */
@@ -44,169 +44,82 @@ st.markdown(f"""
         font-family: 'Noto Sans KR', sans-serif !important;
     }}
     
-    /* 입력 필드 등 내부 요소 폰트 강제 적용 */
+    /* 입력 필드 스타일 강화 */
     input, textarea, select, button {{
         font-family: 'Noto Sans KR', sans-serif !important;
     }}
     
-    /* 메인 컨테이너 배경 */
-    .main {{
-        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
-    }}
-    
-    /* 헤더 - 흰색 배경 + 파란 테두리 */
+    /* 헤더 스타일 */
     .header-container {{
         background: white;
         border: 3px solid #00428B;
         padding: 20px 40px;
         border-radius: 15px;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         box-shadow: 0 4px 15px rgba(0, 66, 139, 0.2);
         display: flex;
         align-items: center;
         justify-content: space-between;
     }}
     
-    .logo-title-container {{
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }}
+    .logo-title-container {{ display: flex; align-items: center; gap: 20px; }}
+    .header-logo {{ width: 120px; height: auto; }}
     
-    .header-logo {{
-        width: 120px;
-        height: auto;
-        background: white;
-        padding: 10px;
-        border-radius: 10px;
-    }}
-    
-    /* 타이틀 색상 - DG는 남색, Form은 노란색 */
-    .header-title {{
-        margin: 0;
-        font-size: 2.5rem;
-        font-weight: 700;
-    }}
-    
-    .title-dg {{
-        color: #00428B;
-    }}
-    
-    .title-form {{
-        color: #FDD000;
-    }}
-    
-    .header-subtitle {{
-        color: #00428B;
-        font-size: 1.2rem;
-        font-weight: 500;
-        margin: 0;
-    }}
-    
-    .header-right {{
-        color: #00428B;
-        text-align: right;
-    }}
+    .header-title {{ margin: 0; font-size: 2.5rem; font-weight: 700; }}
+    .title-dg {{ color: #00428B; }}
+    .title-form {{ color: #FDD000; }}
+    .header-subtitle {{ color: #00428B; font-size: 1.2rem; font-weight: 500; margin: 0; }}
     
     /* 탭 스타일 */
     .stTabs [data-baseweb="tab-list"] {{
-        gap: 10px;
-        background-color: #ffffff;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }}
-    
     .stTabs [data-baseweb="tab"] {{
-        background-color: #f0f4f8;
-        border-radius: 10px;
-        padding: 12px 24px;
-        font-weight: 600;
-        color: #00428B;
-        border: 2px solid transparent;
-        transition: all 0.3s;
+        background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px;
+        font-weight: 600; color: #495057; border: 1px solid #dee2e6;
     }}
-    
-    .stTabs [data-baseweb="tab"]:hover {{
-        background-color: #e1e8ed;
-        transform: translateY(-2px);
-    }}
-    
     .stTabs [aria-selected="true"] {{
-        background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
-        color: white;
-        border-color: #FDD000;
+        background-color: #00428B; color: white; border-color: #00428B;
     }}
-    
-    /* 버튼 스타일 */
-    .stButton > button {{
-        border-radius: 10px;
-        font-weight: 600;
-        transition: all 0.3s;
-        border: 2px solid #00428B;
-        background-color: white;
-        color: #00428B;
-    }}
-    
-    .stButton > button:hover {{
-        background: linear-gradient(135deg, #00428B 0%, #0055b8 100%);
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 66, 139, 0.4);
-    }}
-    
-    /* 다운로드 버튼 - 등기온 옐로우 */
-    .stDownloadButton > button {{
-        background: linear-gradient(135deg, #FDD000 0%, #ffd966 100%);
-        color: #00428B;
-        border: none;
-        font-weight: 700;
-        border-radius: 10px;
-    }}
-    
-    .stDownloadButton > button:hover {{
-        background: linear-gradient(135deg, #ffd966 0%, #FDD000 100%);
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(253, 208, 0, 0.5);
-    }}
-    
-    /* 입력 필드 스타일 */
+
+    /* 입력창 디자인 */
     .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea,
-    .stSelectbox > div > div > select,
-    .stNumberInput > div > div > input {{
-        border-radius: 10px;
-        border: 2px solid #e1e8ed;
-        background-color: white;
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > select {{
+        border-radius: 6px;
+        border: 1px solid #ced4da;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+    }}
+    .stTextInput > div > div > input:focus {{
+        border-color: #00428B; box-shadow: 0 0 0 0.2rem rgba(0, 66, 139, 0.15);
+    }}
+
+    /* 3탭 커스텀 레이아웃용 클래스 */
+    .section-header {{
+        font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid;
+    }}
+    .income-header {{ color: #28a745; border-color: #28a745; }}
+    .tax-header {{ color: #fd7e14; border-color: #fd7e14; }}
+    .total-header {{ color: #dc3545; border-color: #dc3545; }}
+    
+    /* 라벨과 인풋 정렬 */
+    .row-label {{
+        font-weight: 500; color: #495057; display: flex; align-items: center; height: 100%; font-size: 0.9rem;
     }}
     
-    .stTextInput > div > div > input:focus,
-    .stTextArea > div > div > textarea:focus,
-    .stSelectbox > div > div > select:focus,
-    .stNumberInput > div > div > input:focus {{
-        border-color: #00428B;
-        box-shadow: 0 0 0 3px rgba(0, 66, 139, 0.1);
+    /* 총 청구금액 박스 */
+    .total-box {{
+        background-color: #ff0033; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0;
+        box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3);
     }}
-    
-    /* 컨테이너 스타일 */
+    .total-amount {{ font-size: 2rem; font-weight: 800; }}
+
+    /* 컨테이너 배경 */
     [data-testid="stContainer"] {{
-        background-color: white;
-        padding: 25px;
-        border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-        border: 1px solid #e1e8ed;
-    }}
-    
-    /* 메트릭 스타일 */
-    [data-testid="stMetricValue"] {{
-        font-size: 32px;
-        font-weight: 700;
-        color: #00428B;
-    }}
-    
-    [data-testid="stMetricLabel"] {{
-        color: #0055b8;
-        font-weight: 600;
+        background-color: white; padding: 20px; border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9ecef;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -301,27 +214,17 @@ if 'template_status' not in st.session_state:
 # =============================================================================
 # 3. 유틸리티 및 계산 로직
 # =============================================================================
-def format_date(text):
-    if not text: return ""
-    numbers = re.sub(r'[^\d]', '', text)
-    if len(numbers) == 8: return f"{numbers[:4]}년 {numbers[4:6]}월 {numbers[6:8]}일"
-    return text
-
 def format_date_korean(date_obj):
-    """date 객체를 한글 형식으로 변환"""
     if isinstance(date_obj, date):
         return f"{date_obj.year}년 {date_obj.month:02d}월 {date_obj.day:02d}일"
     return str(date_obj)
 
 def format_number_with_comma(num_str):
-    """숫자를 천단위 콤마 문자열로 변환 (입력값 정제 포함)"""
     if num_str is None: return ""
     if isinstance(num_str, (int, float)):
         return "{:,}".format(int(num_str))
-    
     numbers = re.sub(r'[^\d]', '', str(num_str))
     if not numbers: return ""
-    
     try:
         return "{:,}".format(int(numbers))
     except ValueError:
@@ -390,9 +293,8 @@ def extract_address_from_estate(estate_text):
     return ""
 
 # =============================================================================
-# 4. PDF 생성 로직
+# 4. PDF 생성 로직 (생략 - 기존 동일)
 # =============================================================================
-
 def draw_fit_text(c, text, x, y, max_width, font_name='Korean', max_size=11, min_size=6):
     if not text: return
     current_size = max_size
@@ -466,7 +368,6 @@ class PDFConverter(FPDF):
                 self.cell(self.col_width2, self.line_height, f"{data['fee_totals']['보수총액']:,} 원", ln=1, align="R")
             self.draw_labelframe_box("1. 보수액", fee_content)
             self.ln(5)
-        
         def costs_content():
             self.set_font(self.font_family, '', 10)
             items = data['cost_items']
@@ -480,7 +381,6 @@ class PDFConverter(FPDF):
             self.cell(self.col_width2, self.line_height, f"{data['cost_totals']['공과금 총액']:,} 원", ln=1, align="R")
         self.draw_labelframe_box(data['cost_section_title'], costs_content)
         self.ln(5)
-
         self.set_font(self.font_family, 'B', 12)
         self.cell(self.col_width1 - 10, 10, "등기비용 합계")
         self.cell(self.col_width2 + 10, 10, f"{data['grand_total']:,} 원", ln=True, align="R")
@@ -500,28 +400,21 @@ class PDFConverter(FPDF):
             self.set_x(self.l_margin + 5)
             self.cell(0, self.line_height, "• 예금주 : 법무법인 시화", ln=1)
         self.draw_labelframe_box("입금 계좌 정보", bank_content)
-
-        # BytesIO로 반환
         pdf_buffer = BytesIO()
         pdf_bytes = self.output(dest='S')
-        if isinstance(pdf_bytes, str):
-            pdf_buffer.write(pdf_bytes.encode('latin-1'))
-        else:
-            pdf_buffer.write(pdf_bytes)
+        if isinstance(pdf_bytes, str): pdf_buffer.write(pdf_bytes.encode('latin-1'))
+        else: pdf_buffer.write(pdf_bytes)
         pdf_buffer.seek(0)
         return pdf_buffer 
 
 def create_overlay_pdf(data, font_path):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
     try: 
-        pdfmetrics.registerFont(TTFont('Korean', font_path))
-        font_name = 'Korean'
+        pdfmetrics.registerFont(TTFont('Korean', font_path)); font_name = 'Korean'
     except: 
         font_name = 'Helvetica'
-    
     font_size = 11; c.setFont(font_name, font_size); c.setFillColorRGB(0, 0, 0)
     MAX_TEXT_WIDTH = 380
-    
     if data.get("date"): c.drawString(480, height - 85, data["date"])
     if data.get("creditor_name"): c.drawString(157, height - 134, data["creditor_name"])
     if data.get("creditor_addr"): draw_fit_text(c, data["creditor_addr"], 157, height - 150, MAX_TEXT_WIDTH, font_name, font_size)
@@ -531,10 +424,8 @@ def create_overlay_pdf(data, font_path):
     if data.get("owner_addr"): draw_fit_text(c, data["owner_addr"], 157, height - 230, MAX_TEXT_WIDTH, font_name, font_size)
     if data.get("guarantee_type"): c.drawString(65, height - 343, data["guarantee_type"])
     if data.get("claim_amount"): c.drawString(150, height - 535, data["claim_amount"])
-    
     c.showPage(); c.setFont(font_name, font_size)
     if data.get("date"): c.drawString(180, height - 270, data["date"])
-    
     contract_type = data.get("contract_type", "3자담보")
     if contract_type == "개인":
         if data.get("debtor_name"): c.drawString(450, height - 270, data["debtor_name"])
@@ -543,25 +434,20 @@ def create_overlay_pdf(data, font_path):
     elif contract_type == "공동담보":
         if data.get("debtor_name"): c.drawString(450, height - 270, data["debtor_name"])
         if data.get("owner_name"): c.drawString(490, height - 270, data["owner_name"])
-    
     c.showPage(); c.setFont(font_name, font_size)
     base_x = 35; base_y = height - 80; gap = 16
     for i, line in enumerate(data.get("estate_list", [])):
         if line.strip(): c.drawString(base_x, base_y - (i * gap), line)
-    
     c.showPage(); c.save(); packet.seek(0)
     return packet
 
 def make_pdf(template_path, data):
     overlay_packet = create_overlay_pdf(data, FONT_PATH)
     overlay_pdf = PdfReader(overlay_packet); template_pdf = PdfReader(template_path); writer = PdfWriter()
-    
     output_buffer = BytesIO() 
-    
     for page_num in range(min(len(template_pdf.pages), len(overlay_pdf.pages))):
         template_page = template_pdf.pages[page_num]; overlay_page = overlay_pdf.pages[page_num]
         template_page.merge_page(overlay_page); writer.add_page(template_page)
-    
     writer.write(output_buffer)
     output_buffer.seek(0)
     return output_buffer
@@ -569,11 +455,9 @@ def make_pdf(template_path, data):
 def create_signature_overlay_pdf(data, font_path):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
     try: 
-        pdfmetrics.registerFont(TTFont('Korean', font_path))
-        font_name = 'Korean'
+        pdfmetrics.registerFont(TTFont('Korean', font_path)); font_name = 'Korean'
     except: 
         font_name = 'Helvetica'
-    
     c.setFont(font_name, 10); estate_x = 150; estate_y = height - 170; line_h = 14
     if data.get("estate_text"):
         for i, line in enumerate(data["estate_text"].split("\n")[:17]):
@@ -591,12 +475,9 @@ def create_signature_overlay_pdf(data, font_path):
 def make_signature_pdf(template_path, data):
     overlay_packet = create_signature_overlay_pdf(data, FONT_PATH)
     overlay_pdf = PdfReader(overlay_packet); template_pdf = PdfReader(template_path); writer = PdfWriter()
-    
     output_buffer = BytesIO() 
-    
     template_page = template_pdf.pages[0]; overlay_page = overlay_pdf.pages[0]
     template_page.merge_page(overlay_page); writer.add_page(template_page)
-    
     writer.write(output_buffer)
     output_buffer.seek(0)
     return output_buffer
@@ -605,31 +486,17 @@ def make_signature_pdf(template_path, data):
 # 5. Streamlit UI 및 상태 관리
 # =============================================================================
 
-# 3탭 수기 입력 필드 초기화
-if 'add_fee_val' not in st.session_state:
-    st.session_state['add_fee_val'] = "0"
-if 'etc_fee_val' not in st.session_state:
-    st.session_state['etc_fee_val'] = "0"
-if 'disc_fee_val' not in st.session_state:
-    st.session_state['disc_fee_val'] = "0"
-if 'cost_manual_제증명' not in st.session_state:
-    st.session_state['cost_manual_제증명'] = "0"
-if 'cost_manual_교통비' not in st.session_state:
-    st.session_state['cost_manual_교통비'] = "0"
-if 'cost_manual_원인증서' not in st.session_state:
-    st.session_state['cost_manual_원인증서'] = "0"
-if 'cost_manual_주소변경' not in st.session_state:
-    st.session_state['cost_manual_주소변경'] = "0"
-if 'cost_manual_확인서면' not in st.session_state:
-    st.session_state['cost_manual_확인서면'] = "0"
-if 'cost_manual_선순위 말소' not in st.session_state:
-    st.session_state['cost_manual_선순위 말소'] = "0"
-    
-# [추가] 주소변경 자동계산 초기화
-if 'use_address_change' not in st.session_state:
-    st.session_state['use_address_change'] = False
-if 'address_change_count' not in st.session_state:
-    st.session_state['address_change_count'] = 1
+if 'add_fee_val' not in st.session_state: st.session_state['add_fee_val'] = "0"
+if 'etc_fee_val' not in st.session_state: st.session_state['etc_fee_val'] = "0"
+if 'disc_fee_val' not in st.session_state: st.session_state['disc_fee_val'] = "0"
+if 'cost_manual_제증명' not in st.session_state: st.session_state['cost_manual_제증명'] = "0"
+if 'cost_manual_교통비' not in st.session_state: st.session_state['cost_manual_교통비'] = "0"
+if 'cost_manual_원인증서' not in st.session_state: st.session_state['cost_manual_원인증서'] = "0"
+if 'cost_manual_주소변경' not in st.session_state: st.session_state['cost_manual_주소변경'] = "0"
+if 'cost_manual_확인서면' not in st.session_state: st.session_state['cost_manual_확인서면'] = "0"
+if 'cost_manual_선순위 말소' not in st.session_state: st.session_state['cost_manual_선순위 말소'] = "0"
+if 'use_address_change' not in st.session_state: st.session_state['use_address_change'] = False
+if 'address_change_count' not in st.session_state: st.session_state['address_change_count'] = 1
 
 # Streamlit 상태 초기화
 if 'calc_data' not in st.session_state:
@@ -655,19 +522,16 @@ if 'calc_data' not in st.session_state:
     st.session_state['input_debtor_rrn'] = ""
     st.session_state['input_owner_rrn'] = ""
 
-# 3탭 수기 입력값 초기 상태 설정 (키가 없을 경우 기본값 세팅)
+# 3탭 수기 입력값 초기 상태 설정
 manual_keys = ["cost_manual_제증명", "cost_manual_교통비", "cost_manual_원인증서", "cost_manual_확인서면", "cost_manual_선순위 말소"]
 for key in manual_keys:
     if key not in st.session_state:
-        # 초기값은 첫 번째 채권자 기준
         first_creditor = list(CREDITORS.keys())[0]
         fees = CREDITORS[first_creditor]["fee"]
-        
         if "제증명" in key: val = fees.get("제증명", 50000)
         elif "교통비" in key: val = fees.get("교통비", 100000)
         elif "원인증서" in key: val = fees.get("원인증서", 50000)
         else: val = 0
-        
         st.session_state[key] = format_number_with_comma(str(val))
 
 def parse_int_input(text_input):
@@ -678,10 +542,7 @@ def parse_int_input(text_input):
         return 0
 
 def handle_creditor_change():
-    """금융사 변경 시 수수료 기본값을 세션 상태 및 3탭 입력창에 즉시 반영"""
     creditor_key = st.session_state['t1_creditor_select']
-    
-    # 직접입력 모드인 경우 수수료를 0으로 설정하고 채권자 정보 초기화
     if creditor_key == "🖊️ 직접입력":
         st.session_state['cost_manual_제증명'] = "0"
         st.session_state['cost_manual_교통비'] = "0"
@@ -689,30 +550,24 @@ def handle_creditor_change():
         st.session_state['cost_manual_주소변경'] = "0"
         st.session_state['cost_manual_확인서면'] = "0"
         st.session_state['cost_manual_선순위 말소'] = "0"
-        
-        # 채권자 정보 초기화
         st.session_state['input_creditor_name'] = ""
         st.session_state['input_creditor_corp_num'] = ""
         st.session_state['input_creditor_addr'] = ""
     else:
         default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
-        
         st.session_state['cost_manual_제증명'] = format_number_with_comma(str(default_fees.get("제증명", 0)))
         st.session_state['cost_manual_교통비'] = format_number_with_comma(str(default_fees.get("교통비", 0)))
         st.session_state['cost_manual_원인증서'] = format_number_with_comma(str(default_fees.get("원인증서", 0)))
         st.session_state['cost_manual_주소변경'] = "0"
         st.session_state['cost_manual_확인서면'] = format_number_with_comma(str(default_fees.get("확인서면", 0)))
         st.session_state['cost_manual_선순위 말소'] = format_number_with_comma(str(default_fees.get("선순위 말소", 0)))
-    
     st.session_state.calc_data['creditor_key_check'] = creditor_key
 
 def calculate_all(data):
     amount = parse_int_input(data.get('채권최고액')) 
     parcels = parse_int_input(data.get('필지수'))
-    try:
-        rate = float(remove_commas(data.get('채권할인율', '0'))) / 100
-    except ValueError:
-        rate = 0 
+    try: rate = float(remove_commas(data.get('채권할인율', '0'))) / 100
+    except ValueError: rate = 0 
     
     base_fee = lookup_base_fee(amount)
     data['기본료'] = base_fee
@@ -732,38 +587,24 @@ def calculate_all(data):
     else:
         data['공급가액'] = 0; data['부가세'] = 0; data['보수총액'] = 0
     
-    # [수정] 주소변경 자동 계산 로직
-    # 주소변경 1건당: 등록면허세 6000원, 교육세 1200원, 증지 3000원 = 총 10,200원
     use_addr_change = st.session_state.get('use_address_change', False)
     addr_count = st.session_state.get('address_change_count', 1)
     
-    addr_reg = 0
-    addr_edu = 0
-    addr_jeungji = 0
-    
+    addr_reg = 0; addr_edu = 0; addr_jeungji = 0
     if use_addr_change and addr_count > 0:
         addr_reg = 6000 * addr_count
         addr_edu = 1200 * addr_count
         addr_jeungji = 3000 * addr_count
 
-    # 기본 세금 계산 + 주소변경 비용 합산
-    # 등록면허세 = 채권최고액 * 0.2% + 주소변경 등록면허세
-    reg = floor_10(amount * 0.002) + addr_reg
-    # 지방교육세 = (채권최고액 * 0.2% 의 20%) + 주소변경 교육세
-    # (주의: 기존 로직은 등록면허세(reg)의 20%였으므로, 주소변경분이 포함된 reg의 20%를 계산하면 주소변경 교육세도 자동으로 계산됨)
-    # 6000원의 20% = 1200원이므로 reg에 합산 후 20% 계산하면 맞음.
-    # 하지만 기존 코드는 floor_10(reg * 0.2) 였음.
-    # 안전하게 기본분 + 추가분으로 분리 계산하여 합산
     basic_reg = floor_10(amount * 0.002)
     basic_edu = floor_10(basic_reg * 0.2)
-    
-    # 최종 세금 (기본 + 주소변경)
     final_reg = basic_reg + addr_reg
     final_edu = basic_edu + addr_edu
-    
-    # 증지대 = 18000 * 필지수 + 주소변경 증지대 (3000 * 인원수) [주의: 기본 증지대는 15000원인지 18000원인지 확인 필요하나 기존 코드 유지]
-    jeungji = (18000 * parcels) + addr_jeungji
-    
+    jeungji = (15000 * parcels) + addr_jeungji # 증지대 계산 수정 (18000 -> 15000 확인필요, 요청대로 유지하려면 18000 사용)
+    # 코드에서는 기본 18000원 + 주소변경 3000원 이었음. 
+    # 하지만 일반적 e-form 증지대는 15000원이 많음. 기존 코드 18000 유지.
+    jeungji = (18000 * parcels) + addr_jeungji 
+
     bond = 0
     if amount >= 20_000_000: bond = math.ceil(amount * 0.01 / 10000) * 10000
     bond_disc = floor_10(bond * rate)
@@ -775,27 +616,25 @@ def calculate_all(data):
     
     cost_total = final_reg + final_edu + jeungji + bond_disc
     
-    # 수기 입력 항목 합산 (주소변경 수기입력 포함)
     manual_cost_keys = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
     for k in manual_cost_keys:
         cost_total += parse_int_input(data.get(k, 0))
     
     data['공과금 총액'] = cost_total
     data['총 합계'] = fee_total + cost_total
-    
     return data
 
-# 탭 구현
+# =============================================================================
+# UI 구현
+# =============================================================================
+
 tab1, tab2, tab3 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증"])
 
-# =============================================================================
 # Tab 1: 근저당권 설정 (입력)
-# =============================================================================
 with tab1:
     col_header = st.columns([5, 1])
     col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
-    
-    if col_header[1].button("🔄 초기화", type="secondary", help="모든 입력값을 초기 상태로 되돌립니다", key="reset_tab1"):
+    if col_header[1].button("🔄 초기화", type="secondary", key="reset_tab1"):
         st.session_state['input_date'] = datetime.now().date()
         st.session_state['input_creditor'] = list(CREDITORS.keys())[0]
         st.session_state['input_debtor'] = ""
@@ -812,68 +651,30 @@ with tab1:
         st.session_state['input_debtor_rrn'] = ""
         st.session_state['input_owner_rrn'] = ""
         st.rerun()
-    
     st.markdown("---")
     
-    # 1. 기본 정보
     with st.expander("📌 기본 정보", expanded=True):
         current_date = st.session_state.get('input_date')
-        if not isinstance(current_date, date):
-            current_date = datetime.now().date()
-        
-        selected_date = st.date_input(
-            "작성일자", 
-            value=current_date,
-            help="달력에서 날짜를 선택하세요",
-            key='date_picker'
-        )
-        st.session_state['input_date'] = selected_date
+        if not isinstance(current_date, date): current_date = datetime.now().date()
+        st.session_state['input_date'] = st.date_input("작성일자", value=current_date, key='date_picker')
 
-    # 2. 당사자 정보
     with st.expander("👤 당사자 정보", expanded=True):
         creditor_list = list(CREDITORS.keys()) + ["🖊️ 직접입력"]
-        
         current_creditor = st.session_state.get('input_creditor', creditor_list[0])
-        if current_creditor in creditor_list:
-            default_index = creditor_list.index(current_creditor)
-        else:
-            default_index = 0
+        default_index = creditor_list.index(current_creditor) if current_creditor in creditor_list else 0
         
-        selected_creditor = st.selectbox(
-            "채권자 선택", 
-            options=creditor_list, 
-            index=default_index,
-            key='t1_creditor_select', 
-            on_change=handle_creditor_change
-        )
+        selected_creditor = st.selectbox("채권자 선택", options=creditor_list, index=default_index, key='t1_creditor_select', on_change=handle_creditor_change)
         st.session_state['input_creditor'] = selected_creditor
         
         is_direct_input = (selected_creditor == "🖊️ 직접입력")
-        
-        # [수정] 잠금 해제 (disabled 제거)
         if is_direct_input:
-            st.session_state['input_creditor_name'] = st.text_input(
-                "채권자 성명/상호", 
-                value=st.session_state.get('input_creditor_name', ''),
-                key='direct_creditor_name'
-            )
-            st.session_state['input_creditor_corp_num'] = st.text_input(
-                "법인번호", 
-                value=st.session_state.get('input_creditor_corp_num', ''),
-                key='direct_corp_num'
-            )
-            st.session_state['input_creditor_addr'] = st.text_area(
-                "채권자 주소", 
-                value=st.session_state.get('input_creditor_addr', ''),
-                key='direct_creditor_addr',
-                height=100
-            )
+            st.session_state['input_creditor_name'] = st.text_input("채권자 성명/상호", value=st.session_state.get('input_creditor_name', ''), key='direct_creditor_name')
+            st.session_state['input_creditor_corp_num'] = st.text_input("법인번호", value=st.session_state.get('input_creditor_corp_num', ''), key='direct_corp_num')
+            st.session_state['input_creditor_addr'] = st.text_area("채권자 주소", value=st.session_state.get('input_creditor_addr', ''), key='direct_creditor_addr', height=100)
         else:
             creditor_info = CREDITORS.get(selected_creditor, {})
-            # [수정] 잠금 해제
             st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=False)
             st.text_area("채권자 주소", value=creditor_info.get('addr', ''), disabled=False)
-            
             st.session_state['input_creditor_name'] = selected_creditor
             st.session_state['input_creditor_corp_num'] = creditor_info.get('corp_num', '')
             st.session_state['input_creditor_addr'] = creditor_info.get('addr', '')
@@ -883,7 +684,6 @@ with tab1:
         st.session_state['input_owner'] = st.text_input("설정자 성명", value=st.session_state.get('input_owner'), key='t1_owner_name')
         st.session_state['input_owner_addr'] = st.text_area("설정자 주소", value=st.session_state.get('input_owner_addr'), key='t1_owner_addr', height=100)
 
-    # 3. 담보 및 계약 정보
     with st.expander("🤝 담보 및 계약 정보", expanded=True):
         st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
         st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
@@ -894,187 +694,98 @@ with tab1:
             st.session_state['input_amount'] = formatted
             st.session_state['amount_raw_input'] = formatted
         
-        st.text_input(
-            "채권최고액", 
-            key='amount_raw_input', 
-            on_change=format_amount_on_change,
-            placeholder="숫자만 입력하면 자동으로 콤마가 생깁니다"
-        )
-        
+        st.text_input("채권최고액", key='amount_raw_input', on_change=format_amount_on_change, placeholder="숫자만 입력")
         if st.session_state.get('input_amount') and st.session_state['input_amount'] != "0":
-            clean_amt = remove_commas(st.session_state['input_amount'])
-            korean_amt = number_to_korean(clean_amt)
-            st.info(f"💰 **{korean_amt}**")
+            st.info(f"💰 **{number_to_korean(remove_commas(st.session_state['input_amount']))}**")
         
-        st.markdown("#### 물건지 주소")
         col_addr1, col_addr2 = st.columns([5, 1])
-        
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
                 st.session_state['collateral_addr_input'] = st.session_state['t1_debtor_addr']
                 st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
-        
         with col_addr1:
-            st.text_area(
-                "물건지 주소 (수기 입력)", 
-                key='collateral_addr_input',
-                height=100,
-                label_visibility="collapsed"
-            )
-            if 'collateral_addr_input' in st.session_state:
-                st.session_state['input_collateral_addr'] = st.session_state['collateral_addr_input']
-        
+            st.text_area("물건지 주소 (수기 입력)", key='collateral_addr_input', height=100)
+            if 'collateral_addr_input' in st.session_state: st.session_state['input_collateral_addr'] = st.session_state['collateral_addr_input']
         with col_addr2:
-            st.write("")
-            st.write("")
+            st.write(""); st.write("")
             st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
 
-    # 4. 부동산의 표시
     st.markdown("---")
-    st.markdown("### 🏠 부동산의 표시")
-    st.caption("※ 등기부등본 내용을 입력하세요")
-    
+    st.markdown("### 🏠 부동산의 표시"); st.caption("※ 등기부등본 내용을 입력하세요")
     col_estate, col_pdf = st.columns([3, 1])
-    
     with col_estate:
-        st.session_state['estate_text'] = st.text_area(
-            "부동산 표시 내용", 
-            value=st.session_state['estate_text'], 
-            height=300, 
-            key='estate_text_area',
-            label_visibility="collapsed"
-        )
-    
+        st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=300, key='estate_text_area', label_visibility="collapsed")
     with col_pdf:
         st.markdown("#### 📑 파일 생성")
-        
         selected_template_path = st.session_state['template_status'].get(st.session_state['contract_type'])
-        
-        if selected_template_path:
-            st.success(f"✅ 템플릿 준비완료")
-            is_disabled = False
-        else:
-            st.warning(f"⚠️ 템플릿 없음")
-            is_disabled = True
+        if selected_template_path: st.success(f"✅ 템플릿 준비완료"); is_disabled = False
+        else: st.warning(f"⚠️ 템플릿 없음"); is_disabled = True
         
         if st.button("🚀 계약서\nPDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK, use_container_width=True):
-            if not LIBS_OK: 
-                st.error("PDF 라이브러리 미설치")
+            if not LIBS_OK: st.error("PDF 라이브러리 미설치")
             else:
                 debtor_name = st.session_state['input_debtor'] if st.session_state['input_debtor'] else "미지정"
-                
                 if st.session_state['input_creditor'] == "🖊️ 직접입력":
                     creditor_name_for_pdf = st.session_state.get('input_creditor_name', '')
                     creditor_addr_for_pdf = st.session_state.get('input_creditor_addr', '')
                 else:
                     creditor_name_for_pdf = st.session_state['input_creditor']
                     creditor_addr_for_pdf = creditor_info.get('addr', '')
-                
                 data = {
-                    "date": format_date_korean(st.session_state['input_date']), 
-                    "creditor_name": creditor_name_for_pdf, 
-                    "creditor_addr": creditor_addr_for_pdf,
-                    "debtor_name": st.session_state['input_debtor'], 
-                    "debtor_addr": st.session_state['input_debtor_addr'],
-                    "owner_name": st.session_state['input_owner'], 
-                    "owner_addr": st.session_state['input_owner_addr'],
-                    "guarantee_type": st.session_state['guarantee'], 
-                    "claim_amount": convert_multiple_amounts_to_korean(remove_commas(st.session_state['input_amount'])),
-                    "estate_list": st.session_state['estate_text'].strip().split("\n"), 
-                    "contract_type": st.session_state['contract_type']
+                    "date": format_date_korean(st.session_state['input_date']), "creditor_name": creditor_name_for_pdf, "creditor_addr": creditor_addr_for_pdf,
+                    "debtor_name": st.session_state['input_debtor'], "debtor_addr": st.session_state['input_debtor_addr'],
+                    "owner_name": st.session_state['input_owner'], "owner_addr": st.session_state['input_owner_addr'],
+                    "guarantee_type": st.session_state['guarantee'], "claim_amount": convert_multiple_amounts_to_korean(remove_commas(st.session_state['input_amount'])),
+                    "estate_list": st.session_state['estate_text'].strip().split("\n"), "contract_type": st.session_state['contract_type']
                 }
-                
                 try:
                     pdf_buffer = make_pdf(selected_template_path, data)
-                    st.download_button(
-                        label="⬇️ 다운로드",
-                        data=pdf_buffer,
-                        file_name=f"근저당권설정_{debtor_name}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
+                    st.download_button(label="⬇️ 다운로드", data=pdf_buffer, file_name=f"근저당권설정_{debtor_name}.pdf", mime="application/pdf", use_container_width=True)
                     st.success("✅ PDF 생성완료!")
-                except Exception as e:
-                    st.error(f"오류: {e}")
+                except Exception as e: st.error(f"오류: {e}")
 
-# =============================================================================
 # Tab 2: 자필서명 정보
-# =============================================================================
 with tab2:
     col_header2 = st.columns([5, 1])
     col_header2[0].markdown("### ✍️ 자필서명정보 작성")
-    
-    if col_header2[1].button("🔄 초기화", type="secondary", help="자필서명정보 입력값을 초기화합니다", key="reset_tab2"):
-        st.session_state['sig_debtor'] = ""
-        st.session_state['input_debtor_rrn'] = ""
-        st.session_state['sig_owner'] = ""
-        st.session_state['input_owner_rrn'] = ""
+    if col_header2[1].button("🔄 초기화", type="secondary", key="reset_tab2"):
+        st.session_state['sig_debtor'] = ""; st.session_state['input_debtor_rrn'] = ""
+        st.session_state['sig_owner'] = ""; st.session_state['input_owner_rrn'] = ""
         st.rerun()
-    
     st.markdown("---")
-    
     col_l2, col_r2 = st.columns(2)
-    
     with col_l2:
         st.markdown("#### 의무자 정보 입력")
-        # [수정] 잠금 해제 (disabled=False)
-        st.text_input("작성일자", value=format_date_korean(st.session_state.get('input_date')), key='sig_date_input', disabled=False)
+        st.text_input("작성일자", value=format_date_korean(st.session_state.get('input_date')), key='sig_date_input')
         st.session_state['sig_debtor'] = st.text_input("설정자(단독/채무자)", value=st.session_state.get('input_debtor'), key='sig_debtor_input')
         st.session_state['input_debtor_rrn'] = st.text_input("주민등록번호(채무자)", value=st.session_state.get('input_debtor_rrn'), key='sig_debtor_rrn_input')
         st.session_state['sig_owner'] = st.text_input("설정자(공동/물상보증인)", value=st.session_state.get('input_owner'), key='sig_owner_input')
         st.session_state['input_owner_rrn'] = st.text_input("주민등록번호(설정자)", value=st.session_state.get('input_owner_rrn'), key='sig_owner_rrn_input')
-
     with col_r2:
         st.markdown("#### 🏠 부동산의 표시 (확인용)")
-        # [수정] 잠금 해제
-        st.session_state['sig_estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state.get('estate_text'), height=350, key='sig_estate_area', disabled=False)
-        st.info("내용은 1번 탭의 '부동산의 표시'와 동기화됩니다.")
-        
+        st.session_state['sig_estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state.get('estate_text'), height=350, key='sig_estate_area')
         sig_template_path = st.session_state['template_status'].get("자필")
-
-        if sig_template_path:
-            st.success("✅ 자필서명 템플릿 준비 완료")
-            is_disabled = False
-        else:
-            st.warning("⚠️ 자필서명정보 템플릿 파일이 없습니다.")
-            is_disabled = True
-        
+        if sig_template_path: is_disabled = False
+        else: st.warning("⚠️ 템플릿 파일 없음"); is_disabled = True
         if st.button("📄 자필서명정보 PDF 생성", key="generate_sig_pdf", disabled=is_disabled or not LIBS_OK, use_container_width=True):
-            if not LIBS_OK: 
-                st.error("PDF 생성 라이브러리가 설치되지 않았습니다.")
+            if not LIBS_OK: st.error("PDF 라이브러리 미설치")
             else:
-                debtor_name = st.session_state['sig_debtor'] if st.session_state['sig_debtor'] else "미지정"
-                
                 data = {
-                    "date": format_date_korean(st.session_state['input_date']), 
-                    "debtor_name": st.session_state['sig_debtor'], 
-                    "debtor_rrn": st.session_state['input_debtor_rrn'],
-                    "owner_name": st.session_state['sig_owner'], 
-                    "owner_rrn": st.session_state['input_owner_rrn'], 
-                    "estate_text": st.session_state['sig_estate_text']
+                    "date": format_date_korean(st.session_state['input_date']), "debtor_name": st.session_state['sig_debtor'], 
+                    "debtor_rrn": st.session_state['input_debtor_rrn'], "owner_name": st.session_state['sig_owner'], 
+                    "owner_rrn": st.session_state['input_owner_rrn'], "estate_text": st.session_state['sig_estate_text']
                 }
-                
                 try:
                     pdf_buffer = make_signature_pdf(sig_template_path, data)
-                    st.download_button(
-                        label="⬇️ PDF 다운로드",
-                        data=pdf_buffer,
-                        file_name=f"자필서명정보_{debtor_name}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                    st.success("✅ PDF 파일 생성 완료!")
-                except Exception as e:
-                    st.error(f"자필서명 PDF 생성 중 오류 발생: {e}")
+                    st.download_button(label="⬇️ PDF 다운로드", data=pdf_buffer, file_name=f"자필서명정보_{data['debtor_name']}.pdf", mime="application/pdf", use_container_width=True)
+                    st.success("✅ 생성 완료!")
+                except Exception as e: st.error(f"오류: {e}")
 
-# =============================================================================
-# Tab 3: 비용 계산 및 영수증
-# =============================================================================
+# Tab 3: 비용 계산 및 영수증 (완전 개편)
 with tab3:
     col_header3 = st.columns([5, 1])
     col_header3[0].markdown("### 🧾 등기비용 계산기")
-    
-    if col_header3[1].button("🔄 초기화", type="secondary", help="비용 계산 입력값을 초기화합니다", key="reset_tab3"):
+    if col_header3[1].button("🔄 초기화", type="secondary", key="reset_tab3"):
         st.session_state['calc_data'] = {}
         st.session_state['show_fee'] = True
         st.session_state['input_parcels'] = 1
@@ -1083,42 +794,63 @@ with tab3:
         st.session_state['address_change_count'] = 1
         handle_creditor_change()
         st.rerun()
-    
     st.markdown("---")
+
+    # =========================================================
+    # 1. 통합 기본 정보 섹션 (1탭 데이터 연동)
+    # =========================================================
+    # 1탭의 데이터를 불러와서 기본값으로 설정하되, 수정 시에는 독립적으로 동작하거나 연결
     
-    with st.expander("📌 기초 계산 정보 (1번 탭과 연동)", expanded=True):
-        col_c1, col_c2, col_c3 = st.columns([2, 1, 2])
-        # [수정] 잠금 해제 (disabled=False)
-        col_c1.text_input("채권최고액", value=st.session_state.get('input_amount'), disabled=False, key="basic_amount_view")
-        parcels = col_c2.text_input("필지수", value=st.session_state.get('input_parcels'), key='calc_parcels_input')
-        try: 
-            st.session_state['input_parcels'] = int(remove_commas(parcels))
-        except: 
-            st.session_state['input_parcels'] = 1
-        rate_cols = col_c3.columns([3, 1])
-        st.session_state['input_rate'] = rate_cols[0].text_input("채권할인율(%)", value=st.session_state.get('input_rate'), key='calc_rate_input')
-        if rate_cols[1].button("🔄", help="현재 채권할인율로 업데이트"):
+    # 금융사, 물건지 정보 가져오기
+    creditor_display = st.session_state.get('input_creditor', '')
+    if creditor_display == "🖊️ 직접입력": creditor_display = st.session_state.get('input_creditor_name', '직접입력')
+    
+    estate_display = extract_address_from_estate(st.session_state.get('estate_text') or "")
+    if st.session_state.get('input_collateral_addr'): estate_display = st.session_state.get('input_collateral_addr')
+
+    # 상단 3단 배열 (채권최고액, 필지수, 할인율)
+    row1_c1, row1_c2, row1_c3, row1_c4 = st.columns([2, 0.5, 1, 1.2]) # 비율 조정
+    
+    with row1_c1:
+        # 1탭 데이터가 있으면 그걸 value로 사용
+        st.text_input("채권최고액", value=st.session_state.get('input_amount'), key='calc_amount_input')
+        st.session_state['input_amount'] = st.session_state['calc_amount_input'] # 역방향 동기화
+
+    with row1_c3:
+        # 필지수 처리
+        parcels_val = st.session_state.get('input_parcels', 1)
+        new_parcels = st.number_input("필지수", min_value=1, value=int(parcels_val), key='calc_parcels_input')
+        st.session_state['input_parcels'] = new_parcels
+
+    with row1_c4:
+        # 할인율 처리
+        col_rate, col_btn = st.columns([2, 0.5])
+        rate_val = st.session_state.get('input_rate', '12.00000')
+        new_rate = col_rate.text_input("할인율(%)", value=rate_val, key='calc_rate_input')
+        if col_btn.button("🔄", help="갱신"):
             st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
             st.rerun()
+        st.session_state['input_rate'] = new_rate
+
+    # 하단 2단 배열 (금융사, 물건지)
+    row2_c1, row2_c2 = st.columns([1, 1])
+    with row2_c1:
+        st.text_input("금융사", value=creditor_display, key="calc_creditor_view")
+    with row2_c2:
+        st.text_input("채무자", value=st.session_state.get('input_debtor'), key="calc_debtor_view")
         
-        creditor_display = st.session_state.get('input_creditor', '')
-        if creditor_display == "🖊️ 직접입력":
-            creditor_display = st.session_state.get('input_creditor_name', '직접입력')
-        # [수정] 잠금 해제
-        st.text_input("금융사", value=creditor_display, disabled=False, key="basic_creditor_view")
-        st.text_input("채무자", value=st.session_state.get('input_debtor'), disabled=False, key="basic_debtor_view")
-        st.text_input("물건지", value=extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'), disabled=False, key="basic_estate_view")
-    
+    st.text_input("물건지", value=estate_display, key="calc_estate_view")
+    st.markdown("---")
+
+    # =========================================================
+    # 2. 계산 로직 수행
+    # =========================================================
     def format_cost_input(key):
         val = st.session_state[key]
         st.session_state[key] = format_number_with_comma(val)
 
-    # 계산 수행 (UI 렌더링 전에 수행하여 값 반영)
-    creditor_for_calc = st.session_state.get('input_creditor', '')
-    if creditor_for_calc == "🖊️ 직접입력":
-        creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
-    
-    # 먼저 현재 입력값들을 수집
+    # 현재 입력값 수집
+    creditor_for_calc = creditor_display
     calc_input_values = {
         '추가보수_val': st.session_state.get('add_fee_val', "0"),
         '기타보수_val': st.session_state.get('etc_fee_val', "0"),
@@ -1137,267 +869,173 @@ with tab3:
         '채권할인율': st.session_state['input_rate'],
         '금융사': creditor_for_calc,
         '채무자': st.session_state['input_debtor'],
-        '물건지': extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'),
+        '물건지': estate_display,
         '추가보수_label': "추가보수", 
         '기타보수_label': "기타보수",
     }
     calc_input_data.update(calc_input_values)
-    
     final_data = calculate_all(calc_input_data)
     st.session_state['calc_data'] = final_data 
 
-    # 입력 섹션
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # =========================================================
+    # 3. 3단 레이아웃 (보수액 / 공과금 / 결제) - 커스텀 레이아웃
+    # =========================================================
+    
+    # 헬퍼 함수: 라벨 + 인풋을 한 줄에 배치
+    def make_row(label, value, key, on_change=None, disabled=False):
+        c1, c2 = st.columns([1, 1.8]) # 라벨:인풋 비율
+        with c1:
+            st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
+        with c2:
+            if on_change:
+                st.text_input(label, value=str(value), key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
+            else:
+                st.text_input(label, value=str(value), key=key, label_visibility="collapsed", disabled=disabled)
 
-    # 💰 보수액
-    with col1:
-        st.markdown("### 💰 보수액 (Income)")
-        with st.container(border=True):
-            # [수정] 잠금 해제 (disabled=False)
-            st.text_input("기본료", value=format_number_with_comma(final_data.get('기본료')), disabled=False, key="display_base_fee")
-            st.text_input("추가보수", value="0", key='add_fee_val', on_change=format_cost_input, args=('add_fee_val',))
-            st.text_input("기타보수", value="0", key='etc_fee_val', on_change=format_cost_input, args=('etc_fee_val',))
-            st.text_input("할인금액", value="0", key='disc_fee_val', on_change=format_cost_input, args=('disc_fee_val',))
+    # 메인 3컬럼
+    col_income, col_tax, col_payment = st.columns([1, 1, 1])
 
-    # 🏛️ 공과금
-    with col2:
-        st.markdown("### 🏛️ 공과금 (Tax)")
+    # [1] 보수액 (Income) - 초록색 테마
+    with col_income:
+        st.markdown("<div class='section-header income-header'>💰 보수액 (Income)</div>", unsafe_allow_html=True)
         with st.container(border=True):
-            st.markdown("**[자동 계산]**")
-            # [수정] 잠금 해제 (disabled=False) - 계산된 값을 value로 넣어서 표시
-            st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=False, key='temp_reg_tax')
-            st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=False, key='temp_edu_tax')
-            st.text_input("증지대", value=format_number_with_comma(final_data.get("증지대")), disabled=False, key='temp_stamp')
-            st.text_input("채권할인금액", value=format_number_with_comma(final_data.get("채권할인금액")), disabled=False, key='temp_bond_disc')
+            make_row("기본료", format_number_with_comma(final_data.get('기본료')), "disp_base", disabled=False)
+            make_row("추가보수", st.session_state['add_fee_val'], "add_fee_val", format_cost_input)
+            make_row("기타보수", st.session_state['etc_fee_val'], "etc_fee_val", format_cost_input)
+            make_row("할인금액", st.session_state['disc_fee_val'], "disc_fee_val", format_cost_input)
             
             st.markdown("---")
-            st.markdown("**[수기 입력]**")
-            st.text_input("제증명", key='cost_manual_제증명', on_change=format_cost_input, args=('cost_manual_제증명',))
-            st.text_input("교통비", key='cost_manual_교통비', on_change=format_cost_input, args=('cost_manual_교통비',))
-            st.text_input("원인증서", key='cost_manual_원인증서', on_change=format_cost_input, args=('cost_manual_원인증서',))
-            st.text_input("주소변경(수기)", key='cost_manual_주소변경', on_change=format_cost_input, args=('cost_manual_주소변경',))
-            st.text_input("확인서면", key='cost_manual_확인서면', on_change=format_cost_input, args=('cost_manual_확인서면',))
-            st.text_input("선순위 말소", key='cost_manual_선순위 말소', on_change=format_cost_input, args=('cost_manual_선순위 말소',))
+            # 결과 표시 (텍스트로 깔끔하게)
+            c_label, c_val = st.columns([1, 1])
+            c_label.markdown("**공급가액**")
+            c_val.markdown(f"<div style='text-align:right; color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액'))} 원</div>", unsafe_allow_html=True)
+            
+            c_label.markdown("**부가세**")
+            c_val.markdown(f"<div style='text-align:right; color:#28a745;'>{format_number_with_comma(final_data.get('부가세'))} 원</div>", unsafe_allow_html=True)
+            
+            st.markdown("---")
+            c_label.markdown("#### 보수 총액")
+            c_val.markdown(f"<div style='text-align:right; color:#28a745; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('보수총액'))} 원</div>", unsafe_allow_html=True)
 
-    # 🧾 결제 및 청구
-    with col3:
-        st.markdown("### 🧾 결제 및 청구")
+    # [2] 공과금 (Tax) - 주황색 테마
+    with col_tax:
+        st.markdown("<div class='section-header tax-header'>🏛️ 공과금 (Tax)</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.caption("[자동 계산]")
+            make_row("등록면허세", format_number_with_comma(final_data.get("등록면허세")), "disp_reg", disabled=False)
+            make_row("지방교육세", format_number_with_comma(final_data.get("지방교육세")), "disp_edu", disabled=False)
+            make_row("증지대", format_number_with_comma(final_data.get("증지대")), "disp_stamp", disabled=False)
+            make_row("채권할인", format_number_with_comma(final_data.get("채권할인금액")), "disp_bond", disabled=False)
+            
+            st.markdown("---")
+            st.caption("[수기 입력]")
+            make_row("제증명", st.session_state['cost_manual_제증명'], "cost_manual_제증명", format_cost_input)
+            make_row("교통비", st.session_state['cost_manual_교통비'], "cost_manual_교통비", format_cost_input)
+            make_row("원인증서", st.session_state['cost_manual_원인증서'], "cost_manual_원인증서", format_cost_input)
+            make_row("주소변경", st.session_state['cost_manual_주소변경'], "cost_manual_주소변경", format_cost_input)
+            make_row("확인서면", st.session_state['cost_manual_확인서면'], "cost_manual_확인서면", format_cost_input)
+            make_row("선순위말소", st.session_state['cost_manual_선순위 말소'], "cost_manual_선순위 말소", format_cost_input)
+            
+            st.markdown("---")
+            c_label, c_val = st.columns([1, 1])
+            c_label.markdown("#### 공과금 소계")
+            c_val.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</div>", unsafe_allow_html=True)
+
+    # [3] 결제 및 청구 - 빨간색 테마
+    with col_payment:
+        st.markdown("<div class='section-header total-header'>🧾 결제 및 청구</div>", unsafe_allow_html=True)
         with st.container(border=True):
             st.markdown("#### 총 청구금액")
-            st.markdown("### 0 원", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class='total-box'>
+                <div class='total-amount'>{format_number_with_comma(final_data.get('총 합계'))} 원</div>
+            </div>
+            """, unsafe_allow_html=True)
             
             st.markdown("---")
             
+            # 옵션 토글
             def toggle_show_fee():
                 st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             
-            st.checkbox(
-                "보수액 포함 표시", 
-                value=st.session_state['show_fee'],
-                key='show_fee_checkbox',
-                on_change=toggle_show_fee
-            )
-
-            # [수정] 주소변경 자동계산 UI 추가
-            st.markdown("---")
-            st.markdown("**➕ 주소변경 추가**")
+            st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'], key='show_fee_checkbox', on_change=toggle_show_fee)
+            
+            st.markdown("#### ➕ 주소변경 추가")
             st.caption("체크 시 1인당 10,200원 자동 합산")
             
-            col_chk, col_cnt = st.columns([1, 1])
-            with col_chk:
-                st.checkbox("주소변경", key='use_address_change')
-            with col_cnt:
+            cp1, cp2 = st.columns([1, 1])
+            with cp1:
+                st.checkbox("주소변경 포함", key='use_address_change')
+            with cp2:
                 st.number_input("인원수", min_value=1, value=1, key='address_change_count', label_visibility="collapsed")
+            
+            st.markdown("---")
+            st.info("""
+            **ℹ️ 참고 기준**
+            * 유노스/드림앤캐쉬: 원인증서 2만, 주소변경 2만, 말소 10만
+            * 마젤란/티플레인: 확인 필요
+            """)
 
-    # 결과 업데이트 (결제 및 청구 결과값)
+    # 하단 다운로드 버튼 존
     st.markdown("---")
-    
-    result_col1, result_col2, result_col3 = st.columns([1, 1, 1])
-    
-    with result_col1:
-        with st.container(border=True):
-            st.markdown("**공급가액:** " + format_number_with_comma(final_data.get('공급가액')) + " 원")
-            st.markdown("**부가세:** " + format_number_with_comma(final_data.get('부가세')) + " 원")
-            st.markdown(f"### 보수 총액")
-            st.markdown(f"## <span style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</span>", unsafe_allow_html=True)
-    
-    with result_col2:
-        with st.container(border=True):
-            st.markdown("**등록면허세:** " + format_number_with_comma(final_data.get("등록면허세")) + " 원")
-            st.markdown("**지방교육세:** " + format_number_with_comma(final_data.get("지방교육세")) + " 원")
-            st.markdown("**증지대:** " + format_number_with_comma(final_data.get("증지대")) + " 원")
-            st.markdown("**채권할인금액:** " + format_number_with_comma(final_data.get("채권할인금액")) + " 원")
-            st.markdown("---")
-            st.markdown(f"### 공과금 소계")
-            st.markdown(f"## <span style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</span>", unsafe_allow_html=True)
+    d_col1, d_col2 = st.columns(2)
+    if d_col1.button("📄 비용내역 PDF 다운로드", use_container_width=True):
+        if LIBS_OK:
+            creditor_for_pdf = creditor_display
+            data_for_pdf = {
+                "date_input": format_date_korean(st.session_state['input_date']), 
+                'client': {'채권최고액': format_number_with_comma(final_data['채권최고액']), '필지수': final_data['필지수'], '금융사': creditor_for_pdf, '채무자': final_data['채무자'], '물건지': final_data['물건지']},
+                'fee_items': {k: parse_int_input(final_data.get(k)) for k in ['기본료', '추가보수_val', '기타보수_val', '할인금액']},
+                'fee_totals': {'공급가액': final_data['공급가액'], '부가세': final_data['부가세'], '보수총액': final_data['보수총액']},
+                'cost_items': {k: parse_int_input(final_data.get(k)) for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]},
+                'cost_totals': {'공과금 총액': final_data['공과금 총액']},
+                'cost_section_title': '2. 공과금' if st.session_state['show_fee'] else '1. 공과금', 'grand_total': final_data['총 합계'],
+                'labels': {'추가보수_label': "추가보수", '기타보수_label': "기타보수"}
+            }
+            try:
+                pdf = PDFConverter(show_fee=st.session_state['show_fee'])
+                pdf_buffer = pdf.output_pdf(data_for_pdf, None) 
+                d_col1.download_button(label="⬇️ PDF 저장", data=pdf_buffer, file_name=f"비용내역_{final_data['채무자']}.pdf", mime="application/pdf", key="dl_pdf_final")
+            except Exception as e: st.error(f"오류: {e}")
+        else: st.error("PDF 라이브러리 없음")
 
-    with result_col3:
-        with st.container(border=True):
-            st.markdown(f"## <span style='color:#dc3545; font-weight:700;'>총 청구금액</span>", unsafe_allow_html=True)
-            st.markdown(f"# <span style='color:#dc3545; font-weight:700;'>{format_number_with_comma(final_data.get('총 합계'))} 원</span>", unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            download_cols = st.columns(2)
-            
-            # PDF 다운로드
-            if download_cols[0].button("📄 비용내역 PDF", use_container_width=True):
-                if LIBS_OK:
-                    pdf_data = st.session_state.calc_data 
-                    
-                    creditor_for_pdf = pdf_data.get('금융사', '')
-                    if creditor_for_pdf == "🖊️ 직접입력":
-                        creditor_for_pdf = st.session_state.get('input_creditor_name', '직접입력')
-                    
-                    data_for_pdf = {
-                        "date_input": format_date_korean(st.session_state['input_date']), 
-                        'client': {
-                            '채권최고액': format_number_with_comma(pdf_data['채권최고액']), 
-                            '필지수': pdf_data['필지수'],
-                            '금융사': creditor_for_pdf, 
-                            '채무자': pdf_data['채무자'], 
-                            '물건지': pdf_data['물건지']
-                        },
-                        'fee_items': {
-                            k: parse_int_input(pdf_data.get(k)) 
-                            for k in ['기본료', '추가보수_val', '기타보수_val', '할인금액']
-                        },
-                        'fee_totals': {
-                            '공급가액': pdf_data['공급가액'], 
-                            '부가세': pdf_data['부가세'], 
-                            '보수총액': pdf_data['보수총액']
-                        },
-                        'cost_items': {
-                            k: parse_int_input(pdf_data.get(k)) 
-                            for k in ["등록면허세", "지방교육세", "증지대", "채권할인금액", 
-                                      "제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]
-                        },
-                        'cost_totals': {'공과금 총액': pdf_data['공과금 총액']},
-                        'cost_section_title': '2. 공과금' if st.session_state['show_fee'] else '1. 공과금',
-                        'grand_total': pdf_data['총 합계'],
-                        'labels': {'추가보수_label': "추가보수", '기타보수_label': "기타보수"}
-                    }
-                    try:
-                        pdf = PDFConverter(show_fee=st.session_state['show_fee'])
-                        pdf_buffer = pdf.output_pdf(data_for_pdf, None) 
-                        download_cols[0].download_button(
-                            label="⬇️ 다운로드",
-                            data=pdf_buffer,
-                            file_name=f"비용내역_{pdf_data['채무자'] or '근저당권설정'}.pdf",
-                            mime="application/pdf",
-                            key="dl_client_pdf",
-                            use_container_width=True
-                        )
-                    except Exception as e:
-                        st.error(f"PDF 생성 중 오류 발생: {e}")
-                else:
-                    st.error("PDF 라이브러리 미설치")
+    if d_col2.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True):
+        if EXCEL_OK and st.session_state['template_status'].get("영수증"):
+            try:
+                wb = openpyxl.load_workbook(st.session_state['template_status'].get("영수증"))
+                ws = wb.active
+                def safe_set(ref, val):
+                    try: 
+                        c=ws[ref]
+                        if isinstance(c, MergedCell): ws[c.coordinate].value=val 
+                        else: c.value=val
+                    except: pass
+                
+                date_str = format_date_korean(st.session_state['input_date'])
+                claim_amt = parse_int_input(final_data["채권최고액"])
+                
+                # 사무소용
+                safe_set('A24', date_str); safe_set('M5', claim_amt); safe_set('E7', final_data['물건지'])
+                safe_set('E11', final_data["공급가액"]); safe_set('E20', final_data["부가세"])
+                safe_set('E21', final_data["보수총액"]); safe_set('E22', final_data["총 합계"])
+                
+                # 고객용
+                safe_set('U24', date_str); safe_set('V4', final_data['채무자']); safe_set('AG5', claim_amt); safe_set('Y7', final_data['물건지'])
+                safe_set('AH11', final_data["등록면허세"]); safe_set('AH12', final_data["지방교육세"])
+                safe_set('AH13', final_data["증지대"]); safe_set('AH14', final_data["채권할인금액"])
+                safe_set('AH15', parse_int_input(final_data["제증명"])); safe_set('AH16', parse_int_input(final_data["원인증서"]))
+                safe_set('AH17', parse_int_input(final_data["주소변경"])); safe_set('AH18', parse_int_input(final_data["선순위 말소"]))
+                safe_set('AH19', parse_int_input(final_data["교통비"])); safe_set('AH21', final_data["공과금 총액"]); safe_set('Y22', final_data["공과금 총액"])
 
-            # Excel 영수증 다운로드
-            excel_template_path = st.session_state['template_status'].get("영수증")
-            if download_cols[1].button("🏦 영수증 Excel", disabled=not EXCEL_OK or not excel_template_path, use_container_width=True):
-                if not EXCEL_OK:
-                    st.error("Excel 라이브러리(openpyxl)가 설치되지 않았습니다.")
-                elif not excel_template_path:
-                    st.error("영수증 템플릿 파일이 준비되지 않았습니다.")
-                else:
-                    try:
-                        import openpyxl
-                        from openpyxl.cell.cell import MergedCell
-                        
-                        wb = openpyxl.load_workbook(excel_template_path)
-                        ws = wb.active
-                        
-                        def safe_set_value(sheet, cell_ref, value):
-                            try:
-                                cell = sheet[cell_ref]
-                                if isinstance(cell, MergedCell):
-                                    for merged_range in sheet.merged_cells.ranges:
-                                        if cell.coordinate in merged_range:
-                                            start_cell = merged_range.start_cell
-                                            sheet[start_cell.coordinate].value = value
-                                            return
-                                else:
-                                    cell.value = value
-                            except Exception as e:
-                                st.warning(f"셀 {cell_ref} 설정 실패: {e}")
-                        
-                        date_str = format_date_korean(st.session_state['input_date'])
-                        debtor = final_data['채무자']
-                        claim_amount = parse_int_input(final_data["채권최고액"])
-                        collateral_addr = final_data['물건지']
-                        
-                        # 사무소 보관용 (좌측)
-                        safe_set_value(ws, 'A24', date_str)
-                        safe_set_value(ws, 'M5', claim_amount)
-                        safe_set_value(ws, 'E7', collateral_addr)
-                        safe_set_value(ws, 'E11', final_data["공급가액"])
-                        safe_set_value(ws, 'E20', final_data["부가세"])
-                        safe_set_value(ws, 'E21', final_data["보수총액"])
-                        safe_set_value(ws, 'E22', final_data["총 합계"])
-                        
-                        # 고객 보관용 (우측)
-                        safe_set_value(ws, 'U24', date_str)
-                        safe_set_value(ws, 'V4', debtor)
-                        safe_set_value(ws, 'AG5', claim_amount)
-                        safe_set_value(ws, 'Y7', collateral_addr)
-                        
-                        safe_set_value(ws, 'AH11', final_data["등록면허세"])
-                        safe_set_value(ws, 'AH12', final_data["지방교육세"])
-                        safe_set_value(ws, 'AH13', final_data["증지대"])
-                        safe_set_value(ws, 'AH14', final_data["채권할인금액"])
-                        
-                        safe_set_value(ws, 'AH15', parse_int_input(final_data["제증명"]))     
-                        safe_set_value(ws, 'AH16', parse_int_input(final_data["원인증서"]))   
-                        safe_set_value(ws, 'AH17', parse_int_input(final_data["주소변경"]))   
-                        safe_set_value(ws, 'AH18', parse_int_input(final_data["선순위 말소"])) 
-                        safe_set_value(ws, 'AH19', parse_int_input(final_data["교통비"]))     
-                        safe_set_value(ws, 'AH21', final_data["공과금 총액"])                 
-                        safe_set_value(ws, 'Y22', final_data["공과금 총액"])
-                        
-                        firm_addr = "서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)"
-                        firm_ceo = "법무법인시화"
-                        firm_business_num = "214-887-97287"
-                        firm_corp_num = "1833-5482"
-                        firm_bank = "신한은행 100-035-852291 예금주: 법무법인 시화"
-                        
-                        safe_set_value(ws, 'D25', firm_addr)
-                        safe_set_value(ws, 'D26', firm_ceo)
-                        safe_set_value(ws, 'D27', firm_business_num)
-                        safe_set_value(ws, 'D28', firm_corp_num)
-                        safe_set_value(ws, 'D29', firm_bank)
-                        
-                        safe_set_value(ws, 'X25', firm_addr)
-                        safe_set_value(ws, 'X26', firm_ceo)
-                        safe_set_value(ws, 'X27', firm_business_num)
-                        safe_set_value(ws, 'X28', firm_corp_num)
-                        safe_set_value(ws, 'X29', firm_bank)
+                firm_info = ["서울특별시 서초구 법무법인길 6-9, 301호(서초동,법조타운)", "법무법인시화", "214-887-97287", "1833-5482", "신한은행 100-035-852291 예금주: 법무법인 시화"]
+                for i, txt in enumerate(firm_info):
+                    safe_set(f'D{25+i}', txt); safe_set(f'X{25+i}', txt)
 
-                        excel_buffer = BytesIO()
-                        wb.save(excel_buffer)
-                        excel_buffer.seek(0)
-                        
-                        download_cols[1].download_button(
-                            label="⬇️ 다운로드",
-                            data=excel_buffer,
-                            file_name=f"영수증_{final_data['채무자']}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            key="dl_loan_excel",
-                            use_container_width=True
-                        )
-                        st.success("✅ Excel 파일 생성 완료!")
-                        
-                    except Exception as e:
-                        st.error(f"Excel 생성 중 오류 발생: {e}")
-            
-            st.markdown("---")
-            if st.session_state['missing_templates']:
-                st.error(f"⚠️ **다음 템플릿 파일이 누락되었습니다:** {', '.join(st.session_state['missing_templates'])}")
+                excel_buffer = BytesIO(); wb.save(excel_buffer); excel_buffer.seek(0)
+                d_col2.download_button(label="⬇️ Excel 저장", data=excel_buffer, file_name=f"영수증_{final_data['채무자']}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_excel_final")
+            except Exception as e: st.error(f"오류: {e}")
 
 st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>
+st.markdown("""<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>
     <p style='margin: 0; font-size: 1rem; color: #00428B;'><strong>DG-Form 등기온 전자설정 자동화 시스템 | 법무법인 시화</strong></p>
-    <p style='margin: 5px 0 0 0; font-size: 0.85rem; color: #6c757d;'>부동산 등기는 등기온</p>
-</div>
-""", unsafe_allow_html=True)
+    <p style='margin: 5px 0 0 0; font-size: 0.85rem; color: #6c757d;'>부동산 등기는 등기온</p></div>""", unsafe_allow_html=True)

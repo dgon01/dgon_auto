@@ -611,7 +611,7 @@ if 'calc_data' not in st.session_state:
     st.session_state['calc_data'] = {}
     st.session_state['show_fee'] = True
     st.session_state['addr_change_check'] = False
-    st.session_state['addr_count_num'] = 0
+    st.session_state['addr_count_num'] = 1  # 기본값 1로 설정
     st.session_state['input_amount'] = ""
     st.session_state['amount_raw_input'] = ""
     st.session_state['input_parcels'] = 1
@@ -713,12 +713,13 @@ def calculate_all(data):
     edu = floor_10(reg * 0.2)
     jeungji = 18000 * parcels
     
-    # 주소변경 추가 비용 계산
-    addr_count = st.session_state.get('addr_count_num', 0)
-    if st.session_state.get('addr_change_check', False) and addr_count > 0:
-        reg += 6000 * addr_count
-        edu += 1200 * addr_count
-        jeungji += 3000 * addr_count
+    # 주소변경 추가 비용 계산 (체크된 경우만)
+    if st.session_state.get('addr_change_check', False):
+        addr_count = st.session_state.get('addr_count_num', 0)
+        if addr_count > 0:
+            reg += 6000 * addr_count
+            edu += 1200 * addr_count
+            jeungji += 3000 * addr_count
     
     bond = 0
     if amount >= 20_000_000: bond = math.ceil(amount * 0.01 / 10000) * 10000
@@ -1043,7 +1044,7 @@ with tab3:
         st.session_state['calc_data'] = {}
         st.session_state['show_fee'] = True
         st.session_state['addr_change_check'] = False
-        st.session_state['addr_count_num'] = 0
+        st.session_state['addr_count_num'] = 1  # 기본값 1로 설정
         st.session_state['input_parcels'] = 1
         st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
         handle_creditor_change()
@@ -1142,17 +1143,24 @@ with tab3:
             
             with addr_check_col2:
                 if addr_change_enabled:
+                    # 이전 값이 0이거나 없으면 1로 초기화
+                    current_count = st.session_state.get('addr_count_num', 1)
+                    if current_count < 1:
+                        current_count = 1
+                    
                     addr_person_count = st.number_input(
                         "인원수", 
                         min_value=1, 
                         max_value=10, 
-                        value=st.session_state.get('addr_count_num', 1),
+                        value=current_count,
                         step=1,
                         key='addr_count_input'
                     )
                     st.session_state['addr_count_num'] = addr_person_count
                 else:
-                    st.session_state['addr_count_num'] = 0
+                    # 체크 해제 시에도 값은 1로 유지 (0으로 설정하지 않음)
+                    if st.session_state.get('addr_count_num', 1) == 0:
+                        st.session_state['addr_count_num'] = 1
             
             st.divider()
             

@@ -553,9 +553,8 @@ def calculate_all(data):
         # 수기입력 값 업데이트 (화면 반영을 위해)
         st.session_state['cost_manual_주소변경'] = format_number_with_comma(addr_service_fee)
     else:
-        # 체크 해제 시 수기입력 값 유지 혹은 초기화 (여기서는 0으로 초기화하지 않고 그대로 둠 or 필요시 0)
-        # st.session_state['cost_manual_주소변경'] = "0" # 필요 시 주석 해제
-        pass
+        # [수정] 체크 해제 시 수기입력 값 초기화
+        st.session_state['cost_manual_주소변경'] = "0" 
 
     # 등록면허세, 지방교육세 등 계산
     basic_reg = floor_10(amount * 0.002)
@@ -756,6 +755,13 @@ with tab3:
         st.rerun()
     st.markdown("---")
 
+    # =========================================================
+    # [수정] 0. 1탭 데이터 동기화 (Sync Data)
+    # =========================================================
+    # 3탭 진입 시, 1탭의 주요 정보(채권최고액, 채무자 등)가 있다면 3탭 변수와 동기화
+    if 'input_amount' in st.session_state and st.session_state['input_amount']:
+        st.session_state['calc_amount_input'] = st.session_state['input_amount']
+    
     # =========================================================
     # 1. 통합 기본 정보 섹션 (1탭 데이터 연동)
     # =========================================================

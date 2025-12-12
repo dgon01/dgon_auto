@@ -4,3 +4,5 @@ reportlab
 PyPDF2
 fpdf
 pandas
+fpdf2
+requests

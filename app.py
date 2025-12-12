@@ -1154,49 +1154,10 @@ with tab3:
         st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
     
     with metric_placeholder_c_auto.container():
-        st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=True)
-        st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=True)
-        st.text_input("증지대", value=format_number_with_comma(final_data.get("증지대")), disabled=True)
-        st.text_input("채권할인금액", value=format_number_with_comma(final_data.get("채권할인금액")), disabled=True)
-
-    with metric_placeholder_c_total.container():
-         st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)
-
-    # 다운로드 버튼 및 최종 결제 섹션은 아래에서 처리
-
-    # 2. 데이터 취합 및 계산
-    # 금융사 표시 (직접입력 고려)
-    creditor_for_calc = st.session_state.get('input_creditor', '')
-    if creditor_for_calc == "🖊️ 직접입력":
-        creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
-    
-    calc_input_data = {
-        '채권최고액': st.session_state['input_amount'],
-        '필지수': st.session_state['input_parcels'],
-        '채권할인율': st.session_state['input_rate'],
-        '금융사': creditor_for_calc,
-        '채무자': st.session_state['input_debtor'],
-        '물건지': extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'),
-        '추가보수_label': "추가보수", 
-        '기타보수_label': "기타보수",
-    }
-    calc_input_data.update(calc_input_values)
-    
-    final_data = calculate_all(calc_input_data)
-    st.session_state['calc_data'] = final_data 
-
-    # 3. 결과 표시
-    with metric_placeholder_f.container():
-        st.metric("기본료", format_number_with_comma(final_data.get('기본료')) + " 원")
-        st.metric("공급가액", format_number_with_comma(final_data.get('공급가액')) + " 원")
-        st.metric("부가세", format_number_with_comma(final_data.get('부가세')) + " 원")
-        st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
-    
-    with metric_placeholder_c_auto.container():
-        st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=True)
-        st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=True)
-        st.text_input("증지대", value=format_number_with_comma(final_data.get("증지대")), disabled=True)
-        st.text_input("채권할인금액", value=format_number_with_comma(final_data.get("채권할인금액")), disabled=True)
+        st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=True, key='display_reg_tax')
+        st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=True, key='display_edu_tax')
+        st.text_input("증지대", value=format_number_with_comma(final_data.get("증지대")), disabled=True, key='display_stamp')
+        st.text_input("채권할인금액", value=format_number_with_comma(final_data.get("채권할인금액")), disabled=True, key='display_bond_disc')
 
     with metric_placeholder_c_total.container():
          st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)

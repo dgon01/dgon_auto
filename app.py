@@ -502,7 +502,15 @@ class PDFConverter(FPDF):
             self.cell(0, self.line_height, "• 예금주 : 법무법인 시화", ln=1)
         self.draw_labelframe_box("입금 계좌 정보", bank_content)
 
-        return self.output(dest='S') 
+        # BytesIO로 반환
+        pdf_buffer = BytesIO()
+        pdf_bytes = self.output(dest='S')
+        if isinstance(pdf_bytes, str):
+            pdf_buffer.write(pdf_bytes.encode('latin-1'))
+        else:
+            pdf_buffer.write(pdf_bytes)
+        pdf_buffer.seek(0)
+        return pdf_buffer 
 
 def create_overlay_pdf(data, font_path):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
@@ -602,14 +610,17 @@ def make_signature_pdf(template_path, data):
 if 'calc_data' not in st.session_state:
     st.session_state['calc_data'] = {}
     st.session_state['show_fee'] = True
-    st.session_state['addr_change'] = False
-    st.session_state['addr_count'] = 1
+    st.session_state['addr_change_check'] = False
+    st.session_state['addr_count_num'] = 0
     st.session_state['input_amount'] = ""
     st.session_state['amount_raw_input'] = ""
     st.session_state['input_parcels'] = 1
     st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
     st.session_state['input_debtor'] = ""
     st.session_state['input_creditor'] = list(CREDITORS.keys())[0]
+    st.session_state['input_creditor_name'] = ""
+    st.session_state['input_creditor_corp_num'] = ""
+    st.session_state['input_creditor_addr'] = ""
     st.session_state['input_collateral_addr'] = ""
     st.session_state['input_debtor_addr'] = ""
     st.session_state['input_owner'] = ""
@@ -623,7 +634,7 @@ if 'calc_data' not in st.session_state:
     st.session_state['input_owner_rrn'] = ""
 
 # 3탭 수기 입력값 초기 상태 설정 (키가 없을 경우 기본값 세팅)
-manual_keys = ["cost_manual_제증명", "cost_manual_교통비", "cost_manual_원인증서", "cost_manual_확인서면", "cost_manual_선순위 말소", "cost_manual_주소변경"]
+manual_keys = ["cost_manual_제증명", "cost_manual_교통비", "cost_manual_원인증서", "cost_manual_확인서면", "cost_manual_선순위 말소"]
 for key in manual_keys:
     if key not in st.session_state:
         # 초기값은 첫 번째 채권자 기준
@@ -633,7 +644,6 @@ for key in manual_keys:
         if "제증명" in key: val = fees.get("제증명", 50000)
         elif "교통비" in key: val = fees.get("교통비", 100000)
         elif "원인증서" in key: val = fees.get("원인증서", 50000)
-        elif "주소변경" in key: val = 0
         else: val = 0
         
         st.session_state[key] = format_number_with_comma(str(val))
@@ -648,13 +658,22 @@ def parse_int_input(text_input):
 def handle_creditor_change():
     """[수정2] 금융사 변경 시 수수료 기본값을 세션 상태 및 3탭 입력창에 즉시 반영"""
     creditor_key = st.session_state['t1_creditor_select']
-    default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
     
-    st.session_state['cost_manual_제증명'] = format_number_with_comma(str(default_fees.get("제증명", 0)))
-    st.session_state['cost_manual_교통비'] = format_number_with_comma(str(default_fees.get("교통비", 0)))
-    st.session_state['cost_manual_원인증서'] = format_number_with_comma(str(default_fees.get("원인증서", 0)))
-    st.session_state['cost_manual_확인서면'] = format_number_with_comma(str(default_fees.get("확인서면", 0)))
-    st.session_state['cost_manual_선순위 말소'] = format_number_with_comma(str(default_fees.get("선순위 말소", 0)))
+    # 직접입력 모드인 경우 수수료를 0으로 설정
+    if creditor_key == "🖊️ 직접입력":
+        st.session_state['cost_manual_제증명'] = "0"
+        st.session_state['cost_manual_교통비'] = "0"
+        st.session_state['cost_manual_원인증서'] = "0"
+        st.session_state['cost_manual_확인서면'] = "0"
+        st.session_state['cost_manual_선순위 말소'] = "0"
+    else:
+        default_fees = CREDITORS.get(creditor_key, {}).get("fee", {"제증명": 50000, "교통비": 100000, "원인증서": 50000})
+        
+        st.session_state['cost_manual_제증명'] = format_number_with_comma(str(default_fees.get("제증명", 0)))
+        st.session_state['cost_manual_교통비'] = format_number_with_comma(str(default_fees.get("교통비", 0)))
+        st.session_state['cost_manual_원인증서'] = format_number_with_comma(str(default_fees.get("원인증서", 0)))
+        st.session_state['cost_manual_확인서면'] = format_number_with_comma(str(default_fees.get("확인서면", 0)))
+        st.session_state['cost_manual_선순위 말소'] = format_number_with_comma(str(default_fees.get("선순위 말소", 0)))
     
     st.session_state.calc_data['creditor_key_check'] = creditor_key
 
@@ -902,11 +921,19 @@ with tab1:
             else:
                 debtor_name = st.session_state['input_debtor'] if st.session_state['input_debtor'] else "미지정"
                 
+                # 채권자 정보 가져오기 (직접입력 모드 고려)
+                if st.session_state['input_creditor'] == "🖊️ 직접입력":
+                    creditor_name_for_pdf = st.session_state.get('input_creditor_name', '')
+                    creditor_addr_for_pdf = st.session_state.get('input_creditor_addr', '')
+                else:
+                    creditor_name_for_pdf = st.session_state['input_creditor']
+                    creditor_addr_for_pdf = creditor_info.get('addr', '')
+                
                 data = {
                     # [수정1] date 객체를 한글 형식으로 변환
                     "date": format_date_korean(st.session_state['input_date']), 
-                    "creditor_name": st.session_state['input_creditor'], 
-                    "creditor_addr": creditor_info.get('addr', ''),
+                    "creditor_name": creditor_name_for_pdf, 
+                    "creditor_addr": creditor_addr_for_pdf,
                     "debtor_name": st.session_state['input_debtor'], 
                     "debtor_addr": st.session_state['input_debtor_addr'],
                     "owner_name": st.session_state['input_owner'], 
@@ -1010,8 +1037,8 @@ with tab3:
     if col_header3[1].button("🔄 초기화", type="secondary", help="비용 계산 입력값을 초기화합니다", key="reset_tab3"):
         st.session_state['calc_data'] = {}
         st.session_state['show_fee'] = True
-        st.session_state['addr_change'] = False
-        st.session_state['addr_count'] = 1
+        st.session_state['addr_change_check'] = False
+        st.session_state['addr_count_num'] = 0
         st.session_state['input_parcels'] = 1
         st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
         handle_creditor_change()
@@ -1032,7 +1059,12 @@ with tab3:
         if rate_cols[1].button("🔄", help="현재 채권할인율로 업데이트"):
             st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
             st.rerun()
-        st.text_input("금융사", value=st.session_state.get('input_creditor'), disabled=True)
+        
+        # 금융사 표시 (직접입력 고려)
+        creditor_display = st.session_state.get('input_creditor', '')
+        if creditor_display == "🖊️ 직접입력":
+            creditor_display = st.session_state.get('input_creditor_name', '직접입력')
+        st.text_input("금융사", value=creditor_display, disabled=True)
         st.text_input("채무자", value=st.session_state.get('input_debtor'), disabled=True)
         st.text_input("물건지", value=extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'), disabled=True)
     
@@ -1089,17 +1121,64 @@ with tab3:
             metric_placeholder_c_total = st.empty()
 
     # 2. 데이터 취합 및 계산
+    # 금융사 표시 (직접입력 고려)
+    creditor_for_calc = st.session_state.get('input_creditor', '')
+    if creditor_for_calc == "🖊️ 직접입력":
+        creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
+    
     calc_input_data = {
         '채권최고액': st.session_state['input_amount'],
         '필지수': st.session_state['input_parcels'],
         '채권할인율': st.session_state['input_rate'],
-        '금융사': st.session_state['input_creditor'],
+        '금융사': creditor_for_calc,
         '채무자': st.session_state['input_debtor'],
         '물건지': extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'),
         '추가보수_label': "추가보수", 
         '기타보수_label': "기타보수",
     }
-    calc_input_data.update(calc_input_values) 
+    calc_input_data.update(calc_input_values)
+    
+    final_data = calculate_all(calc_input_data)
+    st.session_state['calc_data'] = final_data 
+
+    # 3. 결과 표시
+    with metric_placeholder_f.container():
+        st.metric("기본료", format_number_with_comma(final_data.get('기본료')) + " 원")
+        st.metric("공급가액", format_number_with_comma(final_data.get('공급가액')) + " 원")
+        st.metric("부가세", format_number_with_comma(final_data.get('부가세')) + " 원")
+        st.markdown(f"**총 보수액:** <h3 style='color:#00428B;'>{format_number_with_comma(final_data.get('보수총액'))} 원</h3>", unsafe_allow_html=True)
+    
+    with metric_placeholder_c_auto.container():
+        st.text_input("등록면허세", value=format_number_with_comma(final_data.get("등록면허세")), disabled=True)
+        st.text_input("지방교육세", value=format_number_with_comma(final_data.get("지방교육세")), disabled=True)
+        st.text_input("증지대", value=format_number_with_comma(final_data.get("증지대")), disabled=True)
+        st.text_input("채권할인금액", value=format_number_with_comma(final_data.get("채권할인금액")), disabled=True)
+
+    with metric_placeholder_c_total.container():
+         st.markdown(f"**총 공과금:** <h3 style='color:#ffa500;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</h3>", unsafe_allow_html=True)
+
+    # 다운로드 버튼 및 최종 결제 섹션은 아래에서 처리
+
+    # 2. 데이터 취합 및 계산
+    # 금융사 표시 (직접입력 고려)
+    creditor_for_calc = st.session_state.get('input_creditor', '')
+    if creditor_for_calc == "🖊️ 직접입력":
+        creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
+    
+    calc_input_data = {
+        '채권최고액': st.session_state['input_amount'],
+        '필지수': st.session_state['input_parcels'],
+        '채권할인율': st.session_state['input_rate'],
+        '금융사': creditor_for_calc,
+        '채무자': st.session_state['input_debtor'],
+        '물건지': extract_address_from_estate(st.session_state.get('estate_text') or "") if not st.session_state.get('input_collateral_addr') else st.session_state.get('input_collateral_addr'),
+        '추가보수_label': "추가보수", 
+        '기타보수_label': "기타보수",
+    }
+    calc_input_data.update(calc_input_values)
+    
+    final_data = calculate_all(calc_input_data)
+    st.session_state['calc_data'] = final_data 
 
     # 3. 결과 표시
     with metric_placeholder_f.container():
@@ -1166,13 +1245,19 @@ with tab3:
             if download_cols[0].button("📄 비용내역 PDF", use_container_width=True):
                 if LIBS_OK:
                     pdf_data = st.session_state.calc_data 
+                    
+                    # 금융사 표시 (직접입력 고려)
+                    creditor_for_pdf = pdf_data.get('금융사', '')
+                    if creditor_for_pdf == "🖊️ 직접입력":
+                        creditor_for_pdf = st.session_state.get('input_creditor_name', '직접입력')
+                    
                     data_for_pdf = {
                         # [수정1] date 객체를 한글 형식으로 변환
                         "date_input": format_date_korean(st.session_state['input_date']), 
                         'client': {
                             '채권최고액': format_number_with_comma(pdf_data['채권최고액']), 
                             '필지수': pdf_data['필지수'],
-                            '금융사': pdf_data['금융사'], 
+                            '금융사': creditor_for_pdf, 
                             '채무자': pdf_data['채무자'], 
                             '물건지': pdf_data['물건지']
                         },
@@ -1269,7 +1354,6 @@ with tab3:
                         # [수정3] Excel 매핑 (요청사항대로)
                         safe_set_value(ws, 'AH15', parse_int_input(final_data["제증명"]))     # 제증명(등본제증명)
                         safe_set_value(ws, 'AH16', parse_int_input(final_data["원인증서"]))   # 원인증서
-                        safe_set_value(ws, 'AH17', parse_int_input(final_data["주소변경"]))   # 주소변경
                         safe_set_value(ws, 'AH18', parse_int_input(final_data["선순위 말소"])) # 선순위 말소
                         safe_set_value(ws, 'AH19', parse_int_input(final_data["교통비"]))     # 교통비
                         safe_set_value(ws, 'AH21', final_data["공과금 총액"])                 # 소계/총계

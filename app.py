@@ -742,9 +742,14 @@ with tab1:
     # 1. 기본 정보
     with st.expander("📌 기본 정보", expanded=True):
         # [수정1] date_input으로 변경 - 달력에서 날짜 선택
+        # 기존 세션 상태가 문자열일 수 있으므로 안전하게 변환
+        current_date = st.session_state.get('input_date')
+        if not isinstance(current_date, date):
+            current_date = datetime.now().date()
+        
         selected_date = st.date_input(
             "작성일자", 
-            value=st.session_state.get('input_date', datetime.now().date()),
+            value=current_date,
             help="달력에서 날짜를 선택하세요",
             key='date_picker'
         )

@@ -157,7 +157,6 @@ def format_date_korean(date_obj):
 
 def format_number_with_comma(num_str):
     if num_str is None: return ""
-    # 이미 콤마가 있으면 그대로 반환하되, 숫자 정제
     numbers = re.sub(r'[^\d]', '', str(num_str))
     if not numbers: return ""
     return "{:,}".format(int(numbers))
@@ -176,7 +175,6 @@ def lookup_base_fee(amount):
     return LOOKUP_VALS[0]
 
 def get_rate():
-    # 실제 API 연동이 안될 경우 기본값 반환
     return 0.0913459
 
 def number_to_korean(num_str):
@@ -315,12 +313,6 @@ if LIBS_OK:
         MAX_TEXT_WIDTH = 380
         # 말소 문서 등 다른 문서 타입 처리
         if data.get("doc_type"):
-            # 말소 관련 오버레이 로직 (간소화)
-            c.setFont(font_name, 10)
-            if data.get("obligor_corp"): c.drawString(200, 600, data["obligor_corp"]) # 예시 좌표
-            # 실제 말소 문서 좌표는 템플릿에 맞춰 조정 필요. 여기서는 범용 로직 사용
-            # (기존 코드가 없으므로, 기본 1탭 로직과 유사하게 처리하거나 좌표 지정 필요)
-            # 여기서는 사용자 요구사항(로직 적용)에 집중하기 위해 기존 1탭 오버레이 로직 사용
             pass 
         
         # 1탭 계약서 오버레이
@@ -449,7 +441,7 @@ if 'add_fee_val' not in st.session_state: st.session_state['add_fee_val'] = "0"
 if 'etc_fee_val' not in st.session_state: st.session_state['etc_fee_val'] = "0"
 if 'disc_fee_val' not in st.session_state: st.session_state['disc_fee_val'] = "0"
 
-tab1, tab2, tab3, tab4 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증", "🗑️ 말소 문서"])
+tab1, tab2, tab3, tab4 = st.tabs(["📄 근저당권설정 계약서", ✍️ 자필서명정보", "🧾 비용 계산 및 영수증", "🗑️ 말소 문서"])
 
 # -----------------------------------------------------------------------------
 # Tab 1: 근저당권설정 계약서 (UI 100% 유지)
@@ -512,9 +504,14 @@ with tab1:
             st.text_area("물건지 주소 (수기 입력)", key='input_collateral_addr', height=80)
         with col_addr2:
             st.write(""); st.write("")
-            if st.button("📋\n채무자\n주소복사"):
-                st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
-                st.rerun()
+            
+            # -----------------------------------------------------------------
+            # [수정됨] 콜백 함수로 구현하여 키 충돌 오류 해결
+            # -----------------------------------------------------------------
+            def copy_debtor_addr():
+                st.session_state['input_collateral_addr'] = st.session_state.get('t1_debtor_addr', "")
+                
+            st.button("📋\n채무자\n주소복사", on_click=copy_debtor_addr)
 
     st.markdown("---")
     st.markdown("### 🏠 부동산의 표시")

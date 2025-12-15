@@ -325,7 +325,11 @@ if FPDF_OK:
                 self.set_x(self.l_margin + 5); self.cell(0, self.line_height, "• 업무는 입금이 확인된 후에 진행됩니다.", ln=1)
             self.draw_labelframe_box("안내사항", notes_content); self.ln(5)
             def bank_content():
-                self.set_font(self.font_family, '', 10); self.set_x(self.l_margin + 5); self.cell(0, self.line_height, "• 신한은행 100-035-852291"); self.cell(0, self.line_height, " | 예금주 : 법무법인 시화", ln=1)
+                self.set_font(self.font_family, '', 10)
+                self.set_x(self.l_margin + 5)
+                self.cell(0, self.line_height, "• 신한은행 100-035-852291", ln=1)
+                self.set_x(self.l_margin + 5)
+                self.cell(0, self.line_height, "• 예금주 : 법무법인 시화", ln=1)
             self.draw_labelframe_box("입금 계좌 정보", bank_content)
             pdf_buffer = BytesIO(); pdf_bytes = self.output(dest='S')
             if isinstance(pdf_bytes, str): pdf_buffer.write(pdf_bytes.encode('latin-1'))
@@ -566,53 +570,77 @@ def calculate_all(data):
     return data
 
 def create_receipt_excel(data, template_path=None):
-    """영수증 Excel 파일 생성"""
+    """영수증 Excel 파일 생성 - 템플릿 기반"""
     if not EXCEL_OK:
         return None
     
     # 템플릿이 있으면 사용, 없으면 새로 생성
     if template_path and os.path.exists(template_path):
         try:
-            from copy import copy
             workbook = openpyxl.load_workbook(template_path)
-            sheet = workbook.active
+            ws = workbook.active
             
-            # 날짜 입력 (예: B2 셀)
-            if data.get('date_input'):
-                sheet['B2'] = data['date_input']
-            
-            # 고객 정보
+            # 기본 정보 입력 (Dg-Form.py 방식 적용)
             client = data.get('client', {})
-            if client.get('채무자'):
-                sheet['B4'] = client['채무자']
-            if client.get('물건지'):
-                sheet['B5'] = client['물건지']
-            if client.get('채권최고액'):
-                sheet['B6'] = client['채권최고액']
+            ws['B4'] = client.get('금융사', '')          # 채권자 (금융사)
+            ws['V4'] = client.get('채무자', '')           # 채무자
             
-            # 비용 항목 (예시 - 실제 셀 위치는 템플릿에 맞춰 조정)
+            # 채권최고액 (숫자만 추출)
+            amount_str = client.get('채권최고액', '0')
+            amount_val = int(re.sub(r'[^\d]', '', amount_str)) if amount_str else 0
+            ws['AG5'] = amount_val
+            
+            ws['Y7'] = client.get('물건지', '')           # 물건지
+            
+            # 공과금 항목 입력 (셀 위치: AH11~AH20, AH21)
             cost_items = data.get('cost_items', {})
-            row = 10  # 시작 행
-            for name, value in cost_items.items():
-                if value != 0:
-                    sheet[f'A{row}'] = name
-                    sheet[f'B{row}'] = int(value)
-                    row += 1
+            ws['AH11'] = int(cost_items.get('등록면허세', 0))
+            ws['AH12'] = int(cost_items.get('지방교육세', 0))
+            ws['AH13'] = int(cost_items.get('증지대', 0))
+            ws['AH14'] = int(cost_items.get('채권할인', 0))  # cost_items에서는 '채권할인'
+            ws['AH15'] = int(cost_items.get('제증명', 0))
+            ws['AH16'] = int(cost_items.get('원인증서', 0))
+            ws['AH17'] = int(cost_items.get('주소변경', 0))
+            ws['AH18'] = int(cost_items.get('선순위말소', 0))
             
-            # 총액
-            sheet['B30'] = data.get('grand_total', 0)
-        except:
+            # 교통비 처리 (AD19, AH19)
+            traffic_fee = int(cost_items.get('교통비', 0))
+            if traffic_fee > 0:
+                ws['AD19'] = '교통비'
+                ws['AH19'] = traffic_fee
+            else:
+                # 교통비가 0이면 셀 초기화 (템플릿 기존값 제거)
+                ws['AD19'] = None
+                ws['AH19'] = None
+            
+            # 확인서면 처리 (AD20, AH20)
+            confirm_fee = int(cost_items.get('확인서면', 0))
+            if confirm_fee > 0:
+                ws['AD20'] = '확인서면'
+                ws['AH20'] = confirm_fee
+            else:
+                # 확인서면이 0이면 셀 초기화 (템플릿 기존값 제거)
+                ws['AD20'] = None
+                ws['AH20'] = None
+            
+            # 공과금 소계 (AH21) - SUM 수식으로 자동 계산
+            ws['AH21'] = '=SUM(AH11:AH20)'
+            
+            # 총 합계 (Y22) - AH21 값을 참조하는 수식
+            ws['Y22'] = '=AH21'
+            
+        except Exception as e:
             # 템플릿 사용 실패 시 새로 생성
             workbook = openpyxl.Workbook()
-            sheet = workbook.active
-            sheet.title = "영수증"
-            _create_simple_receipt(sheet, data)
+            ws = workbook.active
+            ws.title = "영수증"
+            _create_simple_receipt(ws, data)
     else:
         # 템플릿 없이 새로 생성
         workbook = openpyxl.Workbook()
-        sheet = workbook.active
-        sheet.title = "영수증"
-        _create_simple_receipt(sheet, data)
+        ws = workbook.active
+        ws.title = "영수증"
+        _create_simple_receipt(ws, data)
     
     output = BytesIO()
     workbook.save(output)

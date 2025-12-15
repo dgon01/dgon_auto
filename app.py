@@ -75,7 +75,7 @@ except ImportError:
 LIBS_OK = PDF_OK
 
 # =============================================================================
-# 2. 스타일 및 디자인 (수정된 헤더 적용)
+# 2. 스타일 및 디자인 (커스텀 헤더 적용)
 # =============================================================================
 st.markdown(f"""
 <style>
@@ -83,33 +83,35 @@ st.markdown(f"""
     .stApp {{ font-family: 'Noto Sans KR', sans-serif !important; }}
     input, textarea, select, button {{ font-family: 'Noto Sans KR', sans-serif !important; }}
     
-    /* 헤더 컨테이너 */
+    /* 헤더 컨테이너: 가로 배치 (로고 - 텍스트) */
     .header-container {{
         background: white; 
         border-bottom: 3px solid #00428B; 
-        padding: 15px 30px;
+        padding: 20px 30px;
         margin-bottom: 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        display: flex; align-items: center; gap: 20px;
+        box-shadow: 0 4px 15px rgba(0, 66, 139, 0.1);
+        display: flex; 
+        align-items: center; 
+        gap: 25px; /* 로고와 텍스트 사이 간격 */
     }}
     
-    /* 로고 스타일 */
-    .header-logo {{ width: 80px; height: auto; }} /* 로고 크기 확대 */
+    /* 로고 스타일 (크기 확대) */
+    .header-logo {{ width: 90px; height: auto; }} 
     
-    /* 텍스트 레이아웃 */
+    /* 텍스트 영역 (세로 정렬) */
     .text-content {{ display: flex; flex-direction: column; justify-content: center; }}
     
-    /* 제목 스타일 (DG-Form) */
+    /* 타이틀 스타일 (DG-Form) */
     .header-title {{ 
         margin: 0; 
-        font-size: 2.2rem; 
+        font-size: 2.5rem; 
         font-weight: 800; 
         line-height: 1.1; 
         letter-spacing: -1px;
     }}
     
-    /* 서브 텍스트 (2줄) */
-    .header-desc {{ margin: 0; padding-top: 5px; }}
+    /* 서브 텍스트 (2줄 배치) */
+    .header-desc {{ margin-top: 5px; }}
     .desc-line-1 {{ 
         display: block; 
         font-size: 1rem; 
@@ -119,16 +121,22 @@ st.markdown(f"""
     }}
     .desc-line-2 {{ 
         display: block; 
-        font-size: 0.95rem; 
+        font-size: 1.1rem; 
         font-weight: 700; 
         color: #00428B; /* 브랜드 컬러 강조 */
     }}
 
-    /* 탭 및 기타 스타일 유지 */
+    /* 탭 및 위젯 스타일 유지 */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
     .stTabs [data-baseweb="tab"] {{ background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: 600; color: #495057; border: 1px solid #dee2e6; }}
     .stTabs [aria-selected="true"] {{ background-color: #00428B; color: white; border-color: #00428B; }}
     
+    .stTextInput > div > div > input, .stNumberInput > div > div > input, .stSelectbox > div > div > select {{
+        border-radius: 6px; border: 1px solid #ced4da; padding: 8px 12px; font-size: 0.95rem;
+    }}
+    .stTextInput > div > div > input:focus {{ border-color: #00428B; box-shadow: 0 0 0 0.2rem rgba(0, 66, 139, 0.15); }}
+
+    /* 3탭 커스텀 레이아웃 클래스 */
     .row-label {{ font-weight: 500; color: #495057; display: flex; align-items: center; height: 100%; font-size: 0.9rem; }}
     .section-header {{ font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid; }}
     .income-header {{ color: #28a745; border-color: #28a745; }}
@@ -136,6 +144,7 @@ st.markdown(f"""
     .total-header {{ color: #dc3545; border-color: #dc3545; }}
     .total-box {{ background-color: #ff0033; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0; }}
     .total-amount {{ font-size: 2rem; font-weight: 800; }}
+    [data-testid="stContainer"] {{ background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9ecef; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -145,7 +154,7 @@ header_html = f"""
     {'<img src="data:image/x-icon;base64,' + logo_base64 + '" class="header-logo" alt="DG-ON Logo">' if logo_base64 else ''}
     <div class="text-content">
         <h1 class="header-title">
-            <span style="color: #00428B;">DG-</span><span style="color: #FFC000;">Form</span>
+            <span style="color: #00428B;">DG-</span><span style="color: #FDD000;">Form</span>
         </h1>
         <div class="header-desc">
             <span class="desc-line-1">등기온 전자설정 자동화 시스템 | 법무법인 시화</span>

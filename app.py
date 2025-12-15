@@ -75,7 +75,7 @@ except ImportError:
 LIBS_OK = PDF_OK
 
 # =============================================================================
-# 2. 스타일 및 디자인 (슬림형 헤더 적용)
+# 2. 스타일 및 디자인 (수정된 헤더 적용)
 # =============================================================================
 st.markdown(f"""
 <style>
@@ -83,23 +83,48 @@ st.markdown(f"""
     .stApp {{ font-family: 'Noto Sans KR', sans-serif !important; }}
     input, textarea, select, button {{ font-family: 'Noto Sans KR', sans-serif !important; }}
     
-    /* 슬림 헤더 스타일 */
+    /* 헤더 컨테이너 */
     .header-container {{
         background: white; 
-        border-bottom: 2px solid #00428B; 
-        padding: 10px 25px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        display: flex; align-items: center; justify-content: space-between;
+        border-bottom: 3px solid #00428B; 
+        padding: 15px 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        display: flex; align-items: center; gap: 20px;
     }}
-    .logo-title-container {{ display: flex; align-items: center; gap: 15px; }}
-    .header-logo {{ width: 50px; height: auto; }}
     
-    .text-content {{ display: flex; align-items: baseline; gap: 10px; }}
-    .header-title {{ margin: 0; font-size: 1.6rem; font-weight: 800; color: #00428B; line-height: 1; }}
-    .header-subtitle {{ margin: 0; font-size: 0.95rem; font-weight: 500; color: #666; }}
-    .header-right {{ font-size: 0.9rem; font-weight: 600; color: #00428B; }}
+    /* 로고 스타일 */
+    .header-logo {{ width: 80px; height: auto; }} /* 로고 크기 확대 */
+    
+    /* 텍스트 레이아웃 */
+    .text-content {{ display: flex; flex-direction: column; justify-content: center; }}
+    
+    /* 제목 스타일 (DG-Form) */
+    .header-title {{ 
+        margin: 0; 
+        font-size: 2.2rem; 
+        font-weight: 800; 
+        line-height: 1.1; 
+        letter-spacing: -1px;
+    }}
+    
+    /* 서브 텍스트 (2줄) */
+    .header-desc {{ margin: 0; padding-top: 5px; }}
+    .desc-line-1 {{ 
+        display: block; 
+        font-size: 1rem; 
+        font-weight: 500; 
+        color: #555; 
+        margin-bottom: 2px; 
+    }}
+    .desc-line-2 {{ 
+        display: block; 
+        font-size: 0.95rem; 
+        font-weight: 700; 
+        color: #00428B; /* 브랜드 컬러 강조 */
+    }}
 
+    /* 탭 및 기타 스타일 유지 */
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
     .stTabs [data-baseweb="tab"] {{ background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: 600; color: #495057; border: 1px solid #dee2e6; }}
     .stTabs [aria-selected="true"] {{ background-color: #00428B; color: white; border-color: #00428B; }}
@@ -114,23 +139,22 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# 헤더 렌더링
+# 헤더 HTML 렌더링
 header_html = f"""
 <div class="header-container">
-    <div class="logo-title-container">
-        {'<img src="data:image/x-icon;base64,' + logo_base64 + '" class="header-logo" alt="DG-ON Logo">' if logo_base64 else ''}
-        <div class="text-content">
-            <h1 class="header-title">DG-Form</h1>
-            <span class="header-subtitle"> | 등기온 전자설정 자동화 시스템</span>
+    {'<img src="data:image/x-icon;base64,' + logo_base64 + '" class="header-logo" alt="DG-ON Logo">' if logo_base64 else ''}
+    <div class="text-content">
+        <h1 class="header-title">
+            <span style="color: #00428B;">DG-</span><span style="color: #FFC000;">Form</span>
+        </h1>
+        <div class="header-desc">
+            <span class="desc-line-1">등기온 전자설정 자동화 시스템 | 법무법인 시화</span>
+            <span class="desc-line-2">부동산 등기는 등기온</span>
         </div>
-    </div>
-    <div class="header-right">
-        <span>부동산 등기는 등기온</span>
     </div>
 </div>
 """
 st.markdown(header_html, unsafe_allow_html=True)
-
 # =============================================================================
 # 3. 데이터 및 유틸리티 함수
 # =============================================================================

@@ -509,6 +509,9 @@ def calculate_all(data):
     try: rate = float(remove_commas(data.get('채권할인율', '0'))) / 100
     except ValueError: rate = 0 
     
+    # 원본 데이터 보존
+    data['input_amount'] = data.get('채권최고액', '')
+    
     # 기본료
     base_fee = lookup_base_fee(amount)
     data['기본료'] = base_fee
@@ -561,6 +564,111 @@ def calculate_all(data):
     data['공과금 총액'] = cost_total
     data['총 합계'] = fee_total + cost_total
     return data
+
+def create_receipt_excel(data, template_path=None):
+    """영수증 Excel 파일 생성"""
+    if not EXCEL_OK:
+        return None
+    
+    # 템플릿이 있으면 사용, 없으면 새로 생성
+    if template_path and os.path.exists(template_path):
+        try:
+            from copy import copy
+            workbook = openpyxl.load_workbook(template_path)
+            sheet = workbook.active
+            
+            # 날짜 입력 (예: B2 셀)
+            if data.get('date_input'):
+                sheet['B2'] = data['date_input']
+            
+            # 고객 정보
+            client = data.get('client', {})
+            if client.get('채무자'):
+                sheet['B4'] = client['채무자']
+            if client.get('물건지'):
+                sheet['B5'] = client['물건지']
+            if client.get('채권최고액'):
+                sheet['B6'] = client['채권최고액']
+            
+            # 비용 항목 (예시 - 실제 셀 위치는 템플릿에 맞춰 조정)
+            cost_items = data.get('cost_items', {})
+            row = 10  # 시작 행
+            for name, value in cost_items.items():
+                if value != 0:
+                    sheet[f'A{row}'] = name
+                    sheet[f'B{row}'] = int(value)
+                    row += 1
+            
+            # 총액
+            sheet['B30'] = data.get('grand_total', 0)
+        except:
+            # 템플릿 사용 실패 시 새로 생성
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "영수증"
+            _create_simple_receipt(sheet, data)
+    else:
+        # 템플릿 없이 새로 생성
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "영수증"
+        _create_simple_receipt(sheet, data)
+    
+    output = BytesIO()
+    workbook.save(output)
+    output.seek(0)
+    return output
+
+def _create_simple_receipt(sheet, data):
+    """간단한 영수증 시트 생성"""
+    from openpyxl.styles import Font, Alignment, Border, Side
+    
+    # 제목
+    sheet['A1'] = '근저당권설정 영수증'
+    sheet['A1'].font = Font(size=16, bold=True)
+    sheet['A1'].alignment = Alignment(horizontal='center')
+    sheet.merge_cells('A1:C1')
+    
+    # 날짜
+    sheet['A3'] = '작성일:'
+    sheet['B3'] = data.get('date_input', '')
+    
+    # 고객 정보
+    client = data.get('client', {})
+    sheet['A5'] = '채무자:'
+    sheet['B5'] = client.get('채무자', '')
+    sheet['A6'] = '물건지:'
+    sheet['B6'] = client.get('물건지', '')
+    sheet['A7'] = '채권최고액:'
+    sheet['B7'] = client.get('채권최고액', '')
+    
+    # 비용 항목
+    row = 9
+    sheet[f'A{row}'] = '항목'
+    sheet[f'B{row}'] = '금액'
+    sheet[f'A{row}'].font = Font(bold=True)
+    sheet[f'B{row}'].font = Font(bold=True)
+    
+    row += 1
+    cost_items = data.get('cost_items', {})
+    for name, value in cost_items.items():
+        if value != 0:
+            sheet[f'A{row}'] = name
+            sheet[f'B{row}'] = f"{int(value):,} 원"
+            row += 1
+    
+    # 합계
+    row += 1
+    sheet[f'A{row}'] = '총 합계'
+    sheet[f'B{row}'] = f"{data.get('grand_total', 0):,} 원"
+    sheet[f'A{row}'].font = Font(bold=True, size=12)
+    sheet[f'B{row}'].font = Font(bold=True, size=12)
+    
+    # 열 너비 조정
+    sheet.column_dimensions['A'].width = 20
+    sheet.column_dimensions['B'].width = 30
+    sheet.column_dimensions['C'].width = 15
+
 
 # =============================================================================
 # UI 구현
@@ -882,10 +990,119 @@ with tab3:
 
     st.markdown("---")
     d_col1, d_col2 = st.columns(2)
-    # (PDF 및 엑셀 다운로드 코드는 이전과 동일하므로 유지 - 필요시 위쪽 전체 코드 참고)
-    # 여기서는 버튼만 렌더링
-    d_col1.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK)
-    d_col2.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK)
+    
+    # [1] 비용내역 PDF 다운로드
+    with d_col1:
+        if st.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK, use_container_width=True):
+            if not FPDF_OK:
+                st.error("FPDF 라이브러리가 설치되지 않았습니다.")
+            else:
+                try:
+                    # PDF 데이터 준비
+                    pdf_data = {
+                        'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
+                        'client': {
+                            '채권최고액': format_number_with_comma(final_data.get('input_amount', st.session_state.get('input_amount', ''))),
+                            '필지수': str(st.session_state.get('input_parcels', 1)),
+                            '금융사': creditor_display,
+                            '채무자': st.session_state.get('input_debtor', ''),
+                            '물건지': estate_display
+                        },
+                        'fee_items': {
+                            '기본료': parse_int_input(final_data.get('기본료', 0)),
+                            '추가보수': parse_int_input(st.session_state.get('add_fee_val', 0)),
+                            '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
+                            '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
+                        },
+                        'fee_totals': {
+                            '보수총액': final_data.get('보수총액', 0)
+                        },
+                        'cost_items': {
+                            '등록면허세': final_data.get('등록면허세', 0),
+                            '지방교육세': final_data.get('지방교육세', 0),
+                            '증지대': final_data.get('증지대', 0),
+                            '채권할인': final_data.get('채권할인금액', 0),
+                            '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
+                            '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
+                            '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
+                            '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
+                            '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
+                            '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                        },
+                        'cost_totals': {
+                            '공과금 총액': final_data.get('공과금 총액', 0)
+                        },
+                        'cost_section_title': '2. 공과금' if st.session_state.get('show_fee', True) else '1. 공과금',
+                        'grand_total': final_data.get('총 합계', 0)
+                    }
+                    
+                    # PDF 생성
+                    pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
+                    pdf_buffer = pdf_converter.output_pdf(pdf_data)
+                    
+                    # 다운로드 버튼
+                    debtor_name = st.session_state.get('input_debtor', '고객')
+                    st.download_button(
+                        label="⬇️ PDF 파일 다운로드",
+                        data=pdf_buffer,
+                        file_name=f"근저당설정_비용내역_{debtor_name}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ PDF 생성 완료!")
+                except Exception as e:
+                    st.error(f"PDF 생성 오류: {e}")
+    
+    # [2] 영수증 Excel 다운로드
+    with d_col2:
+        if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True):
+            if not EXCEL_OK:
+                st.error("openpyxl 라이브러리가 설치되지 않았습니다.")
+            else:
+                try:
+                    # Excel 데이터 준비
+                    receipt_template = st.session_state['template_status'].get('영수증')
+                    
+                    excel_data = {
+                        'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
+                        'client': {
+                            '채무자': st.session_state.get('input_debtor', ''),
+                            '물건지': estate_display,
+                            '채권최고액': format_number_with_comma(st.session_state.get('input_amount', ''))
+                        },
+                        'cost_items': {
+                            '등록면허세': final_data.get('등록면허세', 0),
+                            '지방교육세': final_data.get('지방교육세', 0),
+                            '증지대': final_data.get('증지대', 0),
+                            '채권할인': final_data.get('채권할인금액', 0),
+                            '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
+                            '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
+                            '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
+                            '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
+                            '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
+                            '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                        },
+                        'grand_total': final_data.get('총 합계', 0)
+                    }
+                    
+                    # Excel 생성 (템플릿 있으면 사용, 없으면 새로 생성)
+                    excel_buffer = create_receipt_excel(excel_data, receipt_template)
+                    
+                    if excel_buffer:
+                        # 다운로드 버튼
+                        debtor_name = st.session_state.get('input_debtor', '고객')
+                        st.download_button(
+                            label="⬇️ Excel 파일 다운로드",
+                            data=excel_buffer,
+                            file_name=f"영수증_{debtor_name}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                        st.success("✅ Excel 생성 완료!")
+                    else:
+                        st.error("Excel 생성에 실패했습니다.")
+                except Exception as e:
+                    st.error(f"Excel 생성 오류: {e}")
 
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>

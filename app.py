@@ -461,13 +461,21 @@ def handle_creditor_change():
         st.session_state['input_creditor_corp_num'] = ""
         st.session_state['input_creditor_addr'] = ""
     else:
-        default_fees = CREDITORS.get(creditor_key, {}).get("fee", {})
-        st.session_state['cost_manual_제증명'] = format_number_with_comma(str(default_fees.get("제증명", 0)))
-        st.session_state['cost_manual_교통비'] = format_number_with_comma(str(default_fees.get("교통비", 0)))
-        st.session_state['cost_manual_원인증서'] = format_number_with_comma(str(default_fees.get("원인증서", 0)))
+        # 유노스프레스티지일 경우만 제증명 20,000원, 나머지는 모두 0원
+        if "유노스프레스티지" in creditor_key:
+            st.session_state['cost_manual_제증명'] = format_number_with_comma("20000")
+            st.session_state['cost_manual_교통비'] = "0"
+            st.session_state['cost_manual_원인증서'] = "0"
+            st.session_state['cost_manual_확인서면'] = "0"
+            st.session_state['cost_manual_선순위 말소'] = "0"
+        else:
+            # 유노스프레스티지가 아닌 경우 모두 0원
+            st.session_state['cost_manual_제증명'] = "0"
+            st.session_state['cost_manual_교통비'] = "0"
+            st.session_state['cost_manual_원인증서'] = "0"
+            st.session_state['cost_manual_확인서면'] = "0"
+            st.session_state['cost_manual_선순위 말소'] = "0"
         st.session_state['cost_manual_주소변경'] = "0" # 주소변경은 체크박스로만 제어
-        st.session_state['cost_manual_확인서면'] = format_number_with_comma(str(default_fees.get("확인서면", 0)))
-        st.session_state['cost_manual_선순위 말소'] = format_number_with_comma(str(default_fees.get("선순위 말소", 0)))
     st.session_state.calc_data['creditor_key_check'] = creditor_key
 
 MANUAL_COST_NAMES = ["제증명", "교통비", "원인증서", "주소변경", "확인서면", "선순위 말소"]

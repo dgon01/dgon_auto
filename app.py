@@ -1058,14 +1058,19 @@ with tab3:
             st.markdown("---")
             st.info("**ℹ️ 참고 기준 (주소변경비용)**\n* 유노스/드림앤캐쉬: 20,000원/인\n* 기타 금융사: 50,000원/인\n* (체크 시 수기입력란에 자동반영)")
 
+
     st.markdown("---")
     d_col1, d_col2 = st.columns(2)
     
     # [1] 비용내역 PDF 다운로드
     with d_col1:
-        if st.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK, use_container_width=True):
+        if st.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK, use_container_width=True, key="btn_pdf_download"):
+            st.session_state['generate_pdf'] = True
+        
+        if st.session_state.get('generate_pdf', False):
             if not FPDF_OK:
                 st.error("FPDF 라이브러리가 설치되지 않았습니다.")
+                st.session_state['generate_pdf'] = False
             else:
                 try:
                     # PDF 데이터 준비 (3탭 입력값 우선 사용)
@@ -1101,7 +1106,7 @@ with tab3:
                             '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
                             '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
                             '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
-                            '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                            '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
                         },
                         'cost_totals': {
                             '공과금 총액': final_data.get('공과금 총액', 0)
@@ -1118,22 +1123,32 @@ with tab3:
                     debtor_name = st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '고객'))
                     if not debtor_name:
                         debtor_name = '고객'
+                    
+                    def clear_pdf_flag():
+                        st.session_state['generate_pdf'] = False
+                    
                     st.download_button(
                         label="⬇️ PDF 파일 다운로드",
                         data=pdf_buffer,
                         file_name=f"근저당설정_비용내역_{debtor_name}.pdf",
                         mime="application/pdf",
-                        use_container_width=True
+                        use_container_width=True,
+                        on_click=clear_pdf_flag
                     )
                     st.success("✅ PDF 생성 완료!")
                 except Exception as e:
                     st.error(f"PDF 생성 오류: {e}")
+                    st.session_state['generate_pdf'] = False
     
     # [2] 영수증 Excel 다운로드
     with d_col2:
-        if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True):
+        if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True, key="btn_excel_download"):
+            st.session_state['generate_excel'] = True
+        
+        if st.session_state.get('generate_excel', False):
             if not EXCEL_OK:
                 st.error("openpyxl 라이브러리가 설치되지 않았습니다.")
+                st.session_state['generate_excel'] = False
             else:
                 try:
                     # Excel 데이터 준비 (3탭 입력값 우선 사용)
@@ -1163,6 +1178,9 @@ with tab3:
                             '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
                             '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
                         },
+                        'cost_totals': {
+                            '공과금 총액': final_data.get('공과금 총액', 0)
+                        },
                         'grand_total': final_data.get('총 합계', 0)
                     }
                     
@@ -1174,18 +1192,25 @@ with tab3:
                         debtor_name = st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '고객'))
                         if not debtor_name:
                             debtor_name = '고객'
+                        
+                        def clear_excel_flag():
+                            st.session_state['generate_excel'] = False
+                        
                         st.download_button(
                             label="⬇️ Excel 파일 다운로드",
                             data=excel_buffer,
                             file_name=f"영수증_{debtor_name}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True
+                            use_container_width=True,
+                            on_click=clear_excel_flag
                         )
                         st.success("✅ Excel 생성 완료!")
                     else:
                         st.error("Excel 생성에 실패했습니다.")
+                        st.session_state['generate_excel'] = False
                 except Exception as e:
                     st.error(f"Excel 생성 오류: {e}")
+                    st.session_state['generate_excel'] = False
 
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>

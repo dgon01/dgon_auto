@@ -673,24 +673,38 @@ with tab3:
         handle_creditor_change()
         st.rerun()
     st.markdown("---")
+    
+    # 디버깅용: 현재 세션 상태 확인
+    with st.expander("🔍 디버깅 정보 (개발용)", expanded=False):
+        st.write("**1탭 → 3탭 데이터 동기화 상태**")
+        st.write(f"- 1탭 채권자 (input_creditor): `{st.session_state.get('input_creditor', 'None')}`")
+        st.write(f"- 1탭 채무자 (t1_debtor_name): `{st.session_state.get('t1_debtor_name', 'None')}`")
+        st.write(f"- 3탭 채무자 (input_debtor): `{st.session_state.get('input_debtor', 'None')}`")
+        st.write(f"- 채권최고액 (input_amount): `{st.session_state.get('input_amount', 'None')}`")
+
 
     # =========================================================
     # [수정됨] 0. 1탭 데이터 강제 동기화 (Source of Truth)
     # =========================================================
     # 3탭 위젯 그리기 전에 1탭 데이터를 가져와서 session_state에 박아넣음
+    
+    # 채권최고액 동기화
     if 'input_amount' in st.session_state and st.session_state['input_amount']:
         if st.session_state.get('calc_amount_input') != st.session_state['input_amount']:
             st.session_state['calc_amount_input'] = st.session_state['input_amount']
     
-    # 1탭 채무자 이름(t1_debtor_name)이 있으면 3탭 채무자(input_debtor)로 복사
-    if 't1_debtor_name' in st.session_state:
-        st.session_state['input_debtor'] = st.session_state['t1_debtor_name']
+    # 채무자 이름 동기화 (1탭의 t1_debtor_name → 3탭의 input_debtor)
+    st.session_state['input_debtor'] = st.session_state.get('t1_debtor_name', '')
+    
+    # 채권자 정보 동기화 (1탭에서 이미 input_creditor에 저장되어 있음을 확인)
+    # input_creditor는 1탭의 selectbox에서 자동으로 업데이트됨
     
     # =========================================================
     # 1. 통합 기본 정보 섹션
     # =========================================================
     creditor_display = st.session_state.get('input_creditor', '')
-    if creditor_display == "🖊️ 직접입력": creditor_display = st.session_state.get('input_creditor_name', '직접입력')
+    if creditor_display == "🖊️ 직접입력": 
+        creditor_display = st.session_state.get('input_creditor_name', '직접입력')
     
     estate_display = extract_address_from_estate(st.session_state.get('estate_text') or "")
     if st.session_state.get('input_collateral_addr'): estate_display = st.session_state.get('input_collateral_addr')

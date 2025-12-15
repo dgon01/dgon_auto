@@ -216,7 +216,7 @@ def parse_int_input(text_input):
         return int(remove_commas(text_input or "0"))
     except ValueError: return 0
 
-# 전역 초기화 함수
+# 전역 초기화 함수 (수정됨: rerun 제거)
 def reset_all_data():
     """모든 세션 상태를 초기값으로 리셋"""
     defaults = {
@@ -255,7 +255,7 @@ def reset_all_data():
     
     for key, val in defaults.items():
         st.session_state[key] = val
-    st.rerun()
+    # st.rerun() 제거: on_click에서 호출 시 자동 갱신됨
 
 # 초기 상태 설정
 if 'estate_text' not in st.session_state:
@@ -545,8 +545,8 @@ tab1, tab2, tab3, tab4 = st.tabs(["📄 근저당권설정 계약서", "✍️ �
 with tab1:
     col_header = st.columns([5, 1])
     col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
-    if col_header[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t1"):
-        reset_all_data()
+    # [수정] on_click 사용하여 오류 해결
+    col_header[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t1", on_click=reset_all_data)
     st.markdown("---")
     
     with st.expander("📌 기본 정보", expanded=True):
@@ -642,8 +642,8 @@ with tab1:
 with tab2:
     col_h2 = st.columns([5, 1])
     col_h2[0].markdown("### ✍️ 자필서명정보 작성")
-    if col_h2[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t2"):
-        reset_all_data()
+    # [수정] on_click 사용하여 오류 해결
+    col_h2[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t2", on_click=reset_all_data)
     st.markdown("---")
 
     # 1탭 정보 동기화 로직
@@ -724,8 +724,8 @@ with tab2:
 with tab3:
     col_header3 = st.columns([5, 1])
     col_header3[0].markdown("### 🧾 등기비용 계산기")
-    if col_header3[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t3"):
-        reset_all_data()
+    # [수정] on_click 사용하여 오류 해결
+    col_header3[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t3", on_click=reset_all_data)
     st.markdown("---")
 
     # 1탭 정보 동기화
@@ -752,7 +752,7 @@ with tab3:
     with row1_c3:
         st.number_input("필지수", min_value=1, key='input_parcels')
     with row1_c4:
-        # StreamlitAPIException 수정: on_click 콜백 사용
+        # [수정] on_click 사용하여 오류 해결
         def update_rate():
             st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
             
@@ -914,8 +914,8 @@ with tab3:
 with tab4:
     col_h4 = st.columns([5, 1])
     col_h4[0].markdown("### 🗑️ 말소 문서 작성")
-    if col_h4[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t4"):
-        reset_all_data()
+    # [수정] on_click 사용하여 오류 해결
+    col_h4[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t4", on_click=reset_all_data)
     st.markdown("---")
 
     # 1탭 동기화 로직

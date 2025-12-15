@@ -843,43 +843,59 @@ with tab3:
     
     # 디버깅용: 현재 세션 상태 확인
     with st.expander("🔍 디버깅 정보 (개발용)", expanded=True):
-        st.write("**1탭 → 3탭 데이터 동기화 상태**")
+        st.write("**1탭 원본 데이터**")
         st.write(f"- 1탭 채권자 (input_creditor): `{st.session_state.get('input_creditor', 'None')}`")
         st.write(f"- 1탭 채무자 (t1_debtor_name): `{st.session_state.get('t1_debtor_name', 'None')}`")
+        st.write(f"- 1탭 물건지 (input_collateral_addr): `{st.session_state.get('input_collateral_addr', 'None')}`")
+        st.write(f"- 1탭 채권최고액 (input_amount): `{st.session_state.get('input_amount', 'None')}`")
+        
+        st.write("**3탭 동기화 후 데이터**")
         st.write(f"- 3탭 채무자 (input_debtor): `{st.session_state.get('input_debtor', 'None')}`")
-        st.write(f"- 채권최고액 (input_amount): `{st.session_state.get('input_amount', 'None')}`")
+        st.write(f"- 3탭 채무자 뷰 (calc_debtor_view): `{st.session_state.get('calc_debtor_view', 'None')}`")
+        st.write(f"- 3탭 채무자 위젯 (tab3_debtor_input): `{st.session_state.get('tab3_debtor_input', 'None')}`")
 
 
     # =========================================================
     # [수정됨] 0. 1탭 데이터 강제 동기화 (Source of Truth)
     # =========================================================
-    # 3탭 위젯 그리기 전에 1탭 데이터를 가져와서 session_state에 박아넣음
+    # 3탭이 렌더링될 때마다 1탭 데이터를 무조건 가져옴
     
-    # 채권최고액 동기화
-    if 'input_amount' in st.session_state and st.session_state['input_amount']:
-        if st.session_state.get('calc_amount_input') != st.session_state['input_amount']:
-            st.session_state['calc_amount_input'] = st.session_state['input_amount']
+    # 1탭 데이터 가져오기
+    debtor_from_tab1 = st.session_state.get('t1_debtor_name', '')
+    creditor_from_tab1 = st.session_state.get('input_creditor', '')
+    amount_from_tab1 = st.session_state.get('input_amount', '')
+    estate_from_tab1 = st.session_state.get('input_collateral_addr', '')
     
-    # 채무자 이름 동기화 (1탭의 t1_debtor_name → 3탭의 input_debtor)
-    st.session_state['input_debtor'] = st.session_state.get('t1_debtor_name', '')
+    # 물건지 처리
+    if not estate_from_tab1:
+        estate_from_tab1 = extract_address_from_estate(st.session_state.get('estate_text') or "")
     
-    # 채권자 정보 동기화 (1탭에서 이미 input_creditor에 저장되어 있음을 확인)
-    # input_creditor는 1탭의 selectbox에서 자동으로 업데이트됨
+    # 채권최고액 동기화 (무조건)
+    st.session_state['calc_amount_input'] = amount_from_tab1
+    
+    # 채무자 동기화 (무조건 1탭 값으로 덮어쓰기)
+    st.session_state['input_debtor'] = debtor_from_tab1
+    st.session_state['calc_debtor_view'] = debtor_from_tab1
+    st.session_state['tab3_debtor_input'] = debtor_from_tab1
+    
+    # 채권자 동기화 (무조건 1탭 값으로 덮어쓰기)
+    st.session_state['input_creditor'] = creditor_from_tab1
+    st.session_state['calc_creditor_view'] = creditor_from_tab1
+    st.session_state['tab3_creditor_select'] = creditor_from_tab1
+    
+    # 물건지 동기화 (무조건 1탭 값으로 덮어쓰기)
+    st.session_state['input_collateral_addr'] = estate_from_tab1
+    st.session_state['calc_estate_view'] = estate_from_tab1
+    st.session_state['tab3_estate_input'] = estate_from_tab1
     
     # =========================================================
     # 1. 통합 기본 정보 섹션
     # =========================================================
-    creditor_display = st.session_state.get('input_creditor', '')
+    creditor_display = creditor_from_tab1
     if creditor_display == "🖊️ 직접입력": 
         creditor_display = st.session_state.get('input_creditor_name', '직접입력')
     
-    # disabled text_input의 key에 해당하는 session_state 직접 업데이트
-    st.session_state['calc_creditor_view'] = creditor_display
-    st.session_state['calc_debtor_view'] = st.session_state.get('input_debtor', '')
-    
-    estate_display = extract_address_from_estate(st.session_state.get('estate_text') or "")
-    if st.session_state.get('input_collateral_addr'): estate_display = st.session_state.get('input_collateral_addr')
-    st.session_state['calc_estate_view'] = estate_display
+    estate_display = estate_from_tab1
 
     row1_c1, row1_c2, row1_c3, row1_c4 = st.columns([2, 0.5, 1, 1.2]) 
     
@@ -907,10 +923,12 @@ with tab3:
 
     row2_c1, row2_c2 = st.columns([1, 1])
     
-    # 금융사 선택 (1탭과 동일한 방식)
+    # 금융사 선택 (1탭 값 기준)
     with row2_c1:
         creditor_list = list(CREDITORS.keys()) + ["🖊️ 직접입력"]
-        current_creditor = st.session_state.get('calc_creditor_view', st.session_state.get('input_creditor', creditor_list[0]))
+        
+        # 1탭 값을 우선 사용
+        current_creditor = creditor_from_tab1 if creditor_from_tab1 else creditor_list[0]
         if current_creditor not in creditor_list:
             current_creditor = creditor_list[0]
         default_index = creditor_list.index(current_creditor)
@@ -930,31 +948,31 @@ with tab3:
             st.session_state['input_debtor'] = st.session_state.get('tab3_debtor_input', '')
             st.session_state['calc_debtor_view'] = st.session_state.get('tab3_debtor_input', '')
         
-        st.text_input("채무자", value=st.session_state.get('calc_debtor_view', ''), key='tab3_debtor_input', on_change=on_tab3_debtor_change)
+        st.text_input("채무자", key='tab3_debtor_input', on_change=on_tab3_debtor_change)
     
     # 물건지 입력
     def on_tab3_estate_change():
         st.session_state['input_collateral_addr'] = st.session_state.get('tab3_estate_input', '')
         st.session_state['calc_estate_view'] = st.session_state.get('tab3_estate_input', '')
     
-    st.text_area("물건지", value=st.session_state.get('calc_estate_view', ''), key='tab3_estate_input', on_change=on_tab3_estate_change, height=80)
+    st.text_area("물건지", key='tab3_estate_input', on_change=on_tab3_estate_change, height=80)
     st.markdown("---")
 
     # =========================================================
     # 2. 계산 로직 수행
     # =========================================================
-    # 3탭에서 직접 입력한 값 사용 (우선순위: 3탭 입력 > 1탭 자동 동기화)
-    creditor_for_calc = st.session_state.get('calc_creditor_view', creditor_display)
+    # 3탭 위젯 값 사용 (사용자가 수정한 경우 그 값 반영)
+    creditor_for_calc = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
     if creditor_for_calc == "🖊️ 직접입력":
         creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
     
     calc_input_data = {
-        '채권최고액': st.session_state.get('input_amount'), 
+        '채권최고액': st.session_state.get('calc_amount_input', amount_from_tab1), 
         '필지수': st.session_state['input_parcels'],
         '채권할인율': st.session_state['input_rate'],
         '금융사': creditor_for_calc,
-        '채무자': st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '')),
-        '물건지': st.session_state.get('calc_estate_view', estate_display),
+        '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
+        '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
         '추가보수_val': st.session_state.get('add_fee_val', "0"),
         '기타보수_val': st.session_state.get('etc_fee_val', "0"),
         '할인금액': st.session_state.get('disc_fee_val', "0"),
@@ -1042,9 +1060,10 @@ with tab3:
             
             def update_address_cost():
                 if st.session_state.get('use_address_change', False):
-                    # 3탭에서 직접 선택한 금융사 우선 사용
-                    cur_creditor = st.session_state.get('calc_creditor_view', st.session_state.get('input_creditor', ''))
-                    if cur_creditor == "🖊️ 직접입력": cur_creditor = st.session_state.get('input_creditor_name', '')
+                    # 3탭 위젯 값 사용
+                    cur_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
+                    if cur_creditor == "🖊️ 직접입력": 
+                        cur_creditor = st.session_state.get('input_creditor_name', '')
                     count = st.session_state.get('address_change_count', 1)
                     fee = (20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000) * count
                     st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
@@ -1073,8 +1092,8 @@ with tab3:
                 st.session_state['generate_pdf'] = False
             else:
                 try:
-                    # PDF 데이터 준비 (3탭 입력값 우선 사용)
-                    pdf_creditor = st.session_state.get('calc_creditor_view', creditor_display)
+                    # PDF 데이터 준비 (3탭 위젯 값 사용)
+                    pdf_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
                     if pdf_creditor == "🖊️ 직접입력":
                         pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
                     
@@ -1084,8 +1103,8 @@ with tab3:
                             '채권최고액': format_number_with_comma(final_data.get('input_amount', st.session_state.get('input_amount', ''))),
                             '필지수': str(st.session_state.get('input_parcels', 1)),
                             '금융사': pdf_creditor,
-                            '채무자': st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '')),
-                            '물건지': st.session_state.get('calc_estate_view', estate_display)
+                            '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
+                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
                         },
                         'fee_items': {
                             '기본료': parse_int_input(final_data.get('기본료', 0)),
@@ -1119,9 +1138,9 @@ with tab3:
                     pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
                     pdf_buffer = pdf_converter.output_pdf(pdf_data)
                     
-                    # 다운로드 버튼 (3탭 채무자명 우선 사용)
-                    debtor_name = st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '고객'))
-                    if not debtor_name:
+                    # 다운로드 버튼 (3탭 위젯 값 사용)
+                    debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
+                    if not debtor_name or debtor_name.strip() == '':
                         debtor_name = '고객'
                     
                     def clear_pdf_flag():
@@ -1151,10 +1170,10 @@ with tab3:
                 st.session_state['generate_excel'] = False
             else:
                 try:
-                    # Excel 데이터 준비 (3탭 입력값 우선 사용)
+                    # Excel 데이터 준비 (3탭 위젯 값 사용)
                     receipt_template = st.session_state['template_status'].get('영수증')
                     
-                    excel_creditor = st.session_state.get('calc_creditor_view', creditor_display)
+                    excel_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
                     if excel_creditor == "🖊️ 직접입력":
                         excel_creditor = st.session_state.get('input_creditor_name', '직접입력')
                     
@@ -1162,8 +1181,8 @@ with tab3:
                         'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
                         'client': {
                             '금융사': excel_creditor,
-                            '채무자': st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '')),
-                            '물건지': st.session_state.get('calc_estate_view', estate_display),
+                            '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
+                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
                             '채권최고액': format_number_with_comma(st.session_state.get('input_amount', ''))
                         },
                         'cost_items': {
@@ -1188,9 +1207,9 @@ with tab3:
                     excel_buffer = create_receipt_excel(excel_data, receipt_template)
                     
                     if excel_buffer:
-                        # 다운로드 버튼 (3탭 채무자명 우선 사용)
-                        debtor_name = st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '고객'))
-                        if not debtor_name:
+                        # 다운로드 버튼 (3탭 위젯 값 사용)
+                        debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
+                        if not debtor_name or debtor_name.strip() == '':
                             debtor_name = '고객'
                         
                         def clear_excel_flag():

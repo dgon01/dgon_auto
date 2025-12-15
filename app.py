@@ -333,6 +333,29 @@ if FPDF_OK:
             pdf_buffer.seek(0); return pdf_buffer
 else: PDFConverter = None
 
+def draw_fit_text(canvas_obj, text, x, y, max_width, font_name, font_size):
+    """긴 텍스트를 max_width에 맞춰 여러 줄로 나눠 그리기"""
+    if not text:
+        return
+    words = text.split()
+    lines = []
+    current_line = []
+    
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        if canvas_obj.stringWidth(test_line, font_name, font_size) <= max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+    
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    for i, line in enumerate(lines):
+        canvas_obj.drawString(x, y - (i * (font_size + 2)), line)
+
 def create_overlay_pdf(data, font_path):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
     try: pdfmetrics.registerFont(TTFont('Korean', font_path)); font_name = 'Korean'
@@ -706,8 +729,13 @@ with tab3:
     if creditor_display == "🖊️ 직접입력": 
         creditor_display = st.session_state.get('input_creditor_name', '직접입력')
     
+    # disabled text_input의 key에 해당하는 session_state 직접 업데이트
+    st.session_state['calc_creditor_view'] = creditor_display
+    st.session_state['calc_debtor_view'] = st.session_state.get('input_debtor', '')
+    
     estate_display = extract_address_from_estate(st.session_state.get('estate_text') or "")
     if st.session_state.get('input_collateral_addr'): estate_display = st.session_state.get('input_collateral_addr')
+    st.session_state['calc_estate_view'] = estate_display
 
     row1_c1, row1_c2, row1_c3, row1_c4 = st.columns([2, 0.5, 1, 1.2]) 
     
@@ -734,9 +762,9 @@ with tab3:
         st.session_state['input_rate'] = new_rate
 
     row2_c1, row2_c2 = st.columns([1, 1])
-    with row2_c1: st.text_input("금융사", value=creditor_display, key="calc_creditor_view", disabled=True)
-    with row2_c2: st.text_input("채무자", value=st.session_state.get('input_debtor'), key="calc_debtor_view", disabled=True)
-    st.text_input("물건지", value=estate_display, key="calc_estate_view", disabled=True)
+    with row2_c1: st.text_input("금융사", key="calc_creditor_view", disabled=True)
+    with row2_c2: st.text_input("채무자", key="calc_debtor_view", disabled=True)
+    st.text_input("물건지", key="calc_estate_view", disabled=True)
     st.markdown("---")
 
     # =========================================================

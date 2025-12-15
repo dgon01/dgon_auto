@@ -710,7 +710,7 @@ def _create_simple_receipt(sheet, data):
 # UI 구현
 # =============================================================================
 
-tab1, tab2, tab3 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증"])
+tab1, tab2, tab3, tab4 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증", "🗑️ 말소 문서"])
 
 # Tab 1: 근저당권 설정 (입력)
 with tab1:
@@ -1230,6 +1230,306 @@ with tab3:
                 except Exception as e:
                     st.error(f"Excel 생성 오류: {e}")
                     st.session_state['generate_excel'] = False
+
+# =============================================================================
+# Tab 4: 말소 문서
+# =============================================================================
+
+# =============================================================================
+# Tab 4: 말소 문서
+# =============================================================================
+with tab4:
+    st.markdown("### 🗑️ 말소 문서 작성")
+    
+    # 초기화
+    if 'malso_type' not in st.session_state:
+        st.session_state['malso_type'] = "근저당권"
+    
+    # 1. 말소 유형 선택
+    st.markdown("#### 📋 말소 유형")
+    malso_type_col = st.columns(3)
+    with malso_type_col[0]:
+        if st.button("근저당권", use_container_width=True, type="primary" if st.session_state['malso_type'] == "근저당권" else "secondary", key="btn_malso_type_1"):
+            st.session_state['malso_type'] = "근저당권"
+            st.rerun()
+    with malso_type_col[1]:
+        if st.button("질권", use_container_width=True, type="primary" if st.session_state['malso_type'] == "질권" else "secondary", key="btn_malso_type_2"):
+            st.session_state['malso_type'] = "질권"
+            st.rerun()
+    with malso_type_col[2]:
+        if st.button("전세권", use_container_width=True, type="primary" if st.session_state['malso_type'] == "전세권" else "secondary", key="btn_malso_type_3"):
+            st.session_state['malso_type'] = "전세권"
+            st.rerun()
+    
+    st.info(f"선택된 유형: **{st.session_state['malso_type']}말소**")
+    st.markdown("---")
+    
+    # 2. 출력 문서 선택
+    st.markdown("#### 📄 출력 문서 선택")
+    doc_cols = st.columns(4)
+    with doc_cols[0]:
+        check_signature = st.checkbox("자필서명정보", key="chk_signature")
+    with doc_cols[1]:
+        check_power = st.checkbox("위임장", key="chk_power")
+    with doc_cols[2]:
+        check_termination = st.checkbox("해지증서", key="chk_termination")
+    with doc_cols[3]:
+        check_transfer = st.checkbox("이관증명서", key="chk_transfer")
+    
+    st.markdown("---")
+    
+    # 3. 입력 정보
+    col_input1, col_input2 = st.columns(2)
+    
+    with col_input1:
+        st.markdown("#### 1️⃣ 등기의무자 (권리자)")
+        with st.container(border=True):
+            malso_obligor_corp = st.text_input("법인명", key="malso_obligor_corp", placeholder="주식회사티플레인대부")
+            malso_obligor_rep = st.text_input("대표이사", key="malso_obligor_rep", placeholder="윤웅원")
+            malso_obligor_id = st.text_input("법인등록번호", key="malso_obligor_id", placeholder="110111-7350161")
+            malso_obligor_addr = st.text_area("주소", key="malso_obligor_addr", height=80, 
+                                              placeholder="서울특별시 마포구 삼개로 16, 2신관 1층 103호(도화동, 근신빌딩)")
+    
+    with col_input2:
+        st.markdown("#### 2️⃣ 등기권리자 (의무자)")
+        with st.container(border=True):
+            malso_holder_name = st.text_input("성명", key="malso_holder_name", placeholder="이형기,김의진")
+            malso_holder_addr = st.text_area("주소", key="malso_holder_addr", height=100, 
+                                             placeholder="서울특별시 송파구 중대로 24 222동 205호(문정동, 올림픽훼밀리타운아파트)")
+    
+    st.markdown("---")
+    
+    # 4. 등기원인 및 부동산 정보
+    col_info = st.columns(2)
+    with col_info[0]:
+        st.markdown("#### 3️⃣ 등기원인과 그 년월일")
+        malso_cause_date = st.date_input("등기원인일", value=datetime.now().date(), key="malso_cause_date")
+        malso_cause = st.text_input("등기원인", value="해지", key="malso_cause")
+    
+    with col_info[1]:
+        st.markdown("#### 4️⃣ 등기목적")
+        malso_purpose = st.text_input("등기목적", value=f"{st.session_state['malso_type']}말소", key="malso_purpose", disabled=True)
+    
+    st.markdown("#### 5️⃣ 부동산의 표시")
+    with st.container(border=True):
+        malso_estate_detail = st.text_area(
+            "부동산 상세 (인터넷등기소에서 복사)",
+            key="malso_estate_detail",
+            height=200,
+            placeholder="""1동의 건물의 표시
+서울특별시 송파구 문정동 150
+서울특별시 송파구 문정동 150-1
+올림픽훼밀리타운아파트 제222동
+[도로명주소]서울특별시 송파구 중대로 24
+
+전유부분의 건물의 표시
+1. 건물의 번호 : 제222동 제2층 제205호[고유번호:1162-1996-061542]
+구조 및 면적 : 철근콘크리트조 158.705㎡
+
+전유부분의 대지권의 표시
+토지의 표시
+1.서울특별시 송파구 문정동 150 대 237830.7㎡
+2.서울특별시 송파구 문정동 150-1 대 65184.3㎡
+대지권의 종류: 1, 2 소유권
+대지권의 비율: 303015분의 84.454"""
+        )
+    
+    st.markdown("#### 6️⃣ 말소할 등기")
+    malso_cancel_text = st.text_input(
+        "말소할 등기 (접수번호 등)",
+        key="malso_cancel_text",
+        placeholder="2025년09월30일 접수 제5201489호(으)로 경료한 근저당권설정"
+    )
+    
+    st.markdown("---")
+    
+    # 7. 이관 정보 (이관증명서용)
+    if check_transfer:
+        st.markdown("#### 🏦 이관 정보")
+        col_transfer = st.columns(2)
+        with col_transfer[0]:
+            malso_from_branch = st.text_input("이관 전", key="malso_from_branch", placeholder="취급지점명")
+        with col_transfer[1]:
+            malso_to_branch = st.text_input("이관 후", key="malso_to_branch", placeholder="본점")
+        st.markdown("---")
+    
+    # 8. 대리인 정보
+    st.markdown("#### 👤 대리인 정보")
+    col_agent = st.columns(3)
+    with col_agent[0]:
+        malso_agent_corp = st.text_input("법무법인명", key="malso_agent_corp", value="법무법인 시화", placeholder="법무법인 시화")
+    with col_agent[1]:
+        malso_agent_name = st.text_input("담당변호사", key="malso_agent_name", value="최장섭", placeholder="최장섭")
+    with col_agent[2]:
+        malso_agent_phone = st.text_input("전화번호", key="malso_agent_phone", value="02-522-4100", placeholder="02-522-4100")
+    
+    malso_agent_addr = st.text_input("대리인 주소", key="malso_agent_addr", 
+                                     value="서울특별시 서초구 법원로3길6-9, 301호(서초동,법조빌딩)",
+                                     placeholder="서울특별시 서초구 법원로3길6-9, 301호(서초동,법조빌딩)")
+    
+    st.markdown("---")
+    
+    # 9. 미리보기
+    st.markdown("### 📄 문서 미리보기")
+    
+    # 변수 준비
+    malso_type_text = st.session_state['malso_type']
+    obligor_full = f"{malso_obligor_corp or '[법인명]'}"
+    if malso_obligor_rep:
+        obligor_full += f"\n(대표이사){malso_obligor_rep}"
+    
+    # 선택된 문서만 미리보기
+    preview_docs = []
+    if check_signature:
+        preview_docs.append("자필서명정보")
+    if check_power:
+        preview_docs.append("위임장")
+    if check_termination:
+        preview_docs.append("해지증서")
+    if check_transfer:
+        preview_docs.append("이관증명서")
+    
+    if preview_docs:
+        for doc_type in preview_docs:
+            with st.expander(f"📋 {doc_type}", expanded=True):
+                if doc_type == "자필서명정보":
+                    st.markdown(f"""
+**〔별지 제1호〕 자필서명 정보 양식**
+
+**등기의목적**: {malso_purpose or f'{malso_type_text}말소'}
+
+주민등록증·인감증명서·본인서명사실확인서 등 법령에 따라 작성된 증명서의 제출이나 제시,  
+그 밖에 이에 준하는 확실한 방법으로 위임인이 등기의무자인지 여부를 확인하고 자필서명합니다.  
+「부동산등기규칙」 제46조제1항제8호에 따라 이를 제출합니다.
+
+---
+
+**자격대리인의 등기의무자 확인 및 자필서명 정보**
+
+**등기사건의표시**
+
+**등기할 부동산의 표시**
+
+{malso_estate_detail or '[부동산 표시를 입력하세요]'}
+
+---
+
+| **등기의무자** | **성명** | {obligor_full} |
+|:---|:---|:---|
+| | **(주민)등록번호** | {malso_obligor_id or '[법인등록번호]'} |
+
+**등기의목적**: {malso_purpose or f'{malso_type_text}말소'}
+
+{format_date_korean(malso_cause_date)}
+
+**자격자대리인**  
+변호사 {malso_agent_name or '[변호사명]'}
+
+---
+
+**자격자대리인 자필서명 정보**
+
+주민등록증·인감증명서·본인서명사실확인서 등 법령에 따라 작성된 증명서의 제출이나 제시,  
+그 밖에 이에 준하는 확실한 방법으로 위임인이 등기의무자인지 여부를 확인하고 자필서명합니다.  
+「부동산등기규칙」 제46조제1항제8호에 따라 이를 제출합니다.
+
+{format_date_korean(malso_cause_date)}
+
+변호사 {malso_agent_name or '[변호사명]'}
+""")
+                
+                elif doc_type == "위임장":
+                    st.markdown(f"""
+**위 임 장**
+
+| **구분** | **내용** |
+|:---|:---|
+| **의무자** | {malso_obligor_corp or '[법인명]'}<br>{malso_obligor_addr or '[주소]'}<br>(대표이사){malso_obligor_rep or '[대표이사명]'} |
+| **권리자** | {malso_holder_name or '[성명]'}<br>{malso_holder_addr or '[주소]'} |
+
+---
+
+**부동산의 표시**
+
+{malso_estate_detail or '[부동산 표시를 입력하세요]'}
+
+---
+
+**등기원인과 그 년월일**: {format_date_korean(malso_cause_date)} {malso_cause or '해지'}
+
+**등기의 목적**: {malso_purpose or f'{malso_type_text}말소'}
+
+**말소할 등기**: {malso_cancel_text or '[말소할 등기를 입력하세요]'}
+
+**대리인**  
+{malso_agent_corp or '[법무법인명]'} 담당변호사 {malso_agent_name or '[변호사명]'}  
+{malso_agent_addr or '[주소]'}  
+(전화 : {malso_agent_phone or '[전화번호]'})
+
+위 사람을 대리인으로 정하고 위 부동산 등기신청 및 취하에 관한 모든 권한을 위임한다.  
+또한 복대리인 선임을 허락한다.
+
+{format_date_korean(malso_cause_date)}
+
+{malso_obligor_corp or '[법인명]'}  
+{malso_obligor_addr or '[주소]'}  
+(대표이사){malso_obligor_rep or '[대표이사명]'}
+""")
+                
+                elif doc_type == "해지증서":
+                    st.markdown(f"""
+**해 지 증 서**
+
+**부동산의표시**
+
+{malso_estate_detail or '[부동산 표시를 입력하세요]'}
+
+---
+
+위 부동산에 관하여 **{malso_cancel_text or '[말소할 등기]'}**(을)를 해지한다.
+
+**{malso_type_text}자** {malso_obligor_corp or '[법인명]'}  
+{malso_obligor_addr or '[주소]'}  
+(대표이사){malso_obligor_rep or '[대표이사명]'}
+
+{format_date_korean(malso_cause_date)}
+
+{malso_holder_name or '[등기권리자명]'} 귀하
+""")
+                
+                elif doc_type == "이관증명서":
+                    from_branch = st.session_state.get('malso_from_branch', '[이관 전]')
+                    to_branch = st.session_state.get('malso_to_branch', '[이관 후]')
+                    st.markdown(f"""
+**이 관 증 명 서**
+
+**부동산의표시**
+
+{malso_estate_detail or '[부동산 표시를 입력하세요]'}
+
+---
+
+위 부동산에 관하여 **{malso_cancel_text or '[말소할 등기]'}** 업무일체가 **{from_branch}**에서 **{to_branch}**(으)로 이관되었음을 확인합니다.
+
+{format_date_korean(malso_cause_date)}
+
+**{malso_type_text}자** {malso_obligor_corp or '[법인명]'}  
+{malso_obligor_addr or '[주소]'}  
+(대표이사){malso_obligor_rep or '[대표이사명]'}
+""")
+    else:
+        st.info("📌 출력할 문서를 선택해주세요.")
+    
+    st.markdown("---")
+    
+    # 10. PDF 다운로드 버튼
+    if preview_docs:
+        st.markdown("### 📥 문서 다운로드")
+        download_cols = st.columns(len(preview_docs))
+        for idx, doc_type in enumerate(preview_docs):
+            with download_cols[idx]:
+                if st.button(f"📄 {doc_type} PDF", use_container_width=True, key=f"download_{doc_type}_btn"):
+                    st.info(f"💡 {doc_type} PDF 생성 기능은 추후 구현 예정입니다.")
 
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>

@@ -41,7 +41,10 @@ st.set_page_config(layout="wide", page_title="DG-Form | 등기온 전자설정",
 # 폰트 설정
 FONT_PATH = os.path.join(APP_ROOT, "Malgun.ttf")
 if not os.path.exists(FONT_PATH):
-    FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
+    # 리눅스/클라우드 환경 대응을 위한 예비 경로
+    FONT_PATH = "Malgun.ttf" 
+    if not os.path.exists(FONT_PATH):
+        FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
 
 # -----------------------------------------------------------------------------
 # 스타일 및 로고 (클로드 디자인 유지)
@@ -103,7 +106,9 @@ CREDITORS = {
 
 TEMPLATE_FILENAMES = {
     "개인": "1.pdf", "3자담보": "2.pdf", "공동담보": "3.pdf",
-    "자필": "자필서명정보 템플릿.pdf", "영수증": "영수증_템플릿.xlsx"
+    "자필_전자": "자필서명정보 템플릿.pdf", 
+    "자필_서면": "자필서명정보 템플릿(서면).pdf",
+    "영수증": "영수증_템플릿.xlsx"
 }
 MALSO_TEMPLATES = {
     "자필서명정보": "자필서명정보_말소_템플릿.pdf", "위임장": "위임장_말소_템플릿.pdf",
@@ -386,23 +391,45 @@ with tab1:
         st.download_button("⬇️ 다운로드", pdf, f"근저당권설정_{st.session_state['t1_debtor']}.pdf", "application/pdf", use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# Tab 2: 자필서명정보 (Tab 1 데이터 연동)
+# Tab 2: 자필서명정보 (Tab 1 데이터 연동 + 전자/서면 구분)
 # -----------------------------------------------------------------------------
 with tab2:
     st.markdown("### ✍️ 자필서명정보")
-    st.caption("※ 1탭 정보를 불러오며, 주민번호는 여기서 입력합니다.")
     
+    # 1. 접수 유형 선택
+    col2_btn, col2_opt = st.columns([1, 2])
+    with col2_opt:
+        apply_type = st.radio("접수 구분", ["전자신청", "서면신청"], horizontal=True)
+    with col2_btn:
+        if st.button("🔄 1탭 정보 가져오기", key="sync_tab2"):
+            st.session_state['t2_d_name'] = st.session_state['t1_debtor']
+            st.session_state['t2_o_name'] = st.session_state['t1_owner']
+            st.session_state['t2_estate'] = st.session_state['t1_estate']
+            st.rerun()
+
+    # 데이터 초기화 (1탭 없을시 대비)
+    if 't2_d_name' not in st.session_state: st.session_state['t2_d_name'] = st.session_state['t1_debtor']
+    if 't2_o_name' not in st.session_state: st.session_state['t2_o_name'] = st.session_state['t1_owner']
+    if 't2_estate' not in st.session_state: st.session_state['t2_estate'] = st.session_state['t1_estate']
+
     c2_1, c2_2 = st.columns(2)
     with c2_1:
-        t2_d_name = st.text_input("채무자", value=st.session_state['t1_debtor'], key="t2d")
+        t2_d_name = st.text_input("채무자", value=st.session_state['t2_d_name'], key="t2d_name")
         t2_d_rrn = st.text_input("채무자 주민번호", key="t2d_rrn")
     with c2_2:
-        t2_o_name = st.text_input("소유자", value=st.session_state['t1_owner'], key="t2o")
+        t2_o_name = st.text_input("소유자", value=st.session_state['t2_o_name'], key="t2o_name")
         t2_o_rrn = st.text_input("소유자 주민번호", key="t2o_rrn")
         
-    t2_estate = st.text_area("부동산 표시 (수정 가능)", value=st.session_state['t1_estate'], height=150, key="t2_est")
+    t2_estate = st.text_area("부동산 표시 (수정 가능)", value=st.session_state['t2_estate'], height=150, key="t2_est_mod")
     
-    t_path = resource_path(TEMPLATE_FILENAMES["자필"])
+    # 템플릿 파일 선택 로직
+    if apply_type == "전자신청":
+        t_key = "자필_전자"
+    else:
+        t_key = "자필_서면"
+    
+    t_path = resource_path(TEMPLATE_FILENAMES[t_key])
+    
     if st.button("📄 자필서명 PDF 생성", disabled=not (LIBS_OK and os.path.exists(t_path)), use_container_width=True):
         data = {
             "date": format_date_korean(st.session_state['t1_date']),
@@ -411,31 +438,46 @@ with tab2:
             "estate": t2_estate.split('\n')
         }
         pdf = make_pdf(t_path, data)
-        st.download_button("⬇️ 다운로드", pdf, "자필서명정보.pdf", "application/pdf", use_container_width=True)
+        # 파일명 구분
+        f_name = f"자필서명정보({apply_type}).pdf"
+        st.download_button("⬇️ 다운로드", pdf, f_name, "application/pdf", use_container_width=True)
 
 # -----------------------------------------------------------------------------
-# Tab 3: 영수증/비용 (1탭 연동, 엑셀 출력)
+# Tab 3: 영수증/비용 (1탭 연동, 엑셀 출력 수정)
 # -----------------------------------------------------------------------------
 with tab3:
     st.markdown("### 🧾 영수증 및 비용 (Excel)")
     
-    # 1. 1탭 데이터 자동 Load
-    def_cred = st.session_state['t1_creditor'] if st.session_state['t1_creditor'] != "직접입력" else "채권자"
-    def_addr = extract_address(st.session_state['t1_estate'])
-    
+    if st.button("🔄 1탭 정보 가져오기", key="sync_tab3"):
+        st.session_state['t3_amt_input'] = st.session_state['t1_amount']
+        st.session_state['t3_deb_input'] = st.session_state['t1_debtor']
+        cr = st.session_state['t1_creditor']
+        st.session_state['t3_cred_input'] = cr if cr != "직접입력" else "채권자"
+        st.session_state['t3_est_input'] = extract_address(st.session_state['t1_estate'])
+        st.rerun()
+
+    # 기본값 설정
+    if 't3_amt_input' not in st.session_state: st.session_state['t3_amt_input'] = st.session_state['t1_amount']
+    if 't3_deb_input' not in st.session_state: st.session_state['t3_deb_input'] = st.session_state['t1_debtor']
+    if 't3_cred_input' not in st.session_state: 
+        cr = st.session_state['t1_creditor']
+        st.session_state['t3_cred_input'] = cr if cr != "직접입력" else "채권자"
+    if 't3_est_input' not in st.session_state: 
+        st.session_state['t3_est_input'] = extract_address(st.session_state['t1_estate'])
+
     col3_1, col3_2, col3_3 = st.columns(3)
     with col3_1:
-        t3_amt = st.text_input("채권최고액", value=st.session_state['t1_amount'], key="t3_amt")
+        t3_amt = st.text_input("채권최고액", value=st.session_state['t3_amt_input'], key="t3_amt_val")
     with col3_2:
-        t3_parcels = st.number_input("필지수", min_value=1, value=st.session_state['t3_parcels'], key="t3_parcels")
+        t3_parcels = st.number_input("필지수", min_value=1, value=st.session_state['t3_parcels'], key="t3_parcels_val")
     with col3_3:
-        t3_rate = st.text_input("할인율(%)", value=st.session_state['t3_rate'], key="t3_rate")
+        t3_rate = st.text_input("할인율(%)", value=st.session_state['t3_rate'], key="t3_rate_val")
 
     st.markdown("#### 상세 정보 (1탭 연동)")
     c3_a, c3_b = st.columns(2)
-    with c3_a: t3_debtor = st.text_input("채무자", value=st.session_state['t1_debtor'], key="t3_deb")
-    with c3_b: t3_creditor = st.text_input("금융사", value=def_cred, key="t3_cred")
-    t3_estate = st.text_input("물건지", value=def_addr, key="t3_est")
+    with c3_a: t3_debtor = st.text_input("채무자", value=st.session_state['t3_deb_input'], key="t3_deb_val")
+    with c3_b: t3_creditor = st.text_input("금융사", value=st.session_state['t3_cred_input'], key="t3_cred_val")
+    t3_estate = st.text_input("물건지", value=st.session_state['t3_est_input'], key="t3_est_val")
 
     with st.expander("비용 상세 입력 (자동계산 + 수기)", expanded=True):
         # 기본 자동 계산값
@@ -461,6 +503,11 @@ with tab3:
     st.success(f"💰 공과금 합계: {format_comma(total_cost)} 원")
     
     t_path = resource_path(TEMPLATE_FILENAMES["영수증"])
+    
+    # 엑셀 파일 확인
+    if not os.path.exists(t_path):
+        st.error(f"⚠️ 템플릿 파일을 찾을 수 없습니다: {t_path}")
+    
     if st.button("🏦 영수증 Excel 생성", disabled=not (EXCEL_OK and os.path.exists(t_path)), use_container_width=True):
         data = {
             'client': {'creditor': t3_creditor, 'debtor': t3_debtor, 'amount': t3_amt, 'estate': t3_estate},
@@ -479,17 +526,19 @@ with tab3:
             st.error("엑셀 생성 실패")
 
 # -----------------------------------------------------------------------------
-# Tab 4: 말소 문서 (체크박스 제거 & 소유자 중심)
+# Tab 4: 말소 문서 (데이터 연동 및 자동화)
 # -----------------------------------------------------------------------------
 with tab4:
     c4_h1, c4_h2 = st.columns([5, 1])
     c4_h1.markdown("### 🗑️ 말소 문서 작성")
-    if c4_h2.button("🔄 4탭 초기화", key="reset_tab4"):
-        for k in list(st.session_state.keys()):
-            if k.startswith("malso_"): del st.session_state[k]
+    if c4_h2.button("🔄 1탭 정보 가져오기", key="sync_tab4"):
+        # 권리자에 1탭 소유자 정보 넣기
+        st.session_state['malso_ow_name'] = st.session_state['t1_owner']
+        st.session_state['malso_ow_addr'] = st.session_state['t1_owner_addr']
+        st.session_state['malso_est_mod'] = st.session_state['t1_estate']
         st.rerun()
 
-    # 말소 유형
+    # 1. 말소 유형
     st.markdown("#### 1. 말소 유형")
     b1, b2, b3 = st.columns(3)
     if b1.button("근저당권", use_container_width=True): st.session_state['malso_type'] = "근저당권"
@@ -497,23 +546,25 @@ with tab4:
     if b3.button("전세권", use_container_width=True): st.session_state['malso_type'] = "전세권"
     st.info(f"선택됨: {st.session_state.get('malso_type', '근저당권')}")
 
-    # 당사자 (의무자=공란, 권리자=소유자)
+    # 데이터 초기값 (동기화 전에도 공란 유지 혹은 기존값)
+    if 'malso_ow_name' not in st.session_state: st.session_state['malso_ow_name'] = st.session_state['t1_owner']
+    if 'malso_ow_addr' not in st.session_state: st.session_state['malso_ow_addr'] = st.session_state['t1_owner_addr']
+    if 'malso_est_mod' not in st.session_state: st.session_state['malso_est_mod'] = st.session_state['t1_estate']
+
+    # 2. 당사자
     c4_in1, c4_in2 = st.columns(2)
     with c4_in1:
         st.markdown("**등기의무자 (금융사/채권자)**")
-        st.caption("※ 직접 입력하세요.")
+        st.caption("※ 직접 입력하세요 (공란)")
         m_ob_corp = st.text_input("법인명(성명)", key="malso_ob_corp")
         m_ob_rep = st.text_input("대표자", key="malso_ob_rep")
-        m_ob_addr = st.text_area("주소", height=80, key="malso_ob_addr")
+        # m_ob_addr = st.text_area("주소", height=80, key="malso_ob_addr") # 말소 의무자 주소는 보통 증서에 안들어갈때가 많음, 필요시 주석해제
             
     with c4_in2:
         st.markdown("**등기권리자 (소유자)**")
         st.caption("※ 1탭 소유자 정보가 자동 입력됩니다.")
-        # 1탭 소유자 정보
-        def_owner = st.session_state.get('t1_owner', '')
-        def_addr = st.session_state.get('t1_owner_addr', '')
-        m_ow_name = st.text_input("성명", value=def_owner, key="malso_ow_name")
-        m_ow_addr = st.text_area("주소", value=def_addr, height=80, key="malso_ow_addr")
+        m_ow_name = st.text_input("성명", value=st.session_state['malso_ow_name'], key="malso_ow_name_val")
+        m_ow_addr = st.text_area("주소", value=st.session_state['malso_ow_addr'], height=80, key="malso_ow_addr_val")
 
     st.markdown("---")
     
@@ -526,7 +577,7 @@ with tab4:
         def_purpose = f"{st.session_state['malso_type']}말소"
         m_purpose = st.text_input("등기목적", value=def_purpose, key="malso_purp")
         
-    m_estate = st.text_area("부동산 표시 (수정 가능)", value=st.session_state['t1_estate'], height=150, key="malso_est")
+    m_estate = st.text_area("부동산 표시 (수정 가능)", value=st.session_state['malso_est_mod'], height=150, key="malso_est_val")
     m_cancel = st.text_input("말소할 등기 (접수번호 등)", key="malso_cancel")
 
     with st.expander("이관 정보 (이관증명서용)", expanded=True):

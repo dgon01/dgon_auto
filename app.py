@@ -675,7 +675,7 @@ with tab3:
     st.markdown("---")
     
     # 디버깅용: 현재 세션 상태 확인
-    with st.expander("🔍 디버깅 정보 (개발용)", expanded=False):
+    with st.expander("🔍 디버깅 정보 (개발용)", expanded=True):
         st.write("**1탭 → 3탭 데이터 동기화 상태**")
         st.write(f"- 1탭 채권자 (input_creditor): `{st.session_state.get('input_creditor', 'None')}`")
         st.write(f"- 1탭 채무자 (t1_debtor_name): `{st.session_state.get('t1_debtor_name', 'None')}`")

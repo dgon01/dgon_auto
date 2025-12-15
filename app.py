@@ -318,6 +318,7 @@ if FPDF_OK:
                 self.ln(1); self.line(self.get_x() + 5, self.get_y(), self.w - self.r_margin - 5, self.get_y()); self.ln(1)
                 self.set_font(self.font_family, 'B', 10); self.set_x(self.l_margin + 5); self.cell(self.col_width1, self.line_height, "공과금소계"); self.cell(self.col_width2, self.line_height, f"{data['cost_totals']['공과금 총액']:,} 원", ln=1, align="R")
             self.draw_labelframe_box(data['cost_section_title'], costs_content); self.ln(5)
+            self.ln(3)  # 등기비용 합계를 더 아래로 이동
             self.set_font(self.font_family, 'B', 12); self.cell(self.col_width1 - 10, 10, "등기비용 합계"); self.cell(self.col_width2 + 10, 10, f"{data['grand_total']:,} 원", ln=True, align="R"); self.ln(5)
             def notes_content():
                 self.set_font(self.font_family, '', 10); self.set_x(self.l_margin + 5); self.cell(0, self.line_height, "• 원활한 확인을 위해 입금자는 소유자명(또는 채무자명)으로 기재해 주세요.", ln=1)
@@ -582,6 +583,13 @@ def create_receipt_excel(data, template_path=None):
             
             # 기본 정보 입력 (Dg-Form.py 방식 적용)
             client = data.get('client', {})
+            
+            # 작성일자 (1탭에서 가져온 날짜)
+            date_str = data.get('date_input', '')
+            if date_str:
+                # 날짜를 적절한 셀에 입력 (템플릿 확인 후 조정 필요, 일단 AG2로 설정)
+                ws['AG2'] = date_str
+            
             ws['B4'] = client.get('금융사', '')          # 채권자 (금융사)
             ws['V4'] = client.get('채무자', '')           # 채무자
             
@@ -898,22 +906,55 @@ with tab3:
         st.session_state['input_rate'] = new_rate
 
     row2_c1, row2_c2 = st.columns([1, 1])
-    with row2_c1: st.text_input("금융사", key="calc_creditor_view", disabled=True)
-    with row2_c2: st.text_input("채무자", key="calc_debtor_view", disabled=True)
-    st.text_input("물건지", key="calc_estate_view", disabled=True)
+    
+    # 금융사 선택 (1탭과 동일한 방식)
+    with row2_c1:
+        creditor_list = list(CREDITORS.keys()) + ["🖊️ 직접입력"]
+        current_creditor = st.session_state.get('calc_creditor_view', st.session_state.get('input_creditor', creditor_list[0]))
+        if current_creditor not in creditor_list:
+            current_creditor = creditor_list[0]
+        default_index = creditor_list.index(current_creditor)
+        
+        def on_tab3_creditor_change():
+            selected = st.session_state.get('tab3_creditor_select')
+            st.session_state['calc_creditor_view'] = selected
+            st.session_state['input_creditor'] = selected
+            # 금융사 변경 시 수기입력 기본값 적용
+            handle_creditor_change()
+        
+        st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change)
+    
+    # 채무자 입력
+    with row2_c2:
+        def on_tab3_debtor_change():
+            st.session_state['input_debtor'] = st.session_state.get('tab3_debtor_input', '')
+            st.session_state['calc_debtor_view'] = st.session_state.get('tab3_debtor_input', '')
+        
+        st.text_input("채무자", value=st.session_state.get('calc_debtor_view', ''), key='tab3_debtor_input', on_change=on_tab3_debtor_change)
+    
+    # 물건지 입력
+    def on_tab3_estate_change():
+        st.session_state['input_collateral_addr'] = st.session_state.get('tab3_estate_input', '')
+        st.session_state['calc_estate_view'] = st.session_state.get('tab3_estate_input', '')
+    
+    st.text_area("물건지", value=st.session_state.get('calc_estate_view', ''), key='tab3_estate_input', on_change=on_tab3_estate_change, height=80)
     st.markdown("---")
 
     # =========================================================
     # 2. 계산 로직 수행
     # =========================================================
-    creditor_for_calc = creditor_display
+    # 3탭에서 직접 입력한 값 사용 (우선순위: 3탭 입력 > 1탭 자동 동기화)
+    creditor_for_calc = st.session_state.get('calc_creditor_view', creditor_display)
+    if creditor_for_calc == "🖊️ 직접입력":
+        creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
+    
     calc_input_data = {
         '채권최고액': st.session_state.get('input_amount'), 
         '필지수': st.session_state['input_parcels'],
         '채권할인율': st.session_state['input_rate'],
         '금융사': creditor_for_calc,
-        '채무자': st.session_state.get('input_debtor'),
-        '물건지': estate_display,
+        '채무자': st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '')),
+        '물건지': st.session_state.get('calc_estate_view', estate_display),
         '추가보수_val': st.session_state.get('add_fee_val', "0"),
         '기타보수_val': st.session_state.get('etc_fee_val', "0"),
         '할인금액': st.session_state.get('disc_fee_val', "0"),
@@ -1001,7 +1042,8 @@ with tab3:
             
             def update_address_cost():
                 if st.session_state.get('use_address_change', False):
-                    cur_creditor = st.session_state.get('input_creditor', '')
+                    # 3탭에서 직접 선택한 금융사 우선 사용
+                    cur_creditor = st.session_state.get('calc_creditor_view', st.session_state.get('input_creditor', ''))
                     if cur_creditor == "🖊️ 직접입력": cur_creditor = st.session_state.get('input_creditor_name', '')
                     count = st.session_state.get('address_change_count', 1)
                     fee = (20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000) * count
@@ -1026,15 +1068,19 @@ with tab3:
                 st.error("FPDF 라이브러리가 설치되지 않았습니다.")
             else:
                 try:
-                    # PDF 데이터 준비
+                    # PDF 데이터 준비 (3탭 입력값 우선 사용)
+                    pdf_creditor = st.session_state.get('calc_creditor_view', creditor_display)
+                    if pdf_creditor == "🖊️ 직접입력":
+                        pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
+                    
                     pdf_data = {
                         'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
                         'client': {
                             '채권최고액': format_number_with_comma(final_data.get('input_amount', st.session_state.get('input_amount', ''))),
                             '필지수': str(st.session_state.get('input_parcels', 1)),
-                            '금융사': creditor_display,
-                            '채무자': st.session_state.get('input_debtor', ''),
-                            '물건지': estate_display
+                            '금융사': pdf_creditor,
+                            '채무자': st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '')),
+                            '물건지': st.session_state.get('calc_estate_view', estate_display)
                         },
                         'fee_items': {
                             '기본료': parse_int_input(final_data.get('기본료', 0)),
@@ -1068,8 +1114,10 @@ with tab3:
                     pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
                     pdf_buffer = pdf_converter.output_pdf(pdf_data)
                     
-                    # 다운로드 버튼
-                    debtor_name = st.session_state.get('input_debtor', '고객')
+                    # 다운로드 버튼 (3탭 채무자명 우선 사용)
+                    debtor_name = st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '고객'))
+                    if not debtor_name:
+                        debtor_name = '고객'
                     st.download_button(
                         label="⬇️ PDF 파일 다운로드",
                         data=pdf_buffer,
@@ -1088,14 +1136,19 @@ with tab3:
                 st.error("openpyxl 라이브러리가 설치되지 않았습니다.")
             else:
                 try:
-                    # Excel 데이터 준비
+                    # Excel 데이터 준비 (3탭 입력값 우선 사용)
                     receipt_template = st.session_state['template_status'].get('영수증')
+                    
+                    excel_creditor = st.session_state.get('calc_creditor_view', creditor_display)
+                    if excel_creditor == "🖊️ 직접입력":
+                        excel_creditor = st.session_state.get('input_creditor_name', '직접입력')
                     
                     excel_data = {
                         'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
                         'client': {
-                            '채무자': st.session_state.get('input_debtor', ''),
-                            '물건지': estate_display,
+                            '금융사': excel_creditor,
+                            '채무자': st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '')),
+                            '물건지': st.session_state.get('calc_estate_view', estate_display),
                             '채권최고액': format_number_with_comma(st.session_state.get('input_amount', ''))
                         },
                         'cost_items': {
@@ -1117,8 +1170,10 @@ with tab3:
                     excel_buffer = create_receipt_excel(excel_data, receipt_template)
                     
                     if excel_buffer:
-                        # 다운로드 버튼
-                        debtor_name = st.session_state.get('input_debtor', '고객')
+                        # 다운로드 버튼 (3탭 채무자명 우선 사용)
+                        debtor_name = st.session_state.get('calc_debtor_view', st.session_state.get('input_debtor', '고객'))
+                        if not debtor_name:
+                            debtor_name = '고객'
                         st.download_button(
                             label="⬇️ Excel 파일 다운로드",
                             data=excel_buffer,

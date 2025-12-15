@@ -75,7 +75,7 @@ except ImportError:
 LIBS_OK = PDF_OK
 
 # =============================================================================
-# 2. 스타일 및 디자인
+# 2. 스타일 및 디자인 (슬림형 헤더 적용)
 # =============================================================================
 st.markdown(f"""
 <style>
@@ -83,17 +83,23 @@ st.markdown(f"""
     .stApp {{ font-family: 'Noto Sans KR', sans-serif !important; }}
     input, textarea, select, button {{ font-family: 'Noto Sans KR', sans-serif !important; }}
     
+    /* 슬림 헤더 스타일 */
     .header-container {{
-        background: white; border: 3px solid #00428B; padding: 20px 40px;
-        border-radius: 15px; margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0, 66, 139, 0.2);
+        background: white; 
+        border-bottom: 2px solid #00428B; 
+        padding: 10px 25px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         display: flex; align-items: center; justify-content: space-between;
     }}
-    .header-title {{ margin: 0; font-size: 2.5rem; font-weight: 700; }}
-    .title-dg {{ color: #00428B; }}
-    .title-form {{ color: #FDD000; }}
-    .header-subtitle {{ color: #00428B; font-size: 1.2rem; font-weight: 500; margin: 0; }}
+    .logo-title-container {{ display: flex; align-items: center; gap: 15px; }}
+    .header-logo {{ width: 50px; height: auto; }}
     
+    .text-content {{ display: flex; align-items: baseline; gap: 10px; }}
+    .header-title {{ margin: 0; font-size: 1.6rem; font-weight: 800; color: #00428B; line-height: 1; }}
+    .header-subtitle {{ margin: 0; font-size: 0.95rem; font-weight: 500; color: #666; }}
+    .header-right {{ font-size: 0.9rem; font-weight: 600; color: #00428B; }}
+
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
     .stTabs [data-baseweb="tab"] {{ background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: 600; color: #495057; border: 1px solid #dee2e6; }}
     .stTabs [aria-selected="true"] {{ background-color: #00428B; color: white; border-color: #00428B; }}
@@ -113,13 +119,13 @@ header_html = f"""
 <div class="header-container">
     <div class="logo-title-container">
         {'<img src="data:image/x-icon;base64,' + logo_base64 + '" class="header-logo" alt="DG-ON Logo">' if logo_base64 else ''}
-        <div>
-            <h1 class="header-title"><span class="title-dg">DG</span><span class="title-form">-Form</span></h1>
-            <p class="header-subtitle">등기온 전자설정 자동화 시스템 | 법무법인 시화</p>
+        <div class="text-content">
+            <h1 class="header-title">DG-Form</h1>
+            <span class="header-subtitle"> | 등기온 전자설정 자동화 시스템</span>
         </div>
     </div>
     <div class="header-right">
-        <p style="margin: 0; font-size: 1.1rem; font-weight: 600;">부동산 등기는 등기온</p>
+        <span>부동산 등기는 등기온</span>
     </div>
 </div>
 """
@@ -216,7 +222,7 @@ def parse_int_input(text_input):
         return int(remove_commas(text_input or "0"))
     except ValueError: return 0
 
-# 전역 초기화 함수 (수정됨: rerun 제거)
+# 전역 초기화 함수 (콜백용)
 def reset_all_data():
     """모든 세션 상태를 초기값으로 리셋"""
     defaults = {
@@ -255,7 +261,6 @@ def reset_all_data():
     
     for key, val in defaults.items():
         st.session_state[key] = val
-    # st.rerun() 제거: on_click에서 호출 시 자동 갱신됨
 
 # 초기 상태 설정
 if 'estate_text' not in st.session_state:
@@ -399,27 +404,22 @@ def make_pdf(template_path, data):
     writer.write(output_buffer); output_buffer.seek(0)
     return output_buffer
 
-# 자필서명정보 PDF 생성 로직 (수정됨: 요청사항 반영)
 def make_signature_pdf(template_path, data):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
     try: pdfmetrics.registerFont(TTFont('Korean', FONT_PATH)); font_name = 'Korean'
     except: font_name = 'Helvetica'
     c.setFont(font_name, 10); estate_x = 150; estate_y = height - 170; line_h = 14
     
-    # 2탭의 부동산표시 입력란 사용
     if data.get("estate_text"):
         for i, line in enumerate(str(data["estate_text"]).split("\n")[:17]):
             c.drawString(estate_x, estate_y - (i * line_h), line)
     
-    # 의무자 1 (성명, 주민번호)
     if data.get("name1"): c.drawString(250, 322, str(data["name1"]))
     if data.get("rrn1"): c.drawString(250, 298, str(data["rrn1"]))
     
-    # 의무자 2 (성명, 주민번호)
     if data.get("name2"): c.drawString(400, 322, str(data["name2"]))
     if data.get("rrn2"): c.drawString(400, 298, str(data["rrn2"]))
     
-    # 날짜
     if data.get("date"):
         c.setFont(font_name, 11); text = str(data["date"]); tw = c.stringWidth(text, font_name, 11)
         c.drawString((width - tw) / 2, 150, text)
@@ -545,7 +545,6 @@ tab1, tab2, tab3, tab4 = st.tabs(["📄 근저당권설정 계약서", "✍️ �
 with tab1:
     col_header = st.columns([5, 1])
     col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
-    # [수정] on_click 사용하여 오류 해결
     col_header[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t1", on_click=reset_all_data)
     st.markdown("---")
     
@@ -637,43 +636,34 @@ with tab1:
             except Exception as e: st.error(f"오류: {e}")
 
 # -----------------------------------------------------------------------------
-# Tab 2: 자필서명 정보 (전면 수정)
+# Tab 2: 자필서명 정보
 # -----------------------------------------------------------------------------
 with tab2:
     col_h2 = st.columns([5, 1])
     col_h2[0].markdown("### ✍️ 자필서명정보 작성")
-    # [수정] on_click 사용하여 오류 해결
     col_h2[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t2", on_click=reset_all_data)
     st.markdown("---")
 
-    # 1탭 정보 동기화 로직
     def sync_tab2_from_tab1():
         st.session_state['t2_date'] = st.session_state['input_date']
         c_type = st.session_state.get('contract_type', '개인')
         debtor = st.session_state.get('t1_debtor_name', '')
         owner = st.session_state.get('t1_owner_name', '')
-        
-        # 부동산표시
         st.session_state['t2_estate'] = st.session_state.get('estate_text', '')
 
-        # 의무자 자동 입력 로직
         if c_type == "3자담보":
-            # 3자담보 -> 소유자만 입력
             st.session_state['t2_name1'] = owner
-            st.session_state['t2_name2'] = "" # 비움
+            st.session_state['t2_name2'] = ""
         else:
-            # 개인/공동 -> 채무자, 소유자 입력
             st.session_state['t2_name1'] = debtor
             st.session_state['t2_name2'] = owner
 
     if st.button("🔄 1탭 정보 가져오기", key="sync_tab2"):
         sync_tab2_from_tab1()
 
-    # 접수 유형 선택
     sign_type = st.radio("접수 유형", ["전자접수", "서면접수"], horizontal=True)
     st.info(f"현재 선택: **{sign_type}**")
 
-    # 입력 폼
     col_t2_1, col_t2_2 = st.columns(2)
     with col_t2_1:
         st.markdown("#### 📅 기본 정보")
@@ -696,7 +686,6 @@ with tab2:
     st.markdown("#### 🏠 부동산의 표시")
     st.text_area("부동산 표시 내용", key='t2_estate', height=150)
 
-    # PDF 생성
     st.markdown("---")
     template_key = "자필_전자" if sign_type == "전자접수" else "자필_서면"
     t_path = TEMPLATE_PATHS.get(template_key)
@@ -719,31 +708,25 @@ with tab2:
         st.warning(f"⚠️ 템플릿 파일이 없습니다: {t_path}")
 
 # -----------------------------------------------------------------------------
-# Tab 3: 비용 계산 및 영수증 (오류 수정 및 로직 강화)
+# Tab 3: 비용 계산 및 영수증
 # -----------------------------------------------------------------------------
 with tab3:
     col_header3 = st.columns([5, 1])
     col_header3[0].markdown("### 🧾 등기비용 계산기")
-    # [수정] on_click 사용하여 오류 해결
     col_header3[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t3", on_click=reset_all_data)
     st.markdown("---")
 
-    # 1탭 정보 동기화
     def sync_tab3_from_tab1():
         st.session_state['calc_amount_input'] = st.session_state.get('input_amount', '')
         st.session_state['tab3_debtor_input'] = st.session_state.get('t1_debtor_name', '')
-        # 물건지
         estate_val = st.session_state.get('input_collateral_addr', '')
-        if not estate_val:
-            estate_val = extract_address_from_estate(st.session_state.get('estate_text', ''))
+        if not estate_val: estate_val = extract_address_from_estate(st.session_state.get('estate_text', ''))
         st.session_state['tab3_estate_input'] = estate_val
-        # 금융사
         st.session_state['tab3_creditor_select'] = st.session_state.get('t1_creditor_select', list(CREDITORS.keys())[0])
 
     if st.button("🔄 1탭 정보 가져오기", key="sync_tab3"):
         sync_tab3_from_tab1()
 
-    # 입력 폼
     row1_c1, row1_c2, row1_c3, row1_c4 = st.columns([2, 0.5, 1, 1.2]) 
     with row1_c1:
         def on_amount_change():
@@ -752,41 +735,29 @@ with tab3:
     with row1_c3:
         st.number_input("필지수", min_value=1, key='input_parcels')
     with row1_c4:
-        # [수정] on_click 사용하여 오류 해결
         def update_rate():
             st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
-            
         c_rate, c_btn = st.columns([2, 1])
-        with c_rate:
-            st.text_input("할인율(%)", key='input_rate')
+        with c_rate: st.text_input("할인율(%)", key='input_rate')
         with c_btn:
-            st.write("") # 간격 맞춤
-            st.write("") 
+            st.write(""); st.write("") 
             st.button("🔄", help="할인율 갱신", on_click=update_rate, key='btn_refresh_rate')
 
     row2_c1, row2_c2 = st.columns([1, 1])
     with row2_c1:
         c_list = list(CREDITORS.keys()) + ["🖊️ 직접입력"]
-        # 금융사 선택 시 '유노스' 체크 로직
         def on_creditor_select_change():
             sel = st.session_state['tab3_creditor_select']
-            # 유노스 선택 시 제증명 20,000 자동 입력
-            if "유노스" in sel:
-                st.session_state['cost_manual_제증명'] = "20,000"
-            elif sel != "🖊️ 직접입력":
-                st.session_state['cost_manual_제증명'] = "50,000" # 다른 금융사 기본값 (필요시 조정)
-            else:
-                st.session_state['cost_manual_제증명'] = "0"
-                
+            if "유노스" in sel: st.session_state['cost_manual_제증명'] = "20,000"
+            elif sel != "🖊️ 직접입력": st.session_state['cost_manual_제증명'] = "50,000"
+            else: st.session_state['cost_manual_제증명'] = "0"
         st.selectbox("금융사", options=c_list, key='tab3_creditor_select', on_change=on_creditor_select_change)
-        
     with row2_c2:
         st.text_input("채무자", key='tab3_debtor_input')
     
     st.text_area("물건지", key='tab3_estate_input', height=80)
     st.markdown("---")
 
-    # 계산 로직
     creditor_name = st.session_state['tab3_creditor_select']
     if creditor_name == "🖊️ 직접입력": creditor_name = st.session_state.get('input_creditor_name', '직접입력')
     
@@ -803,17 +774,14 @@ with tab3:
     }
     final_data = calculate_all(calc_data)
 
-    # 3단 레이아웃
     def make_row(label, value, key, on_change=None, disabled=False):
         c1, c2 = st.columns([1, 1.8])
         with c1: st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
         with c2:
             st.text_input(label, value=str(value), key=key, label_visibility="collapsed", disabled=disabled, on_change=on_change, args=(key,) if on_change else None)
-
     def fmt_cost(k): st.session_state[k] = format_number_with_comma(st.session_state[k])
 
     col_income, col_tax, col_payment = st.columns([1, 1, 1])
-
     with col_income:
         st.markdown("<div class='section-header income-header'>💰 보수액 (Income)</div>", unsafe_allow_html=True)
         with st.container(border=True):
@@ -853,11 +821,9 @@ with tab3:
             if 'show_fee' not in st.session_state: st.session_state['show_fee'] = True
             st.checkbox("보수액 포함 표시", key='show_fee')
             
-            # 주소변경 비용 계산 로직 수정 (유노스 2만 / 기타 5만)
             def update_addr_cost():
                 if st.session_state['use_address_change']:
                     sel_c = st.session_state.get('tab3_creditor_select', '')
-                    # 유노스 포함 시 20,000원, 아니면 50,000원
                     unit_cost = 20000 if "유노스" in sel_c else 50000
                     cost = unit_cost * st.session_state['address_change_count']
                     st.session_state['cost_manual_주소변경'] = format_number_with_comma(cost)
@@ -867,11 +833,8 @@ with tab3:
             with c1: st.checkbox("주소변경 포함", key='use_address_change', on_change=update_addr_cost)
             with c2: st.number_input("인원수", min_value=1, key='address_change_count', label_visibility="collapsed", on_change=update_addr_cost)
             
-            # 안내 문구
-            if "유노스" in st.session_state.get('tab3_creditor_select', ''):
-                st.caption("ℹ️ 유노스 적용: 주소변경 20,000원/인")
-            else:
-                st.caption("ℹ️ 일반 적용: 주소변경 50,000원/인")
+            if "유노스" in st.session_state.get('tab3_creditor_select', ''): st.caption("ℹ️ 유노스 적용: 주소변경 20,000원/인")
+            else: st.caption("ℹ️ 일반 적용: 주소변경 50,000원/인")
 
     st.markdown("---")
     d_col1, d_col2 = st.columns(2)
@@ -894,7 +857,6 @@ with tab3:
     with d_col2:
         if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True):
             if EXCEL_OK:
-                # 엑셀용 데이터
                 final_data['cost_items'] = {
                     '등록면허세': final_data['등록면허세'], '지방교육세': final_data['지방교육세'], '증지대': final_data['증지대'], '채권할인': final_data['채권할인금액'],
                     '제증명': parse_int_input(st.session_state['cost_manual_제증명']), '교통비': parse_int_input(st.session_state['cost_manual_교통비']),
@@ -914,11 +876,9 @@ with tab3:
 with tab4:
     col_h4 = st.columns([5, 1])
     col_h4[0].markdown("### 🗑️ 말소 문서 작성")
-    # [수정] on_click 사용하여 오류 해결
     col_h4[1].button("🔄 전체 초기화", type="secondary", key="reset_all_t4", on_click=reset_all_data)
     st.markdown("---")
 
-    # 1탭 동기화 로직
     def sync_malso_from_tab1():
         st.session_state['malso_obligor_corp'] = "" 
         st.session_state['malso_obligor_rep'] = ""
@@ -928,14 +888,8 @@ with tab4:
         c_type = st.session_state.get('contract_type', '개인')
         owner = st.session_state.get('t1_owner_name', '')
         owner_addr = st.session_state.get('t1_owner_addr', '')
-        
-        if c_type == "3자담보":
-            st.session_state['malso_holder_name'] = owner
-            st.session_state['malso_holder_addr'] = owner_addr
-        else:
-            st.session_state['malso_holder_name'] = owner
-            st.session_state['malso_holder_addr'] = owner_addr
-            
+        st.session_state['malso_holder_name'] = owner
+        st.session_state['malso_holder_addr'] = owner_addr
         st.session_state['malso_estate_detail'] = st.session_state.get('estate_text', '')
 
     if st.button("🔄 1탭 정보 가져오기", key="sync_malso"):

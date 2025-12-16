@@ -855,6 +855,16 @@ with tab1:
 # Tab 2: 자필서명정보 작성
 # =============================================================================
 with tab2:
+    # [추가됨] 주민/법인번호 자동 포맷팅 함수 (13자리 숫자 입력 시 '-' 자동 삽입)
+    def auto_format_rrn(key):
+        if key in st.session_state:
+            val = st.session_state[key]
+            # 숫자만 추출
+            clean_val = re.sub(r'[^0-9]', '', str(val))
+            # 13자리(법인/주민)인 경우 6-7 포맷 적용
+            if len(clean_val) == 13:
+                st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:]}"
+
     # 헤더
     col_header = st.columns([5, 1, 1])
     with col_header[0]:
@@ -985,7 +995,6 @@ with tab2:
         st.markdown("#### 👤 등기의무자 정보")
         st.caption("※ 1탭 가져오기: 단독(채무자), 3자(소유자), 공동(채무자+소유자)")
         
-        # [수정됨] 붉은색 강조 및 주민(법인)등록번호 문구 적용
         col1, col2 = st.columns(2)
         
         with col1:
@@ -997,19 +1006,22 @@ with tab2:
                 placeholder="주식회사대한민국 대표이사 홍길동"
             )
             
-            # [수정] 마진 조정 (글자 잘림 방지 및 간격 확보)
+            # [수정] 붉은색 강조 라벨 (마진 조정)
             st.markdown("""
                 <div style='color: #FF4B4B; font-weight: 600; font-size: 0.9rem; margin-top: 10px; margin-bottom: 5px;'>
                     ⚠️ 주민(법인)등록번호 <span style='font-size: 0.8rem; opacity: 0.8;'>(수기입력 필수)</span>
                 </div>
             """, unsafe_allow_html=True)
             
+            # [수정] on_change 추가 (자동 하이픈)
             tab2_owner1_rrn = st.text_input(
-                "주민(법인)등록번호_라벨숨김1", # 고유 ID를 위해 라벨 텍스트 변경 (화면엔 안보임)
+                "주민(법인)등록번호_라벨숨김1",
                 value=st.session_state.get('tab2_owner1_rrn', ''),
                 key='tab2_owner1_rrn_input',
-                placeholder="123456-1234567 (직접 입력하세요)",
-                label_visibility="collapsed"
+                placeholder="숫자 13자리 입력 후 엔터 (자동 '-' 입력)",
+                label_visibility="collapsed",
+                on_change=auto_format_rrn,
+                args=('tab2_owner1_rrn_input',)
             )
         
         with col2:
@@ -1021,19 +1033,22 @@ with tab2:
                 placeholder="(선택사항)"
             )
             
-            # [수정] 마진 조정
+            # [수정] 붉은색 강조 라벨 (마진 조정)
             st.markdown("""
                 <div style='color: #FF4B4B; font-weight: 600; font-size: 0.9rem; margin-top: 10px; margin-bottom: 5px;'>
                     ⚠️ 주민(법인)등록번호 <span style='font-size: 0.8rem; opacity: 0.8;'>(수기입력 필수)</span>
                 </div>
             """, unsafe_allow_html=True)
             
+            # [수정] on_change 추가 (자동 하이픈)
             tab2_owner2_rrn = st.text_input(
                 "주민(법인)등록번호_라벨숨김2",
                 value=st.session_state.get('tab2_owner2_rrn', ''),
                 key='tab2_owner2_rrn_input',
-                placeholder="(선택사항 - 직접 입력하세요)",
-                label_visibility="collapsed"
+                placeholder="(선택사항) 숫자 13자리 입력 후 엔터",
+                label_visibility="collapsed",
+                on_change=auto_format_rrn,
+                args=('tab2_owner2_rrn_input',)
             )
         
         st.markdown("---")
@@ -1087,6 +1102,7 @@ with tab2:
                 st.error(f"PDF 생성 오류: {e}")
     
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 계약 유형에 따라 정보를 자동으로 불러올 수 있습니다.")
+
 
 # Tab 3: 비용 계산 및 영수증 (완전 개편)
 with tab3:

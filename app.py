@@ -851,40 +851,120 @@ with tab1:
                     st.success("✅ PDF 생성완료!")
                 except Exception as e: st.error(f"오류: {e}")
 
-# Tab 2: 자필서명 정보 (생략 - 기존 코드 유지)
+# =============================================================================
+# =============================================================================
+# Tab 2: 자필서명정보 작성
+# =============================================================================
 with tab2:
-    st.markdown("### ✍️ 자필서명정보 작성")
-    st.info("이전 코드가 유지됩니다.")
-    # (코드 간결화를 위해 이 부분은 기존 로직 유지한다고 가정. 실제 파일엔 기존 코드 그대로 들어있음)
-
-# Tab 3: 비용 계산 및 영수증 (완전 개편)
-with tab3:
-    col_header3 = st.columns([5, 1])
-    col_header3[0].markdown("### 🧾 등기비용 계산기")
-    if col_header3[1].button("🔄 초기화", type="secondary", key="reset_tab3"):
-        st.session_state['calc_data'] = {}
-        st.session_state['show_fee'] = True
-        st.session_state['input_parcels'] = 1
-        st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
-        st.session_state['use_address_change'] = False
-        st.session_state['address_change_count'] = 1
-        handle_creditor_change()
-        st.rerun()
+    # 헤더
+    col_header = st.columns([5, 1, 1])
+    with col_header[0]:
+        st.markdown("### ✍️ 자필서명정보 작성")
+    with col_header[1]:
+        if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab2"):
+            # 1탭 데이터 동기화
+            st.session_state['tab2_creditor'] = st.session_state.get('input_creditor', '')
+            st.session_state['tab2_debtor'] = st.session_state.get('t1_debtor_name', '')
+            st.session_state['tab2_owner'] = st.session_state.get('t1_owner_name', '')
+            st.session_state['tab2_estate'] = st.session_state.get('estate_text', '')
+            st.success("✅ 1탭 정보를 불러왔습니다!")
+            st.rerun()
+    with col_header[2]:
+        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2"):
+            st.session_state['tab2_creditor'] = ''
+            st.session_state['tab2_debtor'] = ''
+            st.session_state['tab2_owner'] = ''
+            st.session_state['tab2_estate'] = ''
+            st.session_state['tab2_receipt_type'] = '전자접수'
+            st.success("✅ 초기화되었습니다!")
+            st.rerun()
+    
     st.markdown("---")
     
-    # 디버깅용: 현재 세션 상태 확인
-    with st.expander("🔍 디버깅 정보 (개발용)", expanded=True):
-        st.write("**1탭 원본 데이터**")
-        st.write(f"- 1탭 채권자 (input_creditor): `{st.session_state.get('input_creditor', 'None')}`")
-        st.write(f"- 1탭 채무자 (t1_debtor_name): `{st.session_state.get('t1_debtor_name', 'None')}`")
-        st.write(f"- 1탭 물건지 (input_collateral_addr): `{st.session_state.get('input_collateral_addr', 'None')}`")
-        st.write(f"- 1탭 채권최고액 (input_amount): `{st.session_state.get('input_amount', 'None')}`")
+    # 템플릿 파일 설정 (서면 템플릿 사용)
+    template_filename = "자필서명정보_서면_템플릿.pdf"
+    template_path = resource_path(template_filename)
+    
+    if os.path.exists(template_path):
+        st.success(f"✅ 템플릿 준비완료")
+    else:
+        st.error(f"⚠️ {template_filename} 파일이 없습니다.")
+    
+    st.markdown("---")
+    
+    # 입력 정보
+    with st.expander("📝 자필서명정보 입력", expanded=True):
+        col1, col2 = st.columns(2)
         
-        st.write("**3탭 동기화 후 데이터**")
-        st.write(f"- 3탭 채무자 (input_debtor): `{st.session_state.get('input_debtor', 'None')}`")
-        st.write(f"- 3탭 채무자 뷰 (calc_debtor_view): `{st.session_state.get('calc_debtor_view', 'None')}`")
-        st.write(f"- 3탭 채무자 위젯 (tab3_debtor_input): `{st.session_state.get('tab3_debtor_input', 'None')}`")
-
+        with col1:
+            st.markdown("**채권자 정보**")
+            tab2_creditor = st.text_input(
+                "채권자",
+                value=st.session_state.get('tab2_creditor', ''),
+                key='tab2_creditor_input'
+            )
+        
+        with col2:
+            st.markdown("**채무자 정보**")
+            tab2_debtor = st.text_input(
+                "채무자",
+                value=st.session_state.get('tab2_debtor', ''),
+                key='tab2_debtor_input'
+            )
+        
+        tab2_owner = st.text_input(
+            "소유자 (설정자)",
+            value=st.session_state.get('tab2_owner', ''),
+            key='tab2_owner_input'
+        )
+        
+        tab2_estate = st.text_area(
+            "부동산 표시",
+            value=st.session_state.get('tab2_estate', ''),
+            height=200,
+            key='tab2_estate_input'
+        )
+    
+    st.markdown("---")
+    
+    # PDF 생성
+    st.markdown("#### 📄 PDF 생성")
+    
+    if st.button("🚀 자필서명정보 PDF 생성", type="primary", use_container_width=True, key="generate_signature_pdf"):
+        if not LIBS_OK:
+            st.error("PDF 라이브러리가 설치되지 않았습니다.")
+        elif not os.path.exists(template_path):
+            st.error(f"{template_filename} 파일이 없습니다.")
+        else:
+            try:
+                # PDF 데이터 준비
+                signature_data = {
+                    "date": format_date_korean(st.session_state.get('input_date', datetime.now().date())),
+                    "creditor": tab2_creditor or "[채권자]",
+                    "debtor": tab2_debtor or "[채무자]",
+                    "owner": tab2_owner or "[소유자]",
+                    "estate": tab2_estate or "[부동산 표시]"
+                }
+                
+                # PDF 생성 (make_pdf 함수 사용)
+                pdf_buffer = make_pdf(template_path, signature_data)
+                
+                # 다운로드 버튼
+                st.download_button(
+                    label="⬇️ 자필서명정보 다운로드",
+                    data=pdf_buffer,
+                    file_name=f"자필서명정보_{tab2_debtor or '고객'}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+                
+                st.success("✅ PDF 생성 완료!")
+                
+            except Exception as e:
+                st.error(f"PDF 생성 오류: {e}")
+    
+    # 안내 메시지
+    st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 계약서 정보를 자동으로 불러올 수 있습니다.")
 
     # =========================================================
     # [수정됨] 0. 1탭 데이터 강제 동기화 (Source of Truth)
@@ -1263,110 +1343,128 @@ with tab3:
                     st.session_state['generate_excel'] = False
 
 # =============================================================================
-# Tab 4: 말소 문서
-# =============================================================================
-
-# =============================================================================
-# Tab 4: 말소 문서
+# Tab 4: 말소 문서 작성
 # =============================================================================
 with tab4:
-    st.markdown("### 🗑️ 말소 문서 작성")
+    # 헤더
+    col_header = st.columns([5, 1, 1])
+    with col_header[0]:
+        st.markdown("### 🗑️ 말소 문서 작성")
+    with col_header[1]:
+        if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab4"):
+            # 1탭 데이터 동기화
+            contract_type = st.session_state.get('contract_type', '개인')
+            
+            # 3자담보면 소유자만, 아니면 채무자
+            if contract_type == "3자담보":
+                st.session_state['malso_holder_name'] = st.session_state.get('t1_owner_name', '')
+                st.session_state['malso_holder_addr'] = st.session_state.get('t1_owner_addr', '')
+            else:
+                st.session_state['malso_holder_name'] = st.session_state.get('t1_debtor_name', '')
+                st.session_state['malso_holder_addr'] = st.session_state.get('t1_debtor_addr', '')
+            
+            # 부동산 표시
+            st.session_state['malso_estate_detail'] = st.session_state.get('estate_text', '')
+            
+            st.success("✅ 1탭 정보를 불러왔습니다!")
+            st.rerun()
+    with col_header[2]:
+        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4"):
+            st.session_state['malso_type'] = "근저당권"
+            st.session_state['malso_obligor_corp'] = ''
+            st.session_state['malso_obligor_rep'] = ''
+            st.session_state['malso_obligor_id'] = ''
+            st.session_state['malso_obligor_addr'] = ''
+            st.session_state['malso_holder_name'] = ''
+            st.session_state['malso_holder_addr'] = ''
+            st.session_state['malso_cause_date'] = datetime.now().date()
+            st.session_state['malso_estate_detail'] = ''
+            st.session_state['malso_cancel_text'] = ''
+            st.session_state['malso_from_branch'] = ''
+            st.session_state['malso_to_branch'] = ''
+            st.success("✅ 초기화되었습니다!")
+            st.rerun()
     
-    # 초기화
+    st.markdown("---")
+    
+    # 1. 말소 유형 선택 (좌우 꽉 차게)
+    st.markdown("#### 📋 말소 유형 선택")
+    
     if 'malso_type' not in st.session_state:
         st.session_state['malso_type'] = "근저당권"
     
-    # 1. 말소 유형 선택
-    st.markdown("#### 📋 말소 유형")
-    malso_type_col = st.columns(3)
-    with malso_type_col[0]:
-        if st.button("근저당권", use_container_width=True, type="primary" if st.session_state['malso_type'] == "근저당권" else "secondary", key="btn_malso_type_1"):
+    malso_type_cols = st.columns(3)
+    with malso_type_cols[0]:
+        if st.button("근저당권", 
+                     type="primary" if st.session_state['malso_type']=="근저당권" else "secondary",
+                     use_container_width=True,
+                     key="btn_malso_type_1"):
             st.session_state['malso_type'] = "근저당권"
             st.rerun()
-    with malso_type_col[1]:
-        if st.button("질권", use_container_width=True, type="primary" if st.session_state['malso_type'] == "질권" else "secondary", key="btn_malso_type_2"):
+    with malso_type_cols[1]:
+        if st.button("질권",
+                     type="primary" if st.session_state['malso_type']=="질권" else "secondary",
+                     use_container_width=True,
+                     key="btn_malso_type_2"):
             st.session_state['malso_type'] = "질권"
             st.rerun()
-    with malso_type_col[2]:
-        if st.button("전세권", use_container_width=True, type="primary" if st.session_state['malso_type'] == "전세권" else "secondary", key="btn_malso_type_3"):
+    with malso_type_cols[2]:
+        if st.button("전세권",
+                     type="primary" if st.session_state['malso_type']=="전세권" else "secondary",
+                     use_container_width=True,
+                     key="btn_malso_type_3"):
             st.session_state['malso_type'] = "전세권"
             st.rerun()
     
-    st.info(f"선택된 유형: **{st.session_state['malso_type']}말소**")
+    st.info(f"✅ 선택된 유형: **{st.session_state['malso_type']}말소**")
     st.markdown("---")
     
-    # 2. 출력 문서 선택
-    st.markdown("#### 📄 출력 문서 선택")
-    doc_cols = st.columns(4)
-    with doc_cols[0]:
-        check_signature = st.checkbox("자필서명정보", key="chk_signature")
-    with doc_cols[1]:
-        check_power = st.checkbox("위임장", key="chk_power")
-    with doc_cols[2]:
-        check_termination = st.checkbox("해지증서", key="chk_termination")
-    with doc_cols[3]:
-        check_transfer = st.checkbox("이관증명서", key="chk_transfer")
-    
-    st.markdown("---")
-    
-    # 3. 입력 정보
+    # 2. 입력 정보
     col_input1, col_input2 = st.columns(2)
     
     with col_input1:
         st.markdown("#### 1️⃣ 등기의무자 (권리자)")
         with st.container(border=True):
-            malso_obligor_corp = st.text_input("법인명", key="malso_obligor_corp", placeholder="주식회사티플레인대부")
-            malso_obligor_rep = st.text_input("대표이사", key="malso_obligor_rep", placeholder="윤웅원")
-            malso_obligor_id = st.text_input("법인등록번호", key="malso_obligor_id", placeholder="110111-7350161")
-            malso_obligor_addr = st.text_area("주소", key="malso_obligor_addr", height=80, 
-                                              placeholder="서울특별시 마포구 삼개로 16, 2신관 1층 103호(도화동, 근신빌딩)")
+            st.text_input("법인명", key="malso_obligor_corp", placeholder="주식회사티플레인대부")
+            st.text_input("대표이사", key="malso_obligor_rep", placeholder="윤웅원")
+            st.text_input("법인등록번호", key="malso_obligor_id", placeholder="110111-7350161")
+            st.text_area("주소", key="malso_obligor_addr", height=80,
+                        placeholder="서울특별시 마포구 삼개로 16, 2신관 1층 103호")
     
     with col_input2:
         st.markdown("#### 2️⃣ 등기권리자 (의무자)")
         with st.container(border=True):
-            malso_holder_name = st.text_input("성명", key="malso_holder_name", placeholder="이형기,김의진")
-            malso_holder_addr = st.text_area("주소", key="malso_holder_addr", height=100, 
-                                             placeholder="서울특별시 송파구 중대로 24 222동 205호(문정동, 올림픽훼밀리타운아파트)")
+            st.text_input("성명", key="malso_holder_name", placeholder="홍길동")
+            st.text_area("주소", key="malso_holder_addr", height=100,
+                        placeholder="서울특별시 송파구...")
     
     st.markdown("---")
     
-    # 4. 등기원인 및 부동산 정보
+    # 3. 등기원인 및 부동산 정보
     col_info = st.columns(2)
     with col_info[0]:
         st.markdown("#### 3️⃣ 등기원인과 그 년월일")
-        malso_cause_date = st.date_input("등기원인일", value=datetime.now().date(), key="malso_cause_date")
-        malso_cause = st.text_input("등기원인", value="해지", key="malso_cause")
+        if 'malso_cause_date' not in st.session_state:
+            st.session_state['malso_cause_date'] = datetime.now().date()
+        st.date_input("등기원인일", value=st.session_state['malso_cause_date'], key="malso_cause_date")
+        st.text_input("등기원인", value="해지", key="malso_cause")
     
     with col_info[1]:
         st.markdown("#### 4️⃣ 등기목적")
-        malso_purpose = st.text_input("등기목적", value=f"{st.session_state['malso_type']}말소", key="malso_purpose", disabled=True)
+        malso_purpose = f"{st.session_state['malso_type']}말소"
+        st.text_input("등기목적", value=malso_purpose, disabled=True)
     
     st.markdown("#### 5️⃣ 부동산의 표시")
     with st.container(border=True):
-        malso_estate_detail = st.text_area(
-            "부동산 상세 (인터넷등기소에서 복사)",
+        st.text_area(
+            "부동산 상세 (등기부등본에서 복사)",
             key="malso_estate_detail",
             height=200,
-            placeholder="""1동의 건물의 표시
-서울특별시 송파구 문정동 150
-서울특별시 송파구 문정동 150-1
-올림픽훼밀리타운아파트 제222동
-[도로명주소]서울특별시 송파구 중대로 24
-
-전유부분의 건물의 표시
-1. 건물의 번호 : 제222동 제2층 제205호[고유번호:1162-1996-061542]
-구조 및 면적 : 철근콘크리트조 158.705㎡
-
-전유부분의 대지권의 표시
-토지의 표시
-1.서울특별시 송파구 문정동 150 대 237830.7㎡
-2.서울특별시 송파구 문정동 150-1 대 65184.3㎡
-대지권의 종류: 1, 2 소유권
-대지권의 비율: 303015분의 84.454"""
+            placeholder="1동의 건물의 표시\n서울특별시 송파구 문정동 150\n..."
         )
     
     st.markdown("#### 6️⃣ 말소할 등기")
-    malso_cancel_text = st.text_input(
+    st.text_input(
         "말소할 등기 (접수번호 등)",
         key="malso_cancel_text",
         placeholder="2025년09월30일 접수 제5201489호(으)로 경료한 근저당권설정"
@@ -1374,42 +1472,66 @@ with tab4:
     
     st.markdown("---")
     
-    # 7. 이관 정보 (이관증명서용)
+    # 4. 출력 문서 선택
+    st.markdown("#### 📄 출력 문서 선택")
+    doc_cols = st.columns(4)
+    with doc_cols[0]:
+        check_signature = st.checkbox("자필서명정보", key="chk_signature_malso")
+    with doc_cols[1]:
+        check_power = st.checkbox("위임장", key="chk_power_malso")
+    with doc_cols[2]:
+        check_termination = st.checkbox("해지증서", key="chk_termination_malso")
+    with doc_cols[3]:
+        check_transfer = st.checkbox("이관증명서", key="chk_transfer_malso")
+    
+    # 5. 이관 정보 (이관증명서 선택 시만)
     if check_transfer:
-        st.markdown("#### 🏦 이관 정보")
+        st.markdown("#### 🏦 이관 정보 (이관증명서용)")
         col_transfer = st.columns(2)
         with col_transfer[0]:
-            malso_from_branch = st.text_input("이관 전", key="malso_from_branch", placeholder="취급지점명")
+            st.text_input("이관 전", key="malso_from_branch", placeholder="취급지점명")
         with col_transfer[1]:
-            malso_to_branch = st.text_input("이관 후", key="malso_to_branch", placeholder="본점")
-        st.markdown("---")
-    
-    # 8. 대리인 정보
-    st.markdown("#### 👤 대리인 정보")
-    col_agent = st.columns(3)
-    with col_agent[0]:
-        malso_agent_corp = st.text_input("법무법인명", key="malso_agent_corp", value="법무법인 시화", placeholder="법무법인 시화")
-    with col_agent[1]:
-        malso_agent_name = st.text_input("담당변호사", key="malso_agent_name", value="최장섭", placeholder="최장섭")
-    with col_agent[2]:
-        malso_agent_phone = st.text_input("전화번호", key="malso_agent_phone", value="02-522-4100", placeholder="02-522-4100")
-    
-    malso_agent_addr = st.text_input("대리인 주소", key="malso_agent_addr", 
-                                     value="서울특별시 서초구 법원로3길6-9, 301호(서초동,법조빌딩)",
-                                     placeholder="서울특별시 서초구 법원로3길6-9, 301호(서초동,법조빌딩)")
+            st.text_input("이관 후", key="malso_to_branch", placeholder="본점")
     
     st.markdown("---")
     
-    # 9. 미리보기
+    # 6. 대리인 정보
+    st.markdown("#### 👤 대리인 정보")
+    col_agent = st.columns(3)
+    with col_agent[0]:
+        st.text_input("법무법인명", key="malso_agent_corp", value="법무법인 시화")
+    with col_agent[1]:
+        st.text_input("담당변호사", key="malso_agent_name", value="최장섭")
+    with col_agent[2]:
+        st.text_input("전화번호", key="malso_agent_phone", value="02-522-4100")
+    
+    st.text_input("대리인 주소", key="malso_agent_addr",
+                 value="서울특별시 서초구 법원로3길6-9, 301호(서초동,법조빌딩)")
+    
+    st.markdown("---")
+    
+    # 7. 미리보기
     st.markdown("### 📄 문서 미리보기")
     
     # 변수 준비
     malso_type_text = st.session_state['malso_type']
-    obligor_full = f"{malso_obligor_corp or '[법인명]'}"
-    if malso_obligor_rep:
-        obligor_full += f"\n(대표이사){malso_obligor_rep}"
+    malso_purpose = f"{malso_type_text}말소"
+    malso_obligor_corp = st.session_state.get('malso_obligor_corp', '')
+    malso_obligor_rep = st.session_state.get('malso_obligor_rep', '')
+    malso_obligor_id = st.session_state.get('malso_obligor_id', '')
+    malso_obligor_addr = st.session_state.get('malso_obligor_addr', '')
+    malso_holder_name = st.session_state.get('malso_holder_name', '')
+    malso_holder_addr = st.session_state.get('malso_holder_addr', '')
+    malso_cause_date = st.session_state.get('malso_cause_date', datetime.now().date())
+    malso_cause = st.session_state.get('malso_cause', '해지')
+    malso_estate_detail = st.session_state.get('malso_estate_detail', '')
+    malso_cancel_text = st.session_state.get('malso_cancel_text', '')
+    malso_agent_corp = st.session_state.get('malso_agent_corp', '')
+    malso_agent_name = st.session_state.get('malso_agent_name', '')
+    malso_agent_phone = st.session_state.get('malso_agent_phone', '')
+    malso_agent_addr = st.session_state.get('malso_agent_addr', '')
     
-    # 선택된 문서만 미리보기
+    # 선택된 문서 미리보기
     preview_docs = []
     if check_signature:
         preview_docs.append("자필서명정보")
@@ -1427,17 +1549,14 @@ with tab4:
                     st.markdown(f"""
 **〔별지 제1호〕 자필서명 정보 양식**
 
-**등기의목적**: {malso_purpose or f'{malso_type_text}말소'}
+**등기의목적**: {malso_purpose}
 
 주민등록증·인감증명서·본인서명사실확인서 등 법령에 따라 작성된 증명서의 제출이나 제시,  
-그 밖에 이에 준하는 확실한 방법으로 위임인이 등기의무자인지 여부를 확인하고 자필서명합니다.  
-「부동산등기규칙」 제46조제1항제8호에 따라 이를 제출합니다.
+그 밖에 이에 준하는 확실한 방법으로 위임인이 등기의무자인지 여부를 확인하고 자필서명합니다.
 
 ---
 
 **자격대리인의 등기의무자 확인 및 자필서명 정보**
-
-**등기사건의표시**
 
 **등기할 부동산의 표시**
 
@@ -1445,27 +1564,15 @@ with tab4:
 
 ---
 
-| **등기의무자** | **성명** | {obligor_full} |
+| **등기의무자** | **성명** | {malso_obligor_corp or '[법인명]'} (대표이사){malso_obligor_rep or '[대표이사]'} |
 |:---|:---|:---|
-| | **(주민)등록번호** | {malso_obligor_id or '[법인등록번호]'} |
+| | **등록번호** | {malso_obligor_id or '[법인등록번호]'} |
 
-**등기의목적**: {malso_purpose or f'{malso_type_text}말소'}
+**등기의목적**: {malso_purpose}
 
 {format_date_korean(malso_cause_date)}
 
 **자격자대리인**  
-변호사 {malso_agent_name or '[변호사명]'}
-
----
-
-**자격자대리인 자필서명 정보**
-
-주민등록증·인감증명서·본인서명사실확인서 등 법령에 따라 작성된 증명서의 제출이나 제시,  
-그 밖에 이에 준하는 확실한 방법으로 위임인이 등기의무자인지 여부를 확인하고 자필서명합니다.  
-「부동산등기규칙」 제46조제1항제8호에 따라 이를 제출합니다.
-
-{format_date_korean(malso_cause_date)}
-
 변호사 {malso_agent_name or '[변호사명]'}
 """)
                 
@@ -1475,7 +1582,7 @@ with tab4:
 
 | **구분** | **내용** |
 |:---|:---|
-| **의무자** | {malso_obligor_corp or '[법인명]'}<br>{malso_obligor_addr or '[주소]'}<br>(대표이사){malso_obligor_rep or '[대표이사명]'} |
+| **의무자** | {malso_obligor_corp or '[법인명]'}<br>{malso_obligor_addr or '[주소]'}<br>(대표이사){malso_obligor_rep or '[대표이사]'} |
 | **권리자** | {malso_holder_name or '[성명]'}<br>{malso_holder_addr or '[주소]'} |
 
 ---
@@ -1486,9 +1593,9 @@ with tab4:
 
 ---
 
-**등기원인과 그 년월일**: {format_date_korean(malso_cause_date)} {malso_cause or '해지'}
+**등기원인과 그 년월일**: {format_date_korean(malso_cause_date)} {malso_cause}
 
-**등기의 목적**: {malso_purpose or f'{malso_type_text}말소'}
+**등기의 목적**: {malso_purpose}
 
 **말소할 등기**: {malso_cancel_text or '[말소할 등기를 입력하세요]'}
 
@@ -1504,7 +1611,7 @@ with tab4:
 
 {malso_obligor_corp or '[법인명]'}  
 {malso_obligor_addr or '[주소]'}  
-(대표이사){malso_obligor_rep or '[대표이사명]'}
+(대표이사){malso_obligor_rep or '[대표이사]'}
 """)
                 
                 elif doc_type == "해지증서":
@@ -1521,7 +1628,7 @@ with tab4:
 
 **{malso_type_text}자** {malso_obligor_corp or '[법인명]'}  
 {malso_obligor_addr or '[주소]'}  
-(대표이사){malso_obligor_rep or '[대표이사명]'}
+(대표이사){malso_obligor_rep or '[대표이사]'}
 
 {format_date_korean(malso_cause_date)}
 
@@ -1546,14 +1653,14 @@ with tab4:
 
 **{malso_type_text}자** {malso_obligor_corp or '[법인명]'}  
 {malso_obligor_addr or '[주소]'}  
-(대표이사){malso_obligor_rep or '[대표이사명]'}
+(대표이사){malso_obligor_rep or '[대표이사]'}
 """)
     else:
         st.info("📌 출력할 문서를 선택해주세요.")
     
     st.markdown("---")
     
-    # 10. PDF 다운로드 버튼
+    # 8. PDF 다운로드 버튼
     if preview_docs:
         st.markdown("### 📥 문서 다운로드")
         download_cols = st.columns(len(preview_docs))
@@ -1561,6 +1668,9 @@ with tab4:
             with download_cols[idx]:
                 if st.button(f"📄 {doc_type} PDF", use_container_width=True, key=f"download_{doc_type}_btn"):
                     st.info(f"💡 {doc_type} PDF 생성 기능은 추후 구현 예정입니다.")
+    
+    # 안내 메시지
+    st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")
 
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>

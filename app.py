@@ -78,6 +78,14 @@ st.markdown(f"""
     }}
     .stTextInput > div > div > input:focus {{ border-color: #00428B; box-shadow: 0 0 0 0.2rem rgba(0, 66, 139, 0.15); }}
 
+    /* 헤더 버튼 스타일 */
+    .header-btn-container {{
+        display: flex;
+        gap: 8px;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }}
+    
     /* 3탭 커스텀 레이아웃 */
     .section-header {{ font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 2px solid; }}
     .income-header {{ color: #28a745; border-color: #28a745; }}
@@ -1132,26 +1140,27 @@ tab1, tab2, tab3, tab4 = st.tabs(["📄 근저당권설정 계약서", "✍️ �
 
 # Tab 1: 근저당권 설정 (입력)
 with tab1:
-    col_header = st.columns([5, 1])
+    col_header = st.columns([6, 1])
     col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
-    if col_header[1].button("🔄 초기화", type="secondary", key="reset_tab1"):
-        st.session_state['input_date'] = datetime.now().date()
-        st.session_state['t1_debtor_name'] = "" # 키 초기화
-        st.session_state['t1_debtor_addr'] = ""
-        st.session_state['t1_debtor_rrn'] = ""
-        st.session_state['t1_owner_name'] = ""
-        st.session_state['t1_owner_addr'] = ""
-        st.session_state['t1_owner_rrn'] = ""
-        st.session_state['contract_type'] = "개인"
-        st.session_state['guarantee'] = "한정근담보"
-        st.session_state['amount_raw_input'] = ""
-        st.session_state['input_amount'] = ""
-        st.session_state['input_collateral_addr'] = ""
-        st.session_state['collateral_addr_input'] = ""
-        st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
-        st.session_state['input_debtor_rrn'] = ""
-        st.session_state['input_owner_rrn'] = ""
-        st.rerun()
+    with col_header[1]:
+        if st.button("🔄 초기화", type="secondary", key="reset_tab1", use_container_width=True, help="모든 입력 초기화"):
+            st.session_state['input_date'] = datetime.now().date()
+            st.session_state['t1_debtor_name'] = "" # 키 초기화
+            st.session_state['t1_debtor_addr'] = ""
+            st.session_state['t1_debtor_rrn'] = ""
+            st.session_state['t1_owner_name'] = ""
+            st.session_state['t1_owner_addr'] = ""
+            st.session_state['t1_owner_rrn'] = ""
+            st.session_state['contract_type'] = "개인"
+            st.session_state['guarantee'] = "한정근담보"
+            st.session_state['amount_raw_input'] = ""
+            st.session_state['input_amount'] = ""
+            st.session_state['input_collateral_addr'] = ""
+            st.session_state['collateral_addr_input'] = ""
+            st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
+            st.session_state['input_debtor_rrn'] = ""
+            st.session_state['input_owner_rrn'] = ""
+            st.rerun()
     st.markdown("---")
     
     with st.expander("📌 기본 정보", expanded=True):
@@ -1294,13 +1303,13 @@ with tab2:
                 st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:]}"
 
     # 헤더
-    col_header = st.columns([5, 1, 1])
+    col_header = st.columns([6, 1, 1])
     with col_header[0]:
         st.markdown("### ✍️ 자필서명정보 작성")
     
     # [수정됨] 1탭 가져오기 로직 (위젯 Key 강제 동기화 적용)
     with col_header[1]:
-        if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab2"):
+        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab2", help="1탭 정보 불러오기"):
             # 1. 1탭 데이터 확보 (위젯 Key 기준)
             contract_type = st.session_state.get('contract_type', '개인')
             debtor_name = st.session_state.get('t1_debtor_name', '')
@@ -1356,7 +1365,7 @@ with tab2:
             st.rerun()
     
     with col_header[2]:
-        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2"):
+        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2", help="모든 입력 초기화"):
             st.session_state['tab2_owner1_name'] = ''
             st.session_state['tab2_owner1_rrn'] = ''
             st.session_state['tab2_owner2_name'] = ''
@@ -1535,15 +1544,15 @@ with tab2:
 # Tab 3: 비용 계산 및 영수증 (완전 개편)
 with tab3:
     # 헤더: 가져오기 + 초기화 버튼
-    col_header3 = st.columns([5, 1, 1])
+    col_header3 = st.columns([6, 1, 1])
     with col_header3[0]:
         st.markdown("### 🧾 등기비용 계산기")
     with col_header3[1]:
-        if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab3"):
+        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="1탭 정보 불러오기"):
             st.success("✅ 1탭 정보가 동기화되었습니다!")
             st.rerun()
     with col_header3[2]:
-        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab3"):
+        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab3", help="모든 입력 초기화"):
             st.session_state['calc_data'] = {}
             st.session_state['show_fee'] = True
             st.session_state['input_parcels'] = 1
@@ -1553,20 +1562,6 @@ with tab3:
             handle_creditor_change()
             st.rerun()
     st.markdown("---")
-    
-    # 디버깅용: 현재 세션 상태 확인
-    with st.expander("🔍 디버깅 정보 (개발용)", expanded=True):
-        st.write("**1탭 원본 데이터**")
-        st.write(f"- 1탭 채권자 (input_creditor): `{st.session_state.get('input_creditor', 'None')}`")
-        st.write(f"- 1탭 채무자 (t1_debtor_name): `{st.session_state.get('t1_debtor_name', 'None')}`")
-        st.write(f"- 1탭 물건지 (input_collateral_addr): `{st.session_state.get('input_collateral_addr', 'None')}`")
-        st.write(f"- 1탭 채권최고액 (input_amount): `{st.session_state.get('input_amount', 'None')}`")
-        
-        st.write("**3탭 동기화 후 데이터**")
-        st.write(f"- 3탭 채무자 (input_debtor): `{st.session_state.get('input_debtor', 'None')}`")
-        st.write(f"- 3탭 채무자 뷰 (calc_debtor_view): `{st.session_state.get('calc_debtor_view', 'None')}`")
-        st.write(f"- 3탭 채무자 위젯 (tab3_debtor_input): `{st.session_state.get('tab3_debtor_input', 'None')}`")
-
 
     # =========================================================
     # [수정됨] 0. 1탭 데이터 강제 동기화 (Source of Truth)
@@ -1987,11 +1982,11 @@ with tab3:
 # =============================================================================
 with tab4:
     # 헤더
-    col_header = st.columns([5, 1, 1])
+    col_header = st.columns([6, 1, 1])
     with col_header[0]:
         st.markdown("### 🗑️ 말소 문서 작성")
     with col_header[1]:
-        if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab4"):
+        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab4", help="1탭 정보 불러오기"):
             # 1탭 데이터 동기화
             contract_type = st.session_state.get('contract_type', '개인')
             
@@ -2030,7 +2025,7 @@ with tab4:
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
     with col_header[2]:
-        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4"):
+        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4", help="모든 입력 초기화"):
             for key in ['malso_type', 'malso_obligor_name', 'malso_obligor_id', 'malso_obligor_addr', 
                        'malso_obligor_rep', 'malso_holder1_name', 'malso_holder1_rrn', 'malso_holder1_addr',
                        'malso_holder2_name', 'malso_holder2_rrn', 'malso_holder2_addr',
@@ -2159,22 +2154,29 @@ with tab4:
     
     st.markdown("---")
     
-    # 5. PDF 생성 버튼 (4종)
+    # 5. PDF 생성 - 체크박스 선택 후 한번에 출력
     st.markdown("### 📥 문서 생성")
     
-    col_pdf = st.columns(4)
-    with col_pdf[0]:
-        if st.button("📄 자필서명정보", use_container_width=True, key="pdf_malso_signature"):
-            st.session_state['generate_malso_sig'] = True
-    with col_pdf[1]:
-        if st.button("📄 위임장", use_container_width=True, key="pdf_malso_power"):
-            st.session_state['generate_malso_power'] = True
-    with col_pdf[2]:
-        if st.button("📄 해지증서", use_container_width=True, key="pdf_malso_termination"):
-            st.session_state['generate_malso_term'] = True
-    with col_pdf[3]:
-        if st.button("📄 이관증명서", use_container_width=True, key="pdf_malso_transfer"):
-            st.session_state['generate_malso_transfer'] = True
+    # 체크박스로 문서 선택
+    col_chk = st.columns(4)
+    with col_chk[0]:
+        chk_sig = st.checkbox("📄 자필서명정보", value=True, key="chk_malso_sig")
+    with col_chk[1]:
+        chk_power = st.checkbox("📄 위임장", value=True, key="chk_malso_power")
+    with col_chk[2]:
+        chk_term = st.checkbox("📄 해지증서", value=True, key="chk_malso_term")
+    with col_chk[3]:
+        chk_transfer = st.checkbox("📄 이관증명서", value=False, key="chk_malso_transfer")
+    
+    # 생성 버튼
+    if st.button("🚀 선택한 문서 생성", type="primary", use_container_width=True, key="generate_malso_docs"):
+        if not any([chk_sig, chk_power, chk_term, chk_transfer]):
+            st.warning("⚠️ 생성할 문서를 선택해주세요.")
+        else:
+            st.session_state['generate_malso_sig'] = chk_sig
+            st.session_state['generate_malso_power'] = chk_power
+            st.session_state['generate_malso_term'] = chk_term
+            st.session_state['generate_malso_transfer'] = chk_transfer
     
     # PDF 생성 처리
     if st.session_state.get('generate_malso_sig', False):

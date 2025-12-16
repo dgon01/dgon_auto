@@ -167,7 +167,7 @@ TEMPLATE_FILENAMES = {
     "개인": "1.pdf",
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
-    "자필": "자필서명정보 템플릿.pdf",
+    "자필": "자필서명정보_템플릿.pdf",
     "영수증": "receipt_template.xlsx"
 }
 
@@ -2202,7 +2202,7 @@ with tab4:
                 )
                 st.success("✅ 자필서명정보 생성 완료!")
             else:
-                st.error("자필서명정보 템플릿이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
+                st.error("자필서명정보_템플릿이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
             st.error(f"생성 오류: {e}")
         st.session_state['generate_malso_sig'] = False

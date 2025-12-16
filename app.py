@@ -861,29 +861,82 @@ with tab2:
         st.markdown("### ✍️ 자필서명정보 작성")
     with col_header[1]:
         if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab2"):
-            st.session_state['tab2_creditor'] = st.session_state.get('input_creditor', '')
-            st.session_state['tab2_debtor'] = st.session_state.get('t1_debtor_name', '')
-            st.session_state['tab2_owner'] = st.session_state.get('t1_owner_name', '')
+            # 1탭 계약 유형 확인
+            contract_type = st.session_state.get('contract_type', '개인')
+            
+            if contract_type == "개인":
+                # 단독: 채무자만
+                st.session_state['tab2_owner1_name'] = st.session_state.get('t1_debtor_name', '')
+                st.session_state['tab2_owner1_rrn'] = st.session_state.get('input_debtor_rrn', '')
+                st.session_state['tab2_owner2_name'] = ''
+                st.session_state['tab2_owner2_rrn'] = ''
+            elif contract_type == "3자담보":
+                # 3자: 소유자만
+                st.session_state['tab2_owner1_name'] = st.session_state.get('t1_owner_name', '')
+                st.session_state['tab2_owner1_rrn'] = st.session_state.get('input_owner_rrn', '')
+                st.session_state['tab2_owner2_name'] = ''
+                st.session_state['tab2_owner2_rrn'] = ''
+            elif contract_type == "공동담보":
+                # 공동: 채무자 + 소유자
+                st.session_state['tab2_owner1_name'] = st.session_state.get('t1_debtor_name', '')
+                st.session_state['tab2_owner1_rrn'] = st.session_state.get('input_debtor_rrn', '')
+                st.session_state['tab2_owner2_name'] = st.session_state.get('t1_owner_name', '')
+                st.session_state['tab2_owner2_rrn'] = st.session_state.get('input_owner_rrn', '')
+            
+            # 부동산 표시
             st.session_state['tab2_estate'] = st.session_state.get('estate_text', '')
+            
+            # 작성일자
+            st.session_state['tab2_date'] = st.session_state.get('input_date', datetime.now().date())
+            
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
+    
     with col_header[2]:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2"):
-            st.session_state['tab2_creditor'] = ''
-            st.session_state['tab2_debtor'] = ''
-            st.session_state['tab2_owner'] = ''
+            st.session_state['tab2_owner1_name'] = ''
+            st.session_state['tab2_owner1_rrn'] = ''
+            st.session_state['tab2_owner2_name'] = ''
+            st.session_state['tab2_owner2_rrn'] = ''
             st.session_state['tab2_estate'] = ''
+            st.session_state['tab2_date'] = datetime.now().date()
+            st.session_state['tab2_receipt_type'] = '전자신청'
             st.success("✅ 초기화되었습니다!")
             st.rerun()
     
     st.markdown("---")
     
-    # 템플릿 파일 설정 (서면 템플릿 사용)
-    template_filename = "자필서명정보_서면_템플릿.pdf"
+    # 신청서 구분
+    st.markdown("#### 📋 신청서 구분")
+    if 'tab2_receipt_type' not in st.session_state:
+        st.session_state['tab2_receipt_type'] = '전자신청'
+    
+    col_receipt1, col_receipt2 = st.columns(2)
+    with col_receipt1:
+        if st.button("전자신청", 
+                     type="primary" if st.session_state['tab2_receipt_type']=="전자신청" else "secondary",
+                     use_container_width=True,
+                     key="btn_receipt_1"):
+            st.session_state['tab2_receipt_type'] = "전자신청"
+            st.rerun()
+    with col_receipt2:
+        if st.button("서면신청",
+                     type="primary" if st.session_state['tab2_receipt_type']=="서면신청" else "secondary",
+                     use_container_width=True,
+                     key="btn_receipt_2"):
+            st.session_state['tab2_receipt_type'] = "서면신청"
+            st.rerun()
+    
+    # 템플릿 파일 선택
+    if st.session_state['tab2_receipt_type'] == "전자신청":
+        template_filename = "자필서명정보_템플릿.pdf"
+    else:
+        template_filename = "자필서명정보_서면_템플릿.pdf"
+    
     template_path = resource_path(template_filename)
     
     if os.path.exists(template_path):
-        st.success(f"✅ 템플릿 준비완료")
+        st.success(f"✅ {st.session_state['tab2_receipt_type']} 템플릿 준비완료")
     else:
         st.error(f"⚠️ {template_filename} 파일이 없습니다.")
     
@@ -891,35 +944,64 @@ with tab2:
     
     # 입력 정보
     with st.expander("📝 자필서명정보 입력", expanded=True):
+        # 작성일자
+        st.markdown("#### 📅 작성일자")
+        if 'tab2_date' not in st.session_state:
+            st.session_state['tab2_date'] = datetime.now().date()
+        tab2_date = st.date_input(
+            "작성일자",
+            value=st.session_state.get('tab2_date', datetime.now().date()),
+            key='tab2_date_input'
+        )
+        
+        st.markdown("---")
+        
+        # 등기의무자 정보
+        st.markdown("#### 👤 등기의무자 정보")
+        st.caption("※ 1탭 가져오기: 단독(채무자), 3자(소유자), 공동(채무자+소유자)")
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**채권자 정보**")
-            tab2_creditor = st.text_input(
-                "채권자",
-                value=st.session_state.get('tab2_creditor', ''),
-                key='tab2_creditor_input'
+            st.markdown("**소유자 1**")
+            tab2_owner1_name = st.text_input(
+                "성명",
+                value=st.session_state.get('tab2_owner1_name', ''),
+                key='tab2_owner1_name_input',
+                placeholder="홍길동"
+            )
+            tab2_owner1_rrn = st.text_input(
+                "주민등록번호",
+                value=st.session_state.get('tab2_owner1_rrn', ''),
+                key='tab2_owner1_rrn_input',
+                placeholder="123456-1234567"
             )
         
         with col2:
-            st.markdown("**채무자 정보**")
-            tab2_debtor = st.text_input(
-                "채무자",
-                value=st.session_state.get('tab2_debtor', ''),
-                key='tab2_debtor_input'
+            st.markdown("**소유자 2** (공동명의인 경우)")
+            tab2_owner2_name = st.text_input(
+                "성명",
+                value=st.session_state.get('tab2_owner2_name', ''),
+                key='tab2_owner2_name_input',
+                placeholder="(선택사항)"
+            )
+            tab2_owner2_rrn = st.text_input(
+                "주민등록번호",
+                value=st.session_state.get('tab2_owner2_rrn', ''),
+                key='tab2_owner2_rrn_input',
+                placeholder="(선택사항)"
             )
         
-        tab2_owner = st.text_input(
-            "소유자 (설정자)",
-            value=st.session_state.get('tab2_owner', ''),
-            key='tab2_owner_input'
-        )
+        st.markdown("---")
         
+        # 부동산 표시
+        st.markdown("#### 🏠 부동산의 표시")
         tab2_estate = st.text_area(
             "부동산 표시",
             value=st.session_state.get('tab2_estate', ''),
             height=200,
-            key='tab2_estate_input'
+            key='tab2_estate_input',
+            placeholder="[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡"
         )
     
     st.markdown("---")
@@ -935,10 +1017,11 @@ with tab2:
         else:
             try:
                 signature_data = {
-                    "date": format_date_korean(st.session_state.get('input_date', datetime.now().date())),
-                    "creditor": tab2_creditor or "[채권자]",
-                    "debtor": tab2_debtor or "[채무자]",
-                    "owner": tab2_owner or "[소유자]",
+                    "date": format_date_korean(tab2_date),
+                    "owner1_name": tab2_owner1_name or "[성명1]",
+                    "owner1_rrn": tab2_owner1_rrn or "[주민번호1]",
+                    "owner2_name": tab2_owner2_name or "",
+                    "owner2_rrn": tab2_owner2_rrn or "",
                     "estate": tab2_estate or "[부동산 표시]"
                 }
                 
@@ -947,7 +1030,7 @@ with tab2:
                 st.download_button(
                     label="⬇️ 자필서명정보 다운로드",
                     data=pdf_buffer,
-                    file_name=f"자필서명정보_{tab2_debtor or '고객'}.pdf",
+                    file_name=f"자필서명정보_{tab2_owner1_name or '고객'}_{st.session_state['tab2_receipt_type']}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
@@ -957,7 +1040,7 @@ with tab2:
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
     
-    st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 계약서 정보를 자동으로 불러올 수 있습니다.")
+    st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 계약 유형에 따라 정보를 자동으로 불러올 수 있습니다.")
 
 # Tab 3: 비용 계산 및 영수증 (완전 개편)
 with tab3:
@@ -1077,6 +1160,7 @@ with tab3:
             selected = st.session_state.get('tab3_creditor_select')
             st.session_state['calc_creditor_view'] = selected
             st.session_state['input_creditor'] = selected
+            st.session_state['t1_creditor_select'] = selected  # 이 줄 추가!
             # 금융사 변경 시 수기입력 기본값 적용
             handle_creditor_change()
         

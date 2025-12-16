@@ -78,12 +78,24 @@ st.markdown(f"""
     }}
     .stTextInput > div > div > input:focus {{ border-color: #00428B; box-shadow: 0 0 0 0.2rem rgba(0, 66, 139, 0.15); }}
 
-    /* 헤더 버튼 스타일 */
+    /* 헤더 버튼 스타일 - 한 줄 유지 */
     .header-btn-container {{
         display: flex;
         gap: 8px;
         flex-wrap: nowrap;
         white-space: nowrap;
+    }}
+    
+    /* 헤더 영역 컬럼 한 줄 유지 */
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: nowrap !important;
+        align-items: center;
+    }}
+    
+    /* 버튼 텍스트 줄바꿈 방지 */
+    .stButton > button {{
+        white-space: nowrap !important;
+        min-width: fit-content !important;
     }}
     
     /* 3탭 커스텀 레이아웃 */

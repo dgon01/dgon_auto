@@ -168,7 +168,7 @@ TEMPLATE_FILENAMES = {
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
     "자필": "자필서명정보 템플릿.pdf",
-    "영수증": "영수증_템플릿.xlsx"
+    "영수증": "receipt_template.xlsx"
 }
 
 CREDITORS = {

@@ -963,12 +963,12 @@ with tab2:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**소유자 1**")
+            st.markdown("**등기의무자 1**")
             tab2_owner1_name = st.text_input(
-                "성명",
+                "성명(법인명 직함 성명)",
                 value=st.session_state.get('tab2_owner1_name', ''),
                 key='tab2_owner1_name_input',
-                placeholder="홍길동"
+                placeholder="주식회사대한민국 대표이사 홍길동"
             )
             tab2_owner1_rrn = st.text_input(
                 "주민등록번호",
@@ -978,9 +978,9 @@ with tab2:
             )
         
         with col2:
-            st.markdown("**소유자 2** (공동명의인 경우)")
+            st.markdown("**등기의무자 2** (공동명의인 경우)")
             tab2_owner2_name = st.text_input(
-                "성명",
+                "성명(법인명 직함 성명)",
                 value=st.session_state.get('tab2_owner2_name', ''),
                 key='tab2_owner2_name_input',
                 placeholder="(선택사항)"
@@ -999,7 +999,7 @@ with tab2:
         tab2_estate = st.text_area(
             "부동산 표시",
             value=st.session_state.get('tab2_estate', ''),
-            height=200,
+            height=170,
             key='tab2_estate_input',
             placeholder="[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡"
         )
@@ -1016,16 +1016,18 @@ with tab2:
             st.error(f"{template_filename} 파일이 없습니다.")
         else:
             try:
+                # 자필서명정보 PDF 데이터 준비
                 signature_data = {
                     "date": format_date_korean(tab2_date),
-                    "owner1_name": tab2_owner1_name or "[성명1]",
-                    "owner1_rrn": tab2_owner1_rrn or "[주민번호1]",
-                    "owner2_name": tab2_owner2_name or "",
-                    "owner2_rrn": tab2_owner2_rrn or "",
-                    "estate": tab2_estate or "[부동산 표시]"
+                    "debtor_name": tab2_owner1_name or "[등기의무자1]",
+                    "debtor_rrn": tab2_owner1_rrn or "[주민번호1]",
+                    "owner_name": tab2_owner2_name or "",
+                    "owner_rrn": tab2_owner2_rrn or "",
+                    "estate_text": tab2_estate or "[부동산 표시]"
                 }
                 
-                pdf_buffer = make_pdf(template_path, signature_data)
+                # make_signature_pdf 함수 사용
+                pdf_buffer = make_signature_pdf(template_path, signature_data)
                 
                 st.download_button(
                     label="⬇️ 자필서명정보 다운로드",

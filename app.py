@@ -53,6 +53,22 @@ st.markdown(f"""
     .title-form {{ color: #FDD000; }}
     .header-subtitle {{ color: #00428B; font-size: 1.2rem; font-weight: 500; margin: 0; }}
     
+    /* 📱 반응형 CSS - 모바일 대응 */
+    @media (max-width: 768px) {{
+        .header-container {{ 
+            padding: 15px 20px !important; 
+            flex-direction: column !important; 
+            gap: 10px !important;
+        }}
+        .logo-title-container {{ flex-direction: column !important; text-align: center !important; }}
+        .header-logo {{ width: 80px !important; }}
+        .header-title {{ font-size: 1.8rem !important; }}
+        .header-subtitle {{ font-size: 0.9rem !important; }}
+        .header-right p {{ font-size: 0.85rem !important; }}
+        h3 {{ font-size: 1.2rem !important; }}
+        .total-amount {{ font-size: 1.5rem !important; }}
+    }}
+    
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
     .stTabs [data-baseweb="tab"] {{ background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: 600; color: #495057; border: 1px solid #dee2e6; }}
     .stTabs [aria-selected="true"] {{ background-color: #00428B; color: white; border-color: #00428B; }}
@@ -161,7 +177,8 @@ CREDITORS = {
     "(주)파트너스대부 사내이사 허성": {"addr": "부산광역시 부산진구 서면문화로 43, 2층(부전동)", "corp_num": "180111-1452175", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
     "(주)드림앤캐쉬대부 대표이사 김재섭": {"addr": "서울특별시 강남구 압구정로28길24, 6층 601호(신사동,디앤씨빌딩)", "corp_num": "110111-4176552", "fee": {"제증명": 20000, "교통비": 0, "원인증서": 0}},
     "(주)마젤란트러스트대부 대표이사 김병수": {"addr": "서울특별시 서초구 강남대로34길 7, 7층(양재동,이안빌딩)", "corp_num": "110111-6649979", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
-    "(주)하이클래스대부 사내이사 성윤호": {"addr": "서울특별시 강남구 도곡로 188, 3층 4호(도곡동,도곡스퀘어)", "corp_num": "110111-0933512", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}}
+    "(주)하이클래스대부 사내이사 성윤호": {"addr": "서울특별시 강남구 도곡로 188, 3층 4호(도곡동,도곡스퀘어)", "corp_num": "110111-0933512", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
+    "㈜엘하비스트대부 대표이사 김상수": {"addr": "서울특별시 중구 무교로 15, 16층(무교동,남강건설회관빌딩)", "corp_num": "110111-3648627", "fee": {"제증명": 20000, "교통비": 0, "원인증서": 0}}
 }
 
 def resource_path(relative_path):
@@ -766,7 +783,21 @@ with tab1:
 
     with st.expander("🤝 담보 및 계약 정보", expanded=True):
         st.session_state['contract_type'] = st.radio("계약서 유형", options=["개인", "3자담보", "공동담보"], horizontal=True, key='contract_type_radio')
-        st.session_state['guarantee'] = st.text_input("피담보채무", value=st.session_state.get('guarantee'))
+        
+        # 피담보채무 버튼 선택
+        st.write("**피담보채무**")
+        col_guarantee1, col_guarantee2 = st.columns(2)
+        if 'guarantee' not in st.session_state:
+            st.session_state['guarantee'] = "한정근담보"
+        
+        with col_guarantee1:
+            if st.button("한정근담보", type="primary" if st.session_state['guarantee']=="한정근담보" else "secondary", use_container_width=True, key="btn_guarantee_1"):
+                st.session_state['guarantee'] = "한정근담보"
+                st.rerun()
+        with col_guarantee2:
+            if st.button("포괄근담보", type="primary" if st.session_state['guarantee']=="포괄근담보" else "secondary", use_container_width=True, key="btn_guarantee_2"):
+                st.session_state['guarantee'] = "포괄근담보"
+                st.rerun()
         
         def format_amount_on_change():
             raw_val = st.session_state.get('amount_raw_input', '')

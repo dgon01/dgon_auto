@@ -167,7 +167,7 @@ TEMPLATE_FILENAMES = {
     "개인": "1.pdf",
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
-    "자필": "자필서명정보_템플릿.pdf",
+    "자필": "자필서명정보 템플릿.pdf",
     "영수증": "receipt_template.xlsx"
 }
 
@@ -535,38 +535,43 @@ def make_malso_power_pdf(template_path, data):
         if line.strip():
             c.drawString(estate_x, estate_y - (i * line_h), line)
     
-    # 등기원인과 그 년월일 (Box 2)
+    # 등기원인과 그 년월일 (Box 2) - 상하 중앙정렬, RL Y: 470.6 ~ 491.1, 중앙 480.85
     cause_date = data.get('date', '')
-    c.drawString(175, 485, f"{cause_date} 해지")
+    c.drawString(175, 478, f"{cause_date} 해지")
     
-    # 등기목적 (Box 3)
+    # 등기목적 (Box 3) - 상하 중앙정렬, RL Y: 450.6 ~ 471.1, 중앙 460.85
     malso_type = data.get('malso_type', '근저당권')
-    c.drawString(175, 463, f"{malso_type}말소")
+    c.drawString(175, 458, f"{malso_type}말소")
     
-    # 말소할 사항 (Box 4)
+    # 말소할 사항 (Box 4) - 상하 중앙정렬, RL Y: 386.6 ~ 444.9, 중앙 415.75
     cancel_text = data.get('cancel_text', '')
     c.setFont(font_name, 8)
-    # 긴 텍스트 줄바꿈 처리
-    if len(cancel_text) > 60:
-        c.drawString(175, 435, cancel_text[:60])
-        c.drawString(175, 423, cancel_text[60:])
+    # 긴 텍스트 줄바꿈 처리 (폭 넓힘)
+    if len(cancel_text) > 75:
+        c.drawString(175, 422, cancel_text[:75])
+        c.drawString(175, 410, cancel_text[75:])
     else:
-        c.drawString(175, 430, cancel_text)
+        c.drawString(175, 416, cancel_text)
     
     c.setFont(font_name, 9)
     
-    # 의무자 (소유자) - 왼쪽 상단 (Box 5 영역)
+    # 의무자 (소유자) - 왼쪽 상단 (Box 5 영역), RL Y: 63.1 ~ 251.7
     holder1_name = data.get('holder1_name', '')
     holder1_addr = data.get('holder1_addr', '')
     holder2_name = data.get('holder2_name', '')
     holder2_addr = data.get('holder2_addr', '')
     
-    # 의무자 영역
-    c.drawString(70, 235, holder1_name)
+    # 등기의무자 라벨
+    c.setFont(font_name, 8)
+    c.drawString(70, 248, "등기의무자")
+    c.setFont(font_name, 9)
+    
+    # 의무자 내용
+    c.drawString(70, 232, holder1_name)
     # 주소 (여러 줄 처리)
     addr_lines = holder1_addr.split('\n') if holder1_addr else []
     for i, line in enumerate(addr_lines[:2]):
-        c.drawString(70, 220 - (i * 12), line)
+        c.drawString(70, 217 - (i * 12), line)
     
     if holder2_name:
         c.drawString(70, 180, holder2_name)
@@ -580,16 +585,21 @@ def make_malso_power_pdf(template_path, data):
     obligor_addr = data.get('obligor_addr', '')
     obligor_rep = data.get('obligor_rep', '')
     
+    # 등기권리자 라벨
+    c.setFont(font_name, 8)
+    c.drawString(70, 118, "등기권리자")
+    c.setFont(font_name, 9)
+    
     # 법인 형식: 주식회사티플레인대부(110111-7350161)
     if obligor_id:
         obligor_display = f"{obligor_name}({obligor_id})"
     else:
         obligor_display = obligor_name
     
-    c.drawString(70, 100, obligor_display)
-    c.drawString(70, 85, obligor_addr)
+    c.drawString(70, 102, obligor_display)
+    c.drawString(70, 87, obligor_addr)
     if obligor_rep:
-        c.drawString(70, 70, f"(대표이사){obligor_rep}")
+        c.drawString(70, 72, f"(대표이사){obligor_rep}")
     
     c.showPage()
     c.save()
@@ -622,9 +632,9 @@ def make_malso_termination_pdf(data):
     except:
         font_name = 'Helvetica'
     
-    # 페이지 설정: 좌측 X=72, 우측 X=520, 너비 448
-    left_x = 72
-    right_x = 520
+    # 페이지 설정: 좌측 X=50, 우측 X=545 (여백 줄임)
+    left_x = 50
+    right_x = 545
     center_x = (left_x + right_x) / 2
     content_width = right_x - left_x
     
@@ -641,33 +651,40 @@ def make_malso_termination_pdf(data):
     c.drawString(center_x - subtitle_width/2, 720, subtitle)
     
     # 부동산 표시 내용
-    c.setFont(font_name, 9)
+    c.setFont(font_name, 10)
     estate_text = data.get('estate_text', '')
     estate_lines = estate_text.split('\n')
     estate_y = 695
-    line_h = 12
+    line_h = 13
     for i, line in enumerate(estate_lines[:22]):
         if line.strip():
             c.drawString(left_x, estate_y - (i * line_h), line)
     
-    # 내용 영역 (RL Y: 301.4 ~ 405.4)
+    # 내용 영역
     c.setFont(font_name, 10)
     cancel_text = data.get('cancel_text', '')
     content_y = 395
     
-    content_line1 = f"위 부동산에 관하여 {cancel_text}"
-    content_line2 = "(을)를 해지한다."
+    # 전체 내용 한 문장으로 구성
+    full_content = f"위 부동산에 관하여 {cancel_text} (을)를 해지한다."
     
-    # 긴 텍스트 줄바꿈
-    if len(content_line1) > 70:
-        c.drawString(left_x, content_y, content_line1[:70])
-        c.drawString(left_x, content_y - 14, content_line1[70:])
-        c.drawString(left_x, content_y - 28, content_line2)
+    # 폭 기반 줄바꿈 (약 90자 또는 폭 495pt 기준)
+    max_chars = 90
+    if len(full_content) > max_chars:
+        # 첫 줄
+        c.drawString(left_x, content_y, full_content[:max_chars])
+        # 두번째 줄
+        c.drawString(left_x, content_y - 16, full_content[max_chars:])
     else:
-        c.drawString(left_x, content_y, content_line1)
-        c.drawString(left_x, content_y - 14, content_line2)
+        c.drawString(left_x, content_y, full_content)
     
-    # 의무자 영역 (RL Y: 164.9 ~ 260.3) - 중앙정렬, 라벨 좌측
+    # 작성일자 (중앙)
+    date_text = data.get('date', '')
+    c.setFont(font_name, 11)
+    date_width = c.stringWidth(date_text, font_name, 11)
+    c.drawString(center_x - date_width/2, 320, date_text)
+    
+    # 의무자 영역 - 중앙정렬, 라벨 좌측
     obligor_label = data.get('obligor_label', '근저당권자')
     obligor_name = data.get('obligor_name', '')
     obligor_id = data.get('obligor_id', '')
@@ -676,7 +693,7 @@ def make_malso_termination_pdf(data):
     
     # 라벨 (좌측)
     c.setFont(font_name, 10)
-    c.drawString(left_x, 250, obligor_label)
+    c.drawString(left_x, 280, obligor_label)
     
     # 내용 (중앙)
     c.setFont(font_name, 10)
@@ -686,25 +703,19 @@ def make_malso_termination_pdf(data):
         obligor_display = obligor_name
     
     text_width = c.stringWidth(obligor_display, font_name, 10)
-    c.drawString(center_x - text_width/2, 230, obligor_display)
+    c.drawString(center_x - text_width/2, 260, obligor_display)
     
-    addr_width = c.stringWidth(obligor_addr, font_name, 9)
     c.setFont(font_name, 9)
-    c.drawString(center_x - addr_width/2, 215, obligor_addr)
+    addr_width = c.stringWidth(obligor_addr, font_name, 9)
+    c.drawString(center_x - addr_width/2, 245, obligor_addr)
     
     if obligor_rep:
         rep_text = f"(대표이사){obligor_rep}"
         rep_width = c.stringWidth(rep_text, font_name, 10)
         c.setFont(font_name, 10)
-        c.drawString(center_x - rep_width/2, 195, rep_text)
+        c.drawString(center_x - rep_width/2, 225, rep_text)
     
-    # 작성일자 (중앙) - RL Y: 265.4 ~ 296.3
-    date_text = data.get('date', '')
-    c.setFont(font_name, 11)
-    date_width = c.stringWidth(date_text, font_name, 11)
-    c.drawString(center_x - date_width/2, 290, date_text)
-    
-    # 권리자 (우측정렬) - RL Y: 90 ~ 146.6
+    # 권리자 (우측정렬)
     holder1_name = data.get('holder1_name', '')
     holder2_name = data.get('holder2_name', '')
     
@@ -715,7 +726,7 @@ def make_malso_termination_pdf(data):
         holder_text = f"{holder1_name} 귀하"
     
     holder_width = c.stringWidth(holder_text, font_name, 10)
-    c.drawString(right_x - holder_width, 130, holder_text)
+    c.drawString(right_x - holder_width, 160, holder_text)
     
     c.showPage()
     c.save()
@@ -734,9 +745,9 @@ def make_malso_transfer_pdf(data):
     except:
         font_name = 'Helvetica'
     
-    # 페이지 설정
-    left_x = 72
-    right_x = 520
+    # 페이지 설정: 좌측 X=50, 우측 X=545 (여백 줄임)
+    left_x = 50
+    right_x = 545
     center_x = (left_x + right_x) / 2
     
     # 제목: 이 관 증 명 서 (중앙)
@@ -752,11 +763,11 @@ def make_malso_transfer_pdf(data):
     c.drawString(center_x - subtitle_width/2, 720, subtitle)
     
     # 부동산 표시
-    c.setFont(font_name, 9)
+    c.setFont(font_name, 10)
     estate_text = data.get('estate_text', '')
     estate_lines = estate_text.split('\n')
     estate_y = 695
-    line_h = 12
+    line_h = 13
     for i, line in enumerate(estate_lines[:22]):
         if line.strip():
             c.drawString(left_x, estate_y - (i * line_h), line)
@@ -768,16 +779,26 @@ def make_malso_transfer_pdf(data):
     to_branch = data.get('to_branch', '')
     
     content_y = 395
-    content_line1 = f"위 부동산에 관하여 {cancel_text}"
-    content_line2 = f"업무일체가 {from_branch}에서 {to_branch}(으)로 이관되었음을 확인합니다."
     
-    if len(content_line1) > 70:
-        c.drawString(left_x, content_y, content_line1[:70])
-        c.drawString(left_x, content_y - 14, content_line1[70:])
-        c.drawString(left_x, content_y - 28, content_line2)
+    # 전체 내용
+    full_content1 = f"위 부동산에 관하여 {cancel_text}"
+    full_content2 = f"업무일체가 {from_branch}에서 {to_branch}(으)로 이관되었음을 확인합니다."
+    
+    # 폭 기반 줄바꿈 (약 90자 기준)
+    max_chars = 90
+    if len(full_content1) > max_chars:
+        c.drawString(left_x, content_y, full_content1[:max_chars])
+        c.drawString(left_x, content_y - 16, full_content1[max_chars:])
+        c.drawString(left_x, content_y - 32, full_content2)
     else:
-        c.drawString(left_x, content_y, content_line1)
-        c.drawString(left_x, content_y - 14, content_line2)
+        c.drawString(left_x, content_y, full_content1)
+        c.drawString(left_x, content_y - 16, full_content2)
+    
+    # 작성일자 (중앙)
+    date_text = data.get('date', '')
+    c.setFont(font_name, 11)
+    date_width = c.stringWidth(date_text, font_name, 11)
+    c.drawString(center_x - date_width/2, 320, date_text)
     
     # 의무자 (중앙, 라벨 좌측)
     obligor_label = data.get('obligor_label', '근저당권자')
@@ -787,7 +808,7 @@ def make_malso_transfer_pdf(data):
     obligor_rep = data.get('obligor_rep', '')
     
     c.setFont(font_name, 10)
-    c.drawString(left_x, 250, obligor_label)
+    c.drawString(left_x, 280, obligor_label)
     
     if obligor_id:
         obligor_display = f"{obligor_name}({obligor_id})"
@@ -795,23 +816,17 @@ def make_malso_transfer_pdf(data):
         obligor_display = obligor_name
     
     text_width = c.stringWidth(obligor_display, font_name, 10)
-    c.drawString(center_x - text_width/2, 230, obligor_display)
+    c.drawString(center_x - text_width/2, 260, obligor_display)
     
     c.setFont(font_name, 9)
     addr_width = c.stringWidth(obligor_addr, font_name, 9)
-    c.drawString(center_x - addr_width/2, 215, obligor_addr)
+    c.drawString(center_x - addr_width/2, 245, obligor_addr)
     
     if obligor_rep:
         rep_text = f"(대표이사){obligor_rep}"
         rep_width = c.stringWidth(rep_text, font_name, 10)
         c.setFont(font_name, 10)
-        c.drawString(center_x - rep_width/2, 195, rep_text)
-    
-    # 작성일자 (중앙)
-    date_text = data.get('date', '')
-    c.setFont(font_name, 11)
-    date_width = c.stringWidth(date_text, font_name, 11)
-    c.drawString(center_x - date_width/2, 290, date_text)
+        c.drawString(center_x - rep_width/2, 225, rep_text)
     
     c.showPage()
     c.save()
@@ -2164,9 +2179,9 @@ with tab4:
     # PDF 생성 처리
     if st.session_state.get('generate_malso_sig', False):
         try:
-            # 자필서명정보 생성 (탭2와 동일 로직)
-            sig_template = st.session_state['template_status'].get('자필')
-            if sig_template and PDF_OK:
+            # 자필서명정보 생성 - 서면 템플릿 사용
+            sig_template = resource_path("자필서명정보_서면_템플릿.pdf")
+            if os.path.exists(sig_template) and PDF_OK:
                 # 권리자 목록 생성
                 holders = []
                 if st.session_state.get('malso_holder1_name'):
@@ -2202,7 +2217,7 @@ with tab4:
                 )
                 st.success("✅ 자필서명정보 생성 완료!")
             else:
-                st.error("자필서명정보_템플릿이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
+                st.error("자필서명정보 템플릿(자필서명정보_서면_템플릿.pdf)이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
             st.error(f"생성 오류: {e}")
         st.session_state['generate_malso_sig'] = False

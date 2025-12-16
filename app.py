@@ -1272,20 +1272,27 @@ with tab3:
     # =========================================================
     
     # [수정] 결과 표시용 함수: disabled=True인 경우 state를 강제 갱신하여 0원 표시 방지
-    def make_row(label, value, key, on_change=None, disabled=False):
-        c1, c2 = st.columns([1, 1.8])
-        with c1: st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
-        with c2:
-            formatted_val = str(value)
+    # [수정된 make_row 함수]
+def make_row(label, value, key, on_change=None, disabled=False):
+    c1, c2 = st.columns([1, 1.8])
+    with c1: st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
+    with c2:
+        formatted_val = str(value)
+        
+        # [핵심 수정 1] disabled(수정불가) 항목은 계산된 값을 강제로 session_state에 주입
+        if disabled and key:
+            st.session_state[key] = formatted_val
+        
+        if on_change:
+            st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
+        else:
+            # [핵심 수정 2] 이미 위에서 session_state를 강제로 설정했다면, 
+            # text_input 생성 시 'value' 인자를 빼야 충돌(경고)이 발생하지 않습니다.
             if disabled and key:
-                # 계산된 값을 강제로 session_state에 주입
-                st.session_state[key] = formatted_val
-            
-            if on_change:
-                st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
+                st.text_input(label, key=key, label_visibility="collapsed", disabled=disabled)
             else:
                 st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed", disabled=disabled)
-    
+
     def format_cost_input(key):
         val = st.session_state[key]
         st.session_state[key] = format_number_with_comma(val)

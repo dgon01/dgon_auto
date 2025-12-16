@@ -1163,13 +1163,26 @@ with tab1:
             st.session_state['input_creditor_corp_num'] = creditor_info.get('corp_num', '')
             st.session_state['input_creditor_addr'] = creditor_info.get('addr', '')
 
+        # 주민번호 자동 하이픈 삽입 함수
+        def auto_format_rrn_input(key):
+            """6자리 입력 시 자동으로 '-' 삽입"""
+            if key in st.session_state:
+                val = st.session_state[key]
+                # 숫자만 추출
+                clean_val = re.sub(r'[^0-9]', '', str(val))
+                # 6자리 이상이면 하이픈 삽입
+                if len(clean_val) >= 6 and '-' not in val:
+                    st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:13]}"
+                elif len(clean_val) > 13:
+                    st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:13]}"
+        
         # 채무자 정보
         st.markdown("**채무자**")
         debtor_col1, debtor_col2 = st.columns([2, 1])
         with debtor_col1:
             st.text_input("채무자 성명", value=st.session_state.get('t1_debtor_name', ''), key='t1_debtor_name')
         with debtor_col2:
-            st.text_input("주민등록번호", value=st.session_state.get('t1_debtor_rrn', ''), key='t1_debtor_rrn', placeholder="000000-0000000")
+            st.text_input("주민등록번호", value=st.session_state.get('t1_debtor_rrn', ''), key='t1_debtor_rrn', placeholder="000000-0000000", on_change=auto_format_rrn_input, args=('t1_debtor_rrn',))
         st.text_area("채무자 주소", value=st.session_state.get('t1_debtor_addr', ''), key='t1_debtor_addr', height=100)
         
         # 설정자(소유자) 정보
@@ -1178,7 +1191,7 @@ with tab1:
         with owner_col1:
             st.text_input("설정자 성명", value=st.session_state.get('t1_owner_name', ''), key='t1_owner_name')
         with owner_col2:
-            st.text_input("주민등록번호", value=st.session_state.get('t1_owner_rrn', ''), key='t1_owner_rrn', placeholder="000000-0000000")
+            st.text_input("주민등록번호", value=st.session_state.get('t1_owner_rrn', ''), key='t1_owner_rrn', placeholder="000000-0000000", on_change=auto_format_rrn_input, args=('t1_owner_rrn',))
         st.text_area("설정자 주소", value=st.session_state.get('t1_owner_addr', ''), key='t1_owner_addr', height=100)
 
     with st.expander("🤝 담보 및 계약 정보", expanded=True):
@@ -2175,11 +2188,15 @@ with tab4:
                     'holders': holders
                 }
                 
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
+                
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
                 st.download_button(
                     label="⬇️ 자필서명정보 다운로드",
                     data=pdf_buffer,
-                    file_name=f"자필서명정보_말소_{st.session_state.get('malso_holder1_name', '고객')}.pdf",
+                    file_name=f"{malso_prefix}_{holder_name}_자필서명정보.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
@@ -2209,20 +2226,24 @@ with tab4:
                     'cancel_text': st.session_state.get('malso_cancel_text', '')
                 }
                 
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
+                
                 # 위임장 템플릿 사용
-                power_template_path = resource_path("말소_전세권_질권_근저당권__위_해_이.pdf")
+                power_template_path = resource_path("말소_위임장.pdf")
                 if os.path.exists(power_template_path):
                     pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
                     st.download_button(
                         label="⬇️ 위임장 다운로드",
                         data=pdf_buffer,
-                        file_name=f"위임장_말소_{st.session_state.get('malso_holder1_name', '고객')}.pdf",
+                        file_name=f"{malso_prefix}_{holder_name}_위임장.pdf",
                         mime="application/pdf",
                         use_container_width=True
                     )
                     st.success("✅ 위임장 생성 완료!")
                 else:
-                    st.error("위임장 템플릿 파일이 없습니다.")
+                    st.error("위임장 템플릿 파일이 없습니다. (말소_위임장.pdf)")
             else:
                 st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
@@ -2246,11 +2267,15 @@ with tab4:
                     'cancel_text': st.session_state.get('malso_cancel_text', '')
                 }
                 
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
+                
                 pdf_buffer = make_malso_termination_pdf(term_data)
                 st.download_button(
                     label="⬇️ 해지증서 다운로드",
                     data=pdf_buffer,
-                    file_name=f"해지증서_{st.session_state.get('malso_holder1_name', '고객')}.pdf",
+                    file_name=f"{malso_prefix}_{holder_name}_해지증서.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
@@ -2278,11 +2303,15 @@ with tab4:
                     'to_branch': st.session_state.get('malso_to_branch', '')
                 }
                 
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
+                
                 pdf_buffer = make_malso_transfer_pdf(transfer_data)
                 st.download_button(
                     label="⬇️ 이관증명서 다운로드",
                     data=pdf_buffer,
-                    file_name=f"이관증명서_{st.session_state.get('malso_holder1_name', '고객')}.pdf",
+                    file_name=f"{malso_prefix}_{holder_name}_이관증명서.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )

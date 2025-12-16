@@ -598,60 +598,56 @@ def create_receipt_excel(data, template_path=None):
             workbook = openpyxl.load_workbook(template_path)
             ws = workbook.active
             
-            # 기본 정보 입력 (Dg-Form.py 방식 적용)
+            # 기본 정보 입력
             client = data.get('client', {})
             
-            # 작성일자 (1탭에서 가져온 날짜)
-            date_str = data.get('date_input', '')
-            if date_str:
-                # 날짜를 적절한 셀에 입력 (템플릿 확인 후 조정 필요, 일단 AG2로 설정)
-                ws['AG2'] = date_str
+            # 채권자 (금융사) - B4, 채무자 - V4
+            ws['B4'] = client.get('금융사', '')
+            ws['V4'] = client.get('채무자', '')
             
-            ws['B4'] = client.get('금융사', '')          # 채권자 (금융사)
-            ws['V4'] = client.get('채무자', '')           # 채무자
-            
-            # 채권최고액 (숫자만 추출)
+            # 채권최고액 (숫자만 추출) - AG5
             amount_str = client.get('채권최고액', '0')
             amount_val = int(re.sub(r'[^\d]', '', amount_str)) if amount_str else 0
             ws['AG5'] = amount_val
             
-            ws['Y7'] = client.get('물건지', '')           # 물건지
+            # 물건지 - Y7
+            ws['Y7'] = client.get('물건지', '')
             
-            # 공과금 항목 입력 (셀 위치: AH11~AH20, AH21)
+            # 공과금 항목 입력 (웹에서 계산된 값 직접 입력)
             cost_items = data.get('cost_items', {})
+            
+            # AH11~AH18: 고정 항목 (계산된 값 직접 입력)
             ws['AH11'] = int(cost_items.get('등록면허세', 0))
             ws['AH12'] = int(cost_items.get('지방교육세', 0))
-            ws['AH13'] = int(cost_items.get('증지대', 0))
-            ws['AH14'] = int(cost_items.get('채권할인', 0))  # cost_items에서는 '채권할인'
-            ws['AH15'] = int(cost_items.get('제증명', 0))
+            ws['AH13'] = int(cost_items.get('증지대', 0))          # 등기신청수수료
+            ws['AH14'] = int(cost_items.get('채권할인', 0))        # 채권할인액
+            ws['AH15'] = int(cost_items.get('제증명', 0))          # 등본/제증명
             ws['AH16'] = int(cost_items.get('원인증서', 0))
             ws['AH17'] = int(cost_items.get('주소변경', 0))
-            ws['AH18'] = int(cost_items.get('선순위말소', 0))
+            ws['AH18'] = int(cost_items.get('선순위말소', 0))      # 선순위 말소
             
-            # 교통비 처리 (AD19, AH19)
+            # AD19/AH19: 교통비 (값이 있을 때만 라벨+금액 입력)
             traffic_fee = int(cost_items.get('교통비', 0))
             if traffic_fee > 0:
                 ws['AD19'] = '교통비'
                 ws['AH19'] = traffic_fee
             else:
-                # 교통비가 0이면 셀 초기화 (템플릿 기존값 제거)
                 ws['AD19'] = None
                 ws['AH19'] = None
             
-            # 확인서면 처리 (AD20, AH20)
+            # AD20/AH20: 확인서면 (값이 있을 때만 라벨+금액 입력)
             confirm_fee = int(cost_items.get('확인서면', 0))
             if confirm_fee > 0:
                 ws['AD20'] = '확인서면'
                 ws['AH20'] = confirm_fee
             else:
-                # 확인서면이 0이면 셀 초기화 (템플릿 기존값 제거)
                 ws['AD20'] = None
                 ws['AH20'] = None
             
-            # 공과금 소계 (AH21) - SUM 수식으로 자동 계산
+            # AH21: 공과금 소계 (SUM 수식)
             ws['AH21'] = '=SUM(AH11:AH20)'
             
-            # 총 합계 (Y22) - AH21 값을 참조하는 수식
+            # Y22: 총 합계 (AH21 참조)
             ws['Y22'] = '=AH21'
             
         except Exception as e:
@@ -1272,26 +1268,23 @@ with tab3:
     # =========================================================
     
     # [수정] 결과 표시용 함수: disabled=True인 경우 state를 강제 갱신하여 0원 표시 방지
-    # [수정된 make_row 함수]
-def make_row(label, value, key, on_change=None, disabled=False):
-    c1, c2 = st.columns([1, 1.8])
-    with c1: st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
-    with c2:
-        formatted_val = str(value)
-        
-        # [핵심 수정 1] disabled(수정불가) 항목은 계산된 값을 강제로 session_state에 주입
-        if disabled and key:
-            st.session_state[key] = formatted_val
-        
-        if on_change:
-            st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
-        else:
-            # [핵심 수정 2] 이미 위에서 session_state를 강제로 설정했다면, 
-            # text_input 생성 시 'value' 인자를 빼야 충돌(경고)이 발생하지 않습니다.
+    def make_row(label, value, key, on_change=None, disabled=False):
+        c1, c2 = st.columns([1, 1.8])
+        with c1: st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
+        with c2:
+            formatted_val = str(value)
+            
+            # disabled(수정불가) 항목은 계산된 값을 강제로 session_state에 주입
             if disabled and key:
-                st.text_input(label, key=key, label_visibility="collapsed", disabled=disabled)
+                st.session_state[key] = formatted_val
+            
+            if on_change:
+                st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
             else:
-                st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed", disabled=disabled)
+                if disabled and key:
+                    st.text_input(label, key=key, label_visibility="collapsed", disabled=disabled)
+                else:
+                    st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed", disabled=disabled)
 
     def format_cost_input(key):
         val = st.session_state[key]

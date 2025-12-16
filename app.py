@@ -860,38 +860,62 @@ with tab2:
     with col_header[0]:
         st.markdown("### ✍️ 자필서명정보 작성")
     with col_header[1]:
+       with col_header[1]:
         if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab2"):
-            # 1탭 계약 유형 확인
+            # 1. 1탭 데이터 확보 (위젯 Key 기준)
             contract_type = st.session_state.get('contract_type', '개인')
+            debtor_name = st.session_state.get('t1_debtor_name', '')
+            owner_name = st.session_state.get('t1_owner_name', '')
+            # 1탭 부동산표시 위젯의 값을 가져옵니다
+            estate_info = st.session_state.get('estate_text_area', '') 
             
+            # 주민번호는 1탭에 입력란이 없으므로, 기존 저장값 사용
+            debtor_rrn = st.session_state.get('input_debtor_rrn', '')
+            owner_rrn = st.session_state.get('input_owner_rrn', '')
+            date_val = st.session_state.get('input_date', datetime.now().date())
+
+            # 2. 계약 유형별 할당 데이터 준비
+            o1_name, o1_rrn = "", ""
+            o2_name, o2_rrn = "", ""
+
             if contract_type == "개인":
                 # 단독: 채무자만
-                st.session_state['tab2_owner1_name'] = st.session_state.get('t1_debtor_name', '')
-                st.session_state['tab2_owner1_rrn'] = st.session_state.get('input_debtor_rrn', '')
-                st.session_state['tab2_owner2_name'] = ''
-                st.session_state['tab2_owner2_rrn'] = ''
+                o1_name, o1_rrn = debtor_name, debtor_rrn
             elif contract_type == "3자담보":
                 # 3자: 소유자만
-                st.session_state['tab2_owner1_name'] = st.session_state.get('t1_owner_name', '')
-                st.session_state['tab2_owner1_rrn'] = st.session_state.get('input_owner_rrn', '')
-                st.session_state['tab2_owner2_name'] = ''
-                st.session_state['tab2_owner2_rrn'] = ''
+                o1_name, o1_rrn = owner_name, owner_rrn
             elif contract_type == "공동담보":
                 # 공동: 채무자 + 소유자
-                st.session_state['tab2_owner1_name'] = st.session_state.get('t1_debtor_name', '')
-                st.session_state['tab2_owner1_rrn'] = st.session_state.get('input_debtor_rrn', '')
-                st.session_state['tab2_owner2_name'] = st.session_state.get('t1_owner_name', '')
-                st.session_state['tab2_owner2_rrn'] = st.session_state.get('input_owner_rrn', '')
+                o1_name, o1_rrn = debtor_name, debtor_rrn
+                o2_name, o2_rrn = owner_name, owner_rrn
+
+            # 3. [핵심] Tab 2 위젯 Key(_input)와 Value 변수를 동시에 업데이트
+            
+            # 등기의무자 1
+            st.session_state['tab2_owner1_name_input'] = o1_name
+            st.session_state['tab2_owner1_name'] = o1_name
+            
+            st.session_state['tab2_owner1_rrn_input'] = o1_rrn
+            st.session_state['tab2_owner1_rrn'] = o1_rrn
+
+            # 등기의무자 2
+            st.session_state['tab2_owner2_name_input'] = o2_name
+            st.session_state['tab2_owner2_name'] = o2_name
+            
+            st.session_state['tab2_owner2_rrn_input'] = o2_rrn
+            st.session_state['tab2_owner2_rrn'] = o2_rrn
             
             # 부동산 표시
-            st.session_state['tab2_estate'] = st.session_state.get('estate_text', '')
+            st.session_state['tab2_estate_input'] = estate_info
+            st.session_state['tab2_estate'] = estate_info
             
             # 작성일자
-            st.session_state['tab2_date'] = st.session_state.get('input_date', datetime.now().date())
+            st.session_state['tab2_date_input'] = date_val
+            st.session_state['tab2_date'] = date_val
             
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
-    
+
     with col_header[2]:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2"):
             st.session_state['tab2_owner1_name'] = ''

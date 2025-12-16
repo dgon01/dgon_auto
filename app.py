@@ -859,8 +859,9 @@ with tab2:
     col_header = st.columns([5, 1, 1])
     with col_header[0]:
         st.markdown("### ✍️ 자필서명정보 작성")
+    
+    # [수정됨] 1탭 가져오기 로직 (위젯 Key 강제 동기화 적용)
     with col_header[1]:
-       with col_header[1]:
         if st.button("📥 1탭 가져오기", type="secondary", use_container_width=True, key="sync_tab2"):
             # 1. 1탭 데이터 확보 (위젯 Key 기준)
             contract_type = st.session_state.get('contract_type', '개인')
@@ -915,7 +916,7 @@ with tab2:
             
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
-
+    
     with col_header[2]:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2"):
             st.session_state['tab2_owner1_name'] = ''
@@ -984,6 +985,7 @@ with tab2:
         st.markdown("#### 👤 등기의무자 정보")
         st.caption("※ 1탭 가져오기: 단독(채무자), 3자(소유자), 공동(채무자+소유자)")
         
+        # [수정됨] 붉은색 강조 및 주민(법인)등록번호 문구 적용
         col1, col2 = st.columns(2)
         
         with col1:
@@ -994,11 +996,14 @@ with tab2:
                 key='tab2_owner1_name_input',
                 placeholder="주식회사대한민국 대표이사 홍길동"
             )
+            
+            st.markdown("<div style='color: red; font-weight: bold; font-size: 0.9rem; margin-bottom: -15px;'>⚠️ 주민(법인)등록번호 (수기입력 필수)</div>", unsafe_allow_html=True)
             tab2_owner1_rrn = st.text_input(
-                "주민등록번호",
+                "주민(법인)등록번호",
                 value=st.session_state.get('tab2_owner1_rrn', ''),
                 key='tab2_owner1_rrn_input',
-                placeholder="123456-1234567"
+                placeholder="123456-1234567 (직접 입력하세요)",
+                label_visibility="collapsed"
             )
         
         with col2:
@@ -1009,11 +1014,14 @@ with tab2:
                 key='tab2_owner2_name_input',
                 placeholder="(선택사항)"
             )
+            
+            st.markdown("<div style='color: red; font-weight: bold; font-size: 0.9rem; margin-bottom: -15px;'>⚠️ 주민(법인)등록번호 (수기입력 필수)</div>", unsafe_allow_html=True)
             tab2_owner2_rrn = st.text_input(
-                "주민등록번호",
+                "주민(법인)등록번호",
                 value=st.session_state.get('tab2_owner2_rrn', ''),
                 key='tab2_owner2_rrn_input',
-                placeholder="(선택사항)"
+                placeholder="(선택사항 - 직접 입력하세요)",
+                label_visibility="collapsed"
             )
         
         st.markdown("---")

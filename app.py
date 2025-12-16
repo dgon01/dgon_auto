@@ -997,9 +997,15 @@ with tab2:
                 placeholder="주식회사대한민국 대표이사 홍길동"
             )
             
-            st.markdown("<div style='color: red; font-weight: bold; font-size: 0.9rem; margin-bottom: -15px;'>⚠️ 주민(법인)등록번호 (수기입력 필수)</div>", unsafe_allow_html=True)
+            # [수정] 마진 조정 (글자 잘림 방지 및 간격 확보)
+            st.markdown("""
+                <div style='color: #FF4B4B; font-weight: 600; font-size: 0.9rem; margin-top: 10px; margin-bottom: 5px;'>
+                    ⚠️ 주민(법인)등록번호 <span style='font-size: 0.8rem; opacity: 0.8;'>(수기입력 필수)</span>
+                </div>
+            """, unsafe_allow_html=True)
+            
             tab2_owner1_rrn = st.text_input(
-                "주민(법인)등록번호",
+                "주민(법인)등록번호_라벨숨김1", # 고유 ID를 위해 라벨 텍스트 변경 (화면엔 안보임)
                 value=st.session_state.get('tab2_owner1_rrn', ''),
                 key='tab2_owner1_rrn_input',
                 placeholder="123456-1234567 (직접 입력하세요)",
@@ -1015,9 +1021,15 @@ with tab2:
                 placeholder="(선택사항)"
             )
             
-            st.markdown("<div style='color: red; font-weight: bold; font-size: 0.9rem; margin-bottom: -15px;'>⚠️ 주민(법인)등록번호 (수기입력 필수)</div>", unsafe_allow_html=True)
+            # [수정] 마진 조정
+            st.markdown("""
+                <div style='color: #FF4B4B; font-weight: 600; font-size: 0.9rem; margin-top: 10px; margin-bottom: 5px;'>
+                    ⚠️ 주민(법인)등록번호 <span style='font-size: 0.8rem; opacity: 0.8;'>(수기입력 필수)</span>
+                </div>
+            """, unsafe_allow_html=True)
+            
             tab2_owner2_rrn = st.text_input(
-                "주민(법인)등록번호",
+                "주민(법인)등록번호_라벨숨김2",
                 value=st.session_state.get('tab2_owner2_rrn', ''),
                 key='tab2_owner2_rrn_input',
                 placeholder="(선택사항 - 직접 입력하세요)",

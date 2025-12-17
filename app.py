@@ -916,7 +916,7 @@ def handle_creditor_change():
         st.session_state['input_creditor_addr'] = ""
     else:
         # 유노스프레스티지일 경우만 제증명 20,000원, 나머지는 모두 0원
-        if "유노스프레스티지" in creditor_key:
+        if "(주)유노스프레스티지대부" in creditor_key:
             st.session_state['cost_manual_제증명'] = format_number_with_comma("20000")
             st.session_state['cost_manual_교통비'] = "0"
             st.session_state['cost_manual_원인증서'] = "0"
@@ -1661,7 +1661,18 @@ with tab3:
             # 금융사 변경 시 수기입력 기본값 적용
             handle_creditor_change()
         
-        st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change)
+        selected_creditor_tab3 = st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change)
+        
+        # 유노스프레스티지 선택 시 제증명 20,000원 자동 설정 (최초 렌더링 시에도 적용)
+        if "(주)유노스프레스티지대부" in selected_creditor_tab3:
+            current_cert_fee = st.session_state.get('cost_manual_제증명', '0')
+            # 숫자 0, 문자열 "0", 빈값 등 모두 체크
+            try:
+                cert_fee_val = int(str(current_cert_fee).replace(',', '').replace('원', '').strip() or '0')
+            except:
+                cert_fee_val = 0
+            if cert_fee_val == 0:
+                st.session_state['cost_manual_제증명'] = "20,000"
     
     # 채무자 입력
     with row2_c2:

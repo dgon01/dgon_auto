@@ -1480,6 +1480,7 @@ with tab1:
                 else:
                     formatted = format_estate_text(data)
                     st.session_state['estate_text'] = formatted
+                    st.session_state['estate_text_area'] = formatted  # 위젯 키에도 저장
                     st.success("✅ 부동산표시 추출 완료!")
                     st.rerun()
     

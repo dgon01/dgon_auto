@@ -5,3 +5,4 @@ openpyxl
 pypdf
 fpdf
 requests
+pdfplumber

@@ -1049,11 +1049,30 @@ def parse_registry_pdf(uploaded_file):
 
 def format_estate_text(data):
     """간결한 형식으로 포맷팅"""
+    from collections import defaultdict
+    
     lines = []
     
-    # 1동의 건물의 표시
+    # 1동의 건물의 표시 - 토지 목록에서 생성
     lines.append("1동의 건물의 표시")
-    lines.append(f"  {data['소재지번']}")
+    
+    if data['토지']:
+        # 토지를 동별로 그룹화
+        동별_지번 = defaultdict(list)
+        for t in data['토지']:
+            # "경기도 시흥시 장곡동 811-3" → 동까지/지번 분리
+            match = re.match(r'(.+[동리가읍면])\s+(\S+)$', t['소재지'])
+            if match:
+                동주소 = match.group(1)  # 경기도 시흥시 장곡동
+                지번 = match.group(2)     # 811-3
+                동별_지번[동주소].append(지번)
+        
+        # 동별로 출력
+        for 동주소, 지번들 in 동별_지번.items():
+            lines.append(f"  {동주소} {', '.join(지번들)}")
+    else:
+        lines.append(f"  {data['소재지번']}")
+    
     if data['건물명칭']:
         lines.append(f"  {data['건물명칭']}")
     if data['도로명주소']:
@@ -1073,7 +1092,9 @@ def format_estate_text(data):
     lines.append("  토지의 표시")
     for t in data['토지']:
         lines.append(f"    {t['번호']}. {t['소재지']} {t['지목']} {t['면적']}")
-    lines.append(f"  대지권의 종류: {data['대지권종류']}")
+    # 대지권 종류: "소유권대지권" → "소유권"
+    대지권종류 = data['대지권종류'].replace('대지권', '')
+    lines.append(f"  대지권의 종류: {대지권종류}")
     lines.append(f"  대지권의 비율: {data['대지권비율']}")
     
     return "\n".join(lines)

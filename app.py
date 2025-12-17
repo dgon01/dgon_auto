@@ -1329,9 +1329,9 @@ with tab2:
             # 1탭 부동산표시 위젯의 값을 가져옵니다
             estate_info = st.session_state.get('estate_text_area', '') 
             
-            # 주민번호는 1탭에 입력란이 없으므로, 기존 저장값 사용
-            debtor_rrn = st.session_state.get('input_debtor_rrn', '')
-            owner_rrn = st.session_state.get('input_owner_rrn', '')
+            # 주민번호도 1탭에서 가져오기
+            debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
+            owner_rrn = st.session_state.get('t1_owner_rrn', '')
             date_val = st.session_state.get('input_date', datetime.now().date())
 
             # 2. 계약 유형별 할당 데이터 준비

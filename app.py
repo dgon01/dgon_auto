@@ -178,6 +178,22 @@ except Exception:
     FPDF = None
     FPDF_OK = False
 
+# 등기부 PDF 파싱 (pdfplumber)
+try:
+    import pdfplumber
+    PDFPLUMBER_OK = True
+except Exception:
+    pdfplumber = None
+    PDFPLUMBER_OK = False
+
+# 위택스 API 호출 (requests)
+try:
+    import requests
+    REQUESTS_OK = True
+except Exception:
+    requests = None
+    REQUESTS_OK = False
+
 LIBS_OK = PDF_OK
 
 # =============================================================================
@@ -899,6 +915,181 @@ for key in manual_keys:
         # 이미 0으로 초기화했지만 금융사 변경 시 값 덮어쓰기 위해 여기서 체크
         pass # 아래 handle_creditor_change 등에서 처리
 
+# =============================================================================
+# 등기부 PDF 파싱 함수
+# =============================================================================
+def parse_registry_pdf(uploaded_file):
+    """집합건물 등기부 PDF에서 부동산표시 추출"""
+    if not PDFPLUMBER_OK:
+        return None, "pdfplumber 라이브러리가 설치되지 않았습니다."
+    
+    result = {
+        "고유번호": "",
+        "소재지번": "",
+        "건물명칭": "",
+        "도로명주소": "",
+        "전유부분_건물번호": "",
+        "전유부분_구조": "",
+        "전유부분_면적": "",
+        "토지": [],
+        "대지권종류": "",
+        "대지권비율": ""
+    }
+    
+    try:
+        full_text = ""
+        with pdfplumber.open(uploaded_file) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    full_text += text + "\n"
+        
+        # 1. 고유번호
+        match = re.search(r'고유번호\s*(\d{4}-\d{4}-\d{6})', full_text)
+        if match:
+            result["고유번호"] = match.group(1)
+        
+        # 2. 집합건물 헤더에서 정보 추출
+        match = re.search(r'\[집합건물\]\s*(.+?)\s+([\w]+아파트|[\w]+빌라|[\w]+오피스텔|[\w]+주택)\s*(제?\d+동)?\s*제(\d+)층\s*제(\d+)호', full_text)
+        if match:
+            result["소재지번"] = match.group(1).strip()
+            result["건물명칭"] = (match.group(2) + " " + (match.group(3) or "")).strip()
+            result["전유부분_건물번호"] = f"제{match.group(4)}층 제{match.group(5)}호"
+        
+        # 3. 도로명주소
+        match = re.search(r'(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+(\S+)\s+(\S+?로|\S+?길)\s+\d+층.*?\n(\d+)\s', full_text)
+        if match:
+            result["도로명주소"] = f"{match.group(1)} {match.group(2)} {match.group(3)} {match.group(4)}"
+        
+        # 4. 전유부분 구조/면적
+        match = re.search(r'벽식구조\s+(\d+\.?\d*)㎡', full_text)
+        if match:
+            result["전유부분_구조"] = "철근콘크리트 벽식구조"
+            result["전유부분_면적"] = match.group(1) + "㎡"
+        
+        # 5. 토지 정보
+        토지_section = re.search(r'대지권의 목적인 토지의 표시(.+?)【\s*표\s*제\s*부\s*】', full_text, re.DOTALL)
+        if 토지_section:
+            토지_text = 토지_section.group(1)
+            토지_text = re.sub(r'풍납열동', '풍납동', 토지_text)
+            토지_text = re.sub(r'람(\d)', r'\1', 토지_text)
+            토지_text = re.sub(r'용\s*\n', '\n', 토지_text)
+            
+            토지들 = re.findall(r'(\d)\.\s*(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+(\S+)\s+(\S+동)\s+(대|전|답|임야|잡종지)\s+(\d+\.?\d*)㎡.*?\n(\d+(?:-\d+)?)', 토지_text, re.DOTALL)
+            
+            for t in 토지들:
+                result["토지"].append({
+                    "번호": t[0],
+                    "소재지": f"{t[1]} {t[2]} {t[3]} {t[6]}",
+                    "지목": t[4],
+                    "면적": t[5] + "㎡"
+                })
+        
+        # 6. 대지권 종류 및 비율
+        match = re.search(r'(소유권대지권|지상권대지권|전세권대지권)\s+(\d+\.?\d*)분의[\s\S]*?(\d+\.\d+)\s', full_text)
+        if match:
+            result["대지권종류"] = match.group(1)
+            result["대지권비율"] = f"{match.group(2)}분의 {match.group(3)}"
+        
+        return result, None
+    except Exception as e:
+        return None, str(e)
+
+
+def format_estate_text(data):
+    """추출된 데이터를 등기신청 양식으로 포맷팅"""
+    lines = []
+    
+    lines.append("1. 1동의 건물의 표시")
+    lines.append("")
+    lines.append(f"   {data['소재지번']}")
+    lines.append(f"   {data['건물명칭']}")
+    if data['도로명주소']:
+        lines.append(f"   [도로명주소] {data['도로명주소']}")
+    lines.append("")
+    
+    lines.append("전유부분의 건물의 표시")
+    lines.append("")
+    lines.append(f"  1. 건물의 번호 : {data['전유부분_건물번호']}")
+    lines.append(f"     [고유번호 : {data['고유번호']}]")
+    lines.append(f"     구조 및 면적 : {data['전유부분_구조']}")
+    lines.append(f"                   {data['전유부분_면적']}")
+    lines.append("")
+    
+    lines.append("전유부분의 대지권의 표시")
+    lines.append("")
+    lines.append("  토지의 표시")
+    
+    for t in data['토지']:
+        lines.append(f"       {t['번호']}. {t['소재지']}")
+        lines.append(f"          {t['지목']} {t['면적']}")
+    
+    lines.append("")
+    lines.append(f"      대지권의 종류 : {data['대지권종류']}")
+    lines.append(f"      대지권의 비율 : {data['대지권비율']}")
+    
+    return "\n".join(lines)
+
+
+# =============================================================================
+# 위택스 API 호출 함수
+# =============================================================================
+WETAX_API_URL = "http://localhost:8000/wetax/submit"
+
+def call_wetax_api(cases):
+    """위택스 API 호출"""
+    if not REQUESTS_OK:
+        return None, "requests 라이브러리가 설치되지 않았습니다."
+    
+    try:
+        response = requests.post(WETAX_API_URL, json={"cases": cases}, timeout=120)
+        if response.status_code == 200:
+            return response.json(), None
+        else:
+            return None, f"API 오류: {response.status_code}"
+    except requests.exceptions.ConnectionError:
+        return None, "위택스 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요."
+    except Exception as e:
+        return None, str(e)
+
+
+def parse_corp_num(corp_num_str):
+    """법인번호 분리 (110111-4138560 → 앞6자리, 뒤7자리)"""
+    clean = re.sub(r'[^0-9]', '', str(corp_num_str))
+    if len(clean) >= 13:
+        return clean[:6], clean[6:13]
+    elif len(clean) >= 6:
+        return clean[:6], clean[6:]
+    return clean, ""
+
+
+def parse_rrn(rrn_str):
+    """주민번호 분리 (800101-1234567 → 앞6자리, 뒤7자리)"""
+    clean = re.sub(r'[^0-9]', '', str(rrn_str))
+    if len(clean) >= 13:
+        return clean[:6], clean[6:13]
+    elif len(clean) >= 6:
+        return clean[:6], clean[6:]
+    return clean, ""
+
+
+def extract_road_address(full_address):
+    """전체 주소에서 도로명 추출 (상세주소 제외)"""
+    if not full_address:
+        return "", ""
+    
+    # 쉼표로 분리
+    parts = full_address.split(',')
+    if len(parts) >= 2:
+        return parts[0].strip(), parts[1].strip()
+    
+    # 숫자 뒤 공백으로 분리 시도
+    match = re.match(r'(.+?(?:로|길)\s*\d+(?:-\d+)?)\s*(.*)$', full_address)
+    if match:
+        return match.group(1).strip(), match.group(2).strip()
+    
+    return full_address, ""
+
 def parse_int_input(text_input):
     try:
         if isinstance(text_input, int): return text_input
@@ -1271,7 +1462,28 @@ with tab1:
             st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("### 🏠 부동산의 표시"); st.caption("※ 등기부등본 내용을 입력하세요")
+    st.markdown("### 🏠 부동산의 표시")
+    
+    # 등기부 PDF 업로드
+    col_upload, col_help = st.columns([3, 1])
+    with col_upload:
+        uploaded_registry = st.file_uploader("📤 등기부등본 PDF 업로드 (인터넷등기소 열람용)", type=['pdf'], key='registry_upload_tab1')
+    with col_help:
+        st.caption("※ 집합건물(아파트) 등기부만 지원")
+    
+    if uploaded_registry:
+        if st.button("📋 부동산표시 추출", key='extract_estate_btn', use_container_width=True):
+            with st.spinner("등기부 분석 중..."):
+                data, error = parse_registry_pdf(uploaded_registry)
+                if error:
+                    st.error(f"추출 오류: {error}")
+                else:
+                    formatted = format_estate_text(data)
+                    st.session_state['estate_text'] = formatted
+                    st.success("✅ 부동산표시 추출 완료!")
+                    st.rerun()
+    
+    st.caption("※ 등기부등본 내용을 입력하세요")
     col_estate, col_pdf = st.columns([3, 1])
     with col_estate:
         st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=300, key='estate_text_area', label_visibility="collapsed")
@@ -1299,6 +1511,190 @@ with tab1:
                     st.download_button(label="⬇️ 다운로드", data=pdf_buffer, file_name=f"근저당권설정_{data['debtor_name']}.pdf", mime="application/pdf", use_container_width=True)
                     st.success("✅ PDF 생성완료!")
                 except Exception as e: st.error(f"오류: {e}")
+    
+    # =========================================================================
+    # 위택스 등록면허세 신고 섹션
+    # =========================================================================
+    st.markdown("---")
+    st.markdown("### 🏛️ 위택스 등록면허세 신고")
+    
+    # 초기화
+    if 'wetax_include_addr_change' not in st.session_state:
+        st.session_state['wetax_include_addr_change'] = False
+    if 'wetax_include_correction' not in st.session_state:
+        st.session_state['wetax_include_correction'] = False
+    if 'wetax_addr_owner' not in st.session_state:
+        st.session_state['wetax_addr_owner'] = False
+    if 'wetax_addr_debtor' not in st.session_state:
+        st.session_state['wetax_addr_debtor'] = False
+    
+    contract_type = st.session_state.get('contract_type', '개인')
+    
+    with st.container(border=True):
+        # 근저당설정 (항상 표시)
+        creditor_name = st.session_state.get('input_creditor_name', '') or st.session_state.get('input_creditor', '')
+        st.checkbox("✅ **근저당설정** (납세자: 채권자)", value=True, disabled=True, key='wetax_setting_check')
+        st.caption(f"   └─ {creditor_name}")
+        
+        st.markdown("---")
+        
+        # 주소변경 체크박스
+        include_addr = st.checkbox("📍 **주소변경 포함**", key='wetax_include_addr_change')
+        
+        if include_addr:
+            if contract_type == "개인":
+                # 개인: 채무자만
+                debtor_name = st.session_state.get('t1_debtor_name', '')
+                st.caption(f"   └─ 납세자: 채무자 ({debtor_name})")
+                correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
+                
+            elif contract_type == "3자담보":
+                # 3자담보: 소유자만
+                owner_name = st.session_state.get('t1_owner_name', '')
+                st.caption(f"   └─ 납세자: 소유자 ({owner_name})")
+                correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
+                
+            else:  # 공동담보
+                # 공동담보: 소유자 + 채무자 선택
+                owner_name = st.session_state.get('t1_owner_name', '')
+                debtor_name = st.session_state.get('t1_debtor_name', '')
+                
+                col_owner, col_debtor = st.columns(2)
+                with col_owner:
+                    addr_owner = st.checkbox(f"소유자 ({owner_name})", key='wetax_addr_owner')
+                    if addr_owner:
+                        st.checkbox("   └─ 경정 포함", key='wetax_owner_correction')
+                with col_debtor:
+                    addr_debtor = st.checkbox(f"채무자 ({debtor_name})", key='wetax_addr_debtor')
+                    if addr_debtor:
+                        st.checkbox("   └─ 경정 포함", key='wetax_debtor_correction')
+        
+        st.markdown("---")
+        
+        # 신고 버튼
+        if st.button("🚀 위택스 신고 실행", type="primary", use_container_width=True, key='wetax_submit_btn'):
+            cases = []
+            
+            # 1. 근저당설정 (채권자)
+            creditor_corp_num = st.session_state.get('input_creditor_corp_num', '')
+            creditor_addr = st.session_state.get('input_creditor_addr', '')
+            property_addr = st.session_state.get('input_collateral_addr', '')
+            tax_base = remove_commas(st.session_state.get('input_amount', '0'))
+            
+            front, back = parse_corp_num(creditor_corp_num)
+            road_addr, detail_addr = extract_road_address(creditor_addr)
+            prop_road, prop_detail = extract_road_address(property_addr)
+            
+            cases.append({
+                "type": "설정",
+                "taxpayer_type": "02",  # 법인
+                "taxpayer_name": creditor_name,
+                "resident_no_front": front,
+                "resident_no_back": back,
+                "phone": "0218335482",
+                "address": road_addr,
+                "address_detail": detail_addr,
+                "property_address": prop_road,
+                "property_detail": prop_detail,
+                "tax_base": int(tax_base) if tax_base else 0
+            })
+            
+            # 2. 주소변경
+            if include_addr:
+                if contract_type == "개인":
+                    # 채무자
+                    debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
+                    debtor_addr = st.session_state.get('t1_debtor_addr', '')
+                    front, back = parse_rrn(debtor_rrn)
+                    road_addr, detail_addr = extract_road_address(debtor_addr)
+                    
+                    if st.session_state.get('wetax_include_correction'):
+                        # 경정
+                        cases.append({
+                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                            "address": road_addr, "address_detail": detail_addr,
+                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                        })
+                    # 변경
+                    cases.append({
+                        "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                        "address": road_addr, "address_detail": detail_addr,
+                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                    })
+                    
+                elif contract_type == "3자담보":
+                    # 소유자
+                    owner_rrn = st.session_state.get('t1_owner_rrn', '')
+                    owner_addr = st.session_state.get('t1_owner_addr', '')
+                    front, back = parse_rrn(owner_rrn)
+                    road_addr, detail_addr = extract_road_address(owner_addr)
+                    
+                    if st.session_state.get('wetax_include_correction'):
+                        cases.append({
+                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                            "address": road_addr, "address_detail": detail_addr,
+                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                        })
+                    cases.append({
+                        "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                        "address": road_addr, "address_detail": detail_addr,
+                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                    })
+                    
+                else:  # 공동담보
+                    if st.session_state.get('wetax_addr_owner'):
+                        owner_rrn = st.session_state.get('t1_owner_rrn', '')
+                        owner_addr = st.session_state.get('t1_owner_addr', '')
+                        front, back = parse_rrn(owner_rrn)
+                        road_addr, detail_addr = extract_road_address(owner_addr)
+                        
+                        if st.session_state.get('wetax_owner_correction'):
+                            cases.append({
+                                "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                                "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                "address": road_addr, "address_detail": detail_addr,
+                                "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                            })
+                        cases.append({
+                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                            "address": road_addr, "address_detail": detail_addr,
+                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                        })
+                    
+                    if st.session_state.get('wetax_addr_debtor'):
+                        debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
+                        debtor_addr = st.session_state.get('t1_debtor_addr', '')
+                        front, back = parse_rrn(debtor_rrn)
+                        road_addr, detail_addr = extract_road_address(debtor_addr)
+                        
+                        if st.session_state.get('wetax_debtor_correction'):
+                            cases.append({
+                                "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                                "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                "address": road_addr, "address_detail": detail_addr,
+                                "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                            })
+                        cases.append({
+                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                            "address": road_addr, "address_detail": detail_addr,
+                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
+                        })
+            
+            # API 호출
+            st.info(f"📤 총 {len(cases)}건 신고 중...")
+            result, error = call_wetax_api(cases)
+            
+            if error:
+                st.error(f"❌ 오류: {error}")
+            else:
+                st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
+                st.json(result)
 
 # =============================================================================
 # Tab 2: 자필서명정보 작성
@@ -2361,6 +2757,56 @@ with tab4:
         except Exception as e:
             st.error(f"생성 오류: {e}")
         st.session_state['generate_malso_transfer'] = False
+    
+    # =========================================================================
+    # 위택스 말소 신고 섹션
+    # =========================================================================
+    st.markdown("---")
+    st.markdown("### 🏛️ 위택스 말소 신고")
+    
+    with st.container(border=True):
+        # 납세자 정보 표시
+        holder_name = st.session_state.get('malso_holder1_name', '')
+        holder_rrn = st.session_state.get('malso_holder1_rrn', '')
+        malso_type = st.session_state.get('malso_type', '근저당권')
+        
+        st.markdown(f"**신고 유형:** {malso_type}말소")
+        st.markdown(f"**납세자 (소유자):** {holder_name}")
+        
+        if st.button("🚀 위택스 말소 신고 실행", type="primary", use_container_width=True, key='wetax_malso_submit_btn'):
+            if not holder_name or not holder_rrn:
+                st.error("❌ 등기권리자(소유자) 정보를 입력해주세요.")
+            else:
+                # 데이터 준비
+                holder_addr = st.session_state.get('malso_holder1_addr', '')
+                estate_detail = st.session_state.get('malso_estate_detail', '')
+                
+                front, back = parse_rrn(holder_rrn)
+                road_addr, detail_addr = extract_road_address(holder_addr)
+                prop_road, prop_detail = extract_road_address(estate_detail.split('\n')[0] if estate_detail else '')
+                
+                cases = [{
+                    "type": "말소",
+                    "taxpayer_type": "01",  # 개인
+                    "taxpayer_name": holder_name,
+                    "resident_no_front": front,
+                    "resident_no_back": back,
+                    "phone": "0218335482",
+                    "address": road_addr,
+                    "address_detail": detail_addr,
+                    "property_address": prop_road,
+                    "property_detail": prop_detail,
+                    "tax_base": None
+                }]
+                
+                st.info("📤 말소 신고 중...")
+                result, error = call_wetax_api(cases)
+                
+                if error:
+                    st.error(f"❌ 오류: {error}")
+                else:
+                    st.success("✅ 위택스 말소 신고 완료!")
+                    st.json(result)
     
     # 안내 메시지
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")

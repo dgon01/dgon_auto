@@ -949,40 +949,59 @@ def parse_registry_pdf(uploaded_file):
         if match:
             result["고유번호"] = match.group(1)
         
-        # 2. [집합건물] 헤더 파싱
-        match = re.search(r'\[집합건물\]\s*(.+?)\s+제(\d+)층\s*제(\d+)호', full_text)
+        # 2. [집합건물] 헤더 파싱 - 소재지번, 건물명칭, 동, 층호 분리
+        # 동이 있는 경우: [집합건물] 주소 건물명 제N동 제N층 제N호
+        match = re.search(r'\[집합건물\]\s*(.+?)\s+(제\d+동)\s+(제\d+층)\s*(제\d+호)', full_text)
         if match:
             header_addr = match.group(1).strip()
-            층 = match.group(2)
-            호 = match.group(3)
-            result["전유부분_건물번호"] = f"제{층}층 제{호}호"
+            동 = match.group(2)
+            층 = match.group(3)
+            호 = match.group(4)
+            result["전유부분_건물번호"] = f"{동} {층} {호}"
             
-            if '아파트' in header_addr or '빌라' in header_addr or '오피스텔' in header_addr:
-                apt_match = re.search(r'(.+?)\s+([\w]+(?:아파트|빌라|오피스텔))\s*(제?\d+동)?', header_addr)
-                if apt_match:
-                    result["소재지번"] = apt_match.group(1).strip()
-                    result["건물명칭"] = (apt_match.group(2) + " " + (apt_match.group(3) or "")).strip()
-            else:
-                result["소재지번"] = header_addr
-                result["건물명칭"] = ""
+            # 소재지번과 건물명칭 분리
+            addr_match = re.search(r'((?:서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+\S+?[시군구]\s*\S*?\s+\S+?[동리읍면]\s+\d+(?:-\d+)?(?:외\s*\d+필지)?)\s*(.*)', header_addr)
+            if addr_match:
+                result["소재지번"] = addr_match.group(1).strip()
+                건물명 = addr_match.group(2).strip()
+                if 건물명 and not re.match(r'^외\s*\d+필지$', 건물명):
+                    # 건물명칭에 동 포함
+                    result["건물명칭"] = f"{건물명} {동}"
+        else:
+            # 동이 없는 경우: [집합건물] 주소 제N층 제N호
+            match = re.search(r'\[집합건물\]\s*(.+?)\s+(제\d+층)\s*(제\d+호)', full_text)
+            if match:
+                header_addr = match.group(1).strip()
+                층 = match.group(2)
+                호 = match.group(3)
+                result["전유부분_건물번호"] = f"{층} {호}"
+                
+                addr_match = re.search(r'((?:서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+\S+?[시군구]\s*\S*?\s+\S+?[동리읍면]\s+\d+(?:-\d+)?(?:외\s*\d+필지)?)\s*(.*)', header_addr)
+                if addr_match:
+                    result["소재지번"] = addr_match.group(1).strip()
+                    건물명 = addr_match.group(2).strip()
+                    if 건물명 and not re.match(r'^외\s*\d+필지$', 건물명):
+                        result["건물명칭"] = 건물명
+                else:
+                    result["소재지번"] = header_addr
+                    result["건물명칭"] = ""
         
-        # 3. 도로명주소
+        # 3. 도로명주소 - 시도 + 시군구 + 도로명(로/길) + 번호 패턴으로 직접 검색
         표제부_section = re.search(r'1동의 건물의 표시(.+?)대지권의 목적인 토지의 표시', full_text, re.DOTALL)
         if 표제부_section:
             표제부_text = 표제부_section.group(1)
             표제부_clean = re.sub(r'열\s*람\s*용', '', 표제부_text)
             
-            도로명_match = re.search(r'(\S+(?:로|길))\s+(\d+)', 표제부_clean)
+            # 시도 + 시군구 + 도로명 + 번호 패턴
+            시도_pattern = r'(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)'
+            도로명_match = re.search(rf'{시도_pattern}\s+(\S+?[시군])\s*(\S+?구)?\s*(\S+(?:로|길))\s+(\d+)', 표제부_clean)
             if 도로명_match:
-                도로명 = 도로명_match.group(1)
-                번호 = 도로명_match.group(2)
-                
-                소재지_match = re.match(r'(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+(\S+?[시군구])\s*(\S+?구)?', result["소재지번"])
-                if 소재지_match:
-                    시도 = 소재지_match.group(1)
-                    시군 = 소재지_match.group(2)
-                    구 = 소재지_match.group(3) or ""
-                    result["도로명주소"] = f"{시도} {시군} {구} {도로명} {번호}".replace("  ", " ").strip()
+                시도 = 도로명_match.group(1)
+                시군 = 도로명_match.group(2)
+                구 = 도로명_match.group(3) or ""
+                도로명 = 도로명_match.group(4)
+                번호 = 도로명_match.group(5)
+                result["도로명주소"] = f"{시도} {시군} {구} {도로명} {번호}".replace("  ", " ").strip()
         
         # 4. 전유부분 구조/면적
         match = re.search(r'벽식구조\s+(\d+\.?\d*)㎡', full_text)
@@ -993,7 +1012,8 @@ def parse_registry_pdf(uploaded_file):
             전유부분_section = re.search(r'전유부분의 건물의 표시(.+?)대지권의 표시', full_text, re.DOTALL)
             if 전유부분_section:
                 전유_text = 전유부분_section.group(1)
-                match = re.search(r'(철근콘크리트조|철골조|벽돌조|조적조)[\s\S]*?(\d+\.?\d*)㎡', 전유_text)
+                # 구조 패턴 확장: 철근콘크리트조, 철근콘크리트구조, 철골조 등
+                match = re.search(r'(철근콘크리트구조|철근콘크리트조|철골조|벽돌조|조적조)[\s\S]*?(\d+\.?\d*)㎡', 전유_text)
                 if match:
                     result["전유부분_구조"] = match.group(1)
                     result["전유부분_면적"] = match.group(2) + "㎡"

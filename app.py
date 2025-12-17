@@ -1058,7 +1058,7 @@ def parse_registry_pdf(uploaded_file):
             if match_type:
                 result["대지권종류"] = match_type.group(1)
             
-            match_ratio = re.search(r'(\d+\.?\d*)분의[\s\S]*?(\d+\.\d+)\s', 대지권_text)
+            match_ratio = re.search(r'(\d+(?:\.\d+)?)분의\s*(\d+(?:\.\d+)?)', 대지권_text)
             if match_ratio:
                 result["대지권비율"] = f"{match_ratio.group(1)}분의 {match_ratio.group(2)}"
         

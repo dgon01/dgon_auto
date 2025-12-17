@@ -949,47 +949,98 @@ def parse_registry_pdf(uploaded_file):
         if match:
             result["고유번호"] = match.group(1)
         
-        # 2. 집합건물 헤더에서 정보 추출
-        match = re.search(r'\[집합건물\]\s*(.+?)\s+([\w]+아파트|[\w]+빌라|[\w]+오피스텔|[\w]+주택)\s*(제?\d+동)?\s*제(\d+)층\s*제(\d+)호', full_text)
+        # 2. [집합건물] 헤더 파싱
+        match = re.search(r'\[집합건물\]\s*(.+?)\s+제(\d+)층\s*제(\d+)호', full_text)
         if match:
-            result["소재지번"] = match.group(1).strip()
-            result["건물명칭"] = (match.group(2) + " " + (match.group(3) or "")).strip()
-            result["전유부분_건물번호"] = f"제{match.group(4)}층 제{match.group(5)}호"
+            header_addr = match.group(1).strip()
+            층 = match.group(2)
+            호 = match.group(3)
+            result["전유부분_건물번호"] = f"제{층}층 제{호}호"
+            
+            if '아파트' in header_addr or '빌라' in header_addr or '오피스텔' in header_addr:
+                apt_match = re.search(r'(.+?)\s+([\w]+(?:아파트|빌라|오피스텔))\s*(제?\d+동)?', header_addr)
+                if apt_match:
+                    result["소재지번"] = apt_match.group(1).strip()
+                    result["건물명칭"] = (apt_match.group(2) + " " + (apt_match.group(3) or "")).strip()
+            else:
+                result["소재지번"] = header_addr
+                result["건물명칭"] = ""
         
         # 3. 도로명주소
-        match = re.search(r'(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+(\S+)\s+(\S+?로|\S+?길)\s+\d+층.*?\n(\d+)\s', full_text)
-        if match:
-            result["도로명주소"] = f"{match.group(1)} {match.group(2)} {match.group(3)} {match.group(4)}"
+        표제부_section = re.search(r'1동의 건물의 표시(.+?)대지권의 목적인 토지의 표시', full_text, re.DOTALL)
+        if 표제부_section:
+            표제부_text = 표제부_section.group(1)
+            표제부_clean = re.sub(r'열\s*람\s*용', '', 표제부_text)
+            
+            도로명_match = re.search(r'(\S+(?:로|길))\s+(\d+)', 표제부_clean)
+            if 도로명_match:
+                도로명 = 도로명_match.group(1)
+                번호 = 도로명_match.group(2)
+                
+                소재지_match = re.match(r'(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+(\S+?[시군구])\s*(\S+?구)?', result["소재지번"])
+                if 소재지_match:
+                    시도 = 소재지_match.group(1)
+                    시군 = 소재지_match.group(2)
+                    구 = 소재지_match.group(3) or ""
+                    result["도로명주소"] = f"{시도} {시군} {구} {도로명} {번호}".replace("  ", " ").strip()
         
         # 4. 전유부분 구조/면적
         match = re.search(r'벽식구조\s+(\d+\.?\d*)㎡', full_text)
         if match:
             result["전유부분_구조"] = "철근콘크리트 벽식구조"
             result["전유부분_면적"] = match.group(1) + "㎡"
+        else:
+            전유부분_section = re.search(r'전유부분의 건물의 표시(.+?)대지권의 표시', full_text, re.DOTALL)
+            if 전유부분_section:
+                전유_text = 전유부분_section.group(1)
+                match = re.search(r'(철근콘크리트조|철골조|벽돌조|조적조)[\s\S]*?(\d+\.?\d*)㎡', 전유_text)
+                if match:
+                    result["전유부분_구조"] = match.group(1)
+                    result["전유부분_면적"] = match.group(2) + "㎡"
         
         # 5. 토지 정보
         토지_section = re.search(r'대지권의 목적인 토지의 표시(.+?)【\s*표\s*제\s*부\s*】', full_text, re.DOTALL)
         if 토지_section:
             토지_text = 토지_section.group(1)
-            토지_text = re.sub(r'풍납열동', '풍납동', 토지_text)
-            토지_text = re.sub(r'람(\d)', r'\1', 토지_text)
-            토지_text = re.sub(r'용\s*\n', '\n', 토지_text)
+            토지_text = re.sub(r'열\s*람\s*용', '', 토지_text)
             
-            토지들 = re.findall(r'(\d)\.\s*(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도)\s+(\S+)\s+(\S+동)\s+(대|전|답|임야|잡종지)\s+(\d+\.?\d*)㎡.*?\n(\d+(?:-\d+)?)', 토지_text, re.DOTALL)
+            시도_pattern = r'서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라남도|경상북도|경상남도|제주특별자치도'
             
-            for t in 토지들:
-                result["토지"].append({
-                    "번호": t[0],
-                    "소재지": f"{t[1]} {t[2]} {t[3]} {t[6]}",
-                    "지목": t[4],
-                    "면적": t[5] + "㎡"
-                })
+            # 패턴1: "번호. 시도 구군 동 지번 지목 면적" (지번이 같은 줄)
+            토지들 = re.findall(rf'(\d)\.\s*({시도_pattern})\s+(\S+)\s+(\S+?동)\s+(\d+(?:-\d+)?)\s+(대|전|답|임야|잡종지)\s+(\d+\.?\d*)㎡', 토지_text)
+            
+            if 토지들:
+                for t in 토지들:
+                    result["토지"].append({
+                        "번호": t[0],
+                        "소재지": f"{t[1]} {t[2]} {t[3]} {t[4]}",
+                        "지목": t[5],
+                        "면적": t[6] + "㎡"
+                    })
+            else:
+                # 패턴2: "번호. 시도 ... 동 지목 면적" + 다음줄 "지번"
+                토지들 = re.findall(rf'(\d)\.\s*({시도_pattern})\s+(.+?[동리가읍면])\s+(대|전|답|임야|잡종지)\s+(\d+\.?\d*)㎡.*?\n\s*(\d+(?:-\d+)?)', 토지_text, re.DOTALL)
+                
+                if 토지들:
+                    for t in 토지들:
+                        result["토지"].append({
+                            "번호": t[0],
+                            "소재지": f"{t[1]} {t[2]} {t[5]}",
+                            "지목": t[3],
+                            "면적": t[4] + "㎡"
+                        })
         
         # 6. 대지권 종류 및 비율
-        match = re.search(r'(소유권대지권|지상권대지권|전세권대지권)\s+(\d+\.?\d*)분의[\s\S]*?(\d+\.\d+)\s', full_text)
-        if match:
-            result["대지권종류"] = match.group(1)
-            result["대지권비율"] = f"{match.group(2)}분의 {match.group(3)}"
+        대지권_section = re.search(r'대지권의 표시(.+?)【\s*갑\s*구\s*】', full_text, re.DOTALL)
+        if 대지권_section:
+            대지권_text = 대지권_section.group(1)
+            match_type = re.search(r'(소유권대지권|지상권대지권|전세권대지권)', 대지권_text)
+            if match_type:
+                result["대지권종류"] = match_type.group(1)
+            
+            match_ratio = re.search(r'(\d+\.?\d*)분의[\s\S]*?(\d+\.\d+)\s', 대지권_text)
+            if match_ratio:
+                result["대지권비율"] = f"{match_ratio.group(1)}분의 {match_ratio.group(2)}"
         
         return result, None
     except Exception as e:
@@ -997,36 +1048,33 @@ def parse_registry_pdf(uploaded_file):
 
 
 def format_estate_text(data):
-    """추출된 데이터를 등기신청 양식으로 포맷팅"""
+    """간결한 형식으로 포맷팅"""
     lines = []
     
-    lines.append("1. 1동의 건물의 표시")
-    lines.append("")
-    lines.append(f"   {data['소재지번']}")
-    lines.append(f"   {data['건물명칭']}")
+    # 1동의 건물의 표시
+    lines.append("1동의 건물의 표시")
+    lines.append(f"  {data['소재지번']}")
+    if data['건물명칭']:
+        lines.append(f"  {data['건물명칭']}")
     if data['도로명주소']:
-        lines.append(f"   [도로명주소] {data['도로명주소']}")
-    lines.append("")
+        lines.append(f"  [도로명주소] {data['도로명주소']}")
     
+    lines.append("")  # 한 칸 띄움
+    
+    # 전유부분의 건물의 표시
     lines.append("전유부분의 건물의 표시")
-    lines.append("")
-    lines.append(f"  1. 건물의 번호 : {data['전유부분_건물번호']}")
-    lines.append(f"     [고유번호 : {data['고유번호']}]")
-    lines.append(f"     구조 및 면적 : {data['전유부분_구조']}")
-    lines.append(f"                   {data['전유부분_면적']}")
-    lines.append("")
+    lines.append(f"  건물번호: {data['전유부분_건물번호']} [고유번호: {data['고유번호']}]")
+    lines.append(f"  구조 및 면적: {data['전유부분_구조']} {data['전유부분_면적']}")
     
+    lines.append("")  # 한 칸 띄움
+    
+    # 전유부분의 대지권의 표시
     lines.append("전유부분의 대지권의 표시")
-    lines.append("")
     lines.append("  토지의 표시")
-    
     for t in data['토지']:
-        lines.append(f"       {t['번호']}. {t['소재지']}")
-        lines.append(f"          {t['지목']} {t['면적']}")
-    
-    lines.append("")
-    lines.append(f"      대지권의 종류 : {data['대지권종류']}")
-    lines.append(f"      대지권의 비율 : {data['대지권비율']}")
+        lines.append(f"    {t['번호']}. {t['소재지']} {t['지목']} {t['면적']}")
+    lines.append(f"  대지권의 종류: {data['대지권종류']}")
+    lines.append(f"  대지권의 비율: {data['대지권비율']}")
     
     return "\n".join(lines)
 

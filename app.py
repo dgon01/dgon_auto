@@ -1081,27 +1081,30 @@ def parse_registry_pdf(uploaded_file):
                 content_lines = [l.strip() for l in content_lines if l.strip() and l.strip() not in ['열', '람', '용']]
                 
                 if content_lines:
-                    last_line = content_lines[-1]
+                    # 번지(숫자 또는 숫자-숫자)로 끝나는 마지막 줄 찾기 = 지번 끝
+                    지번_end_idx = -1
+                    for i, line in enumerate(content_lines):
+                        if re.search(r'\d+(-\d+)?$', line.strip()):
+                            지번_end_idx = i
                     
-                    # 아파트명 패턴 체크
-                    apt_pattern = r'([가-힣A-Za-z0-9]+(?:아파트|빌라|타운|오피스텔|빌|파크|힐스|애비뉴|타워|팰리스|하이츠|주상복합))'
-                    apt_match = re.search(apt_pattern, last_line)
-                    
-                    # 동명칭 패턴 체크
-                    동_match = re.search(r'(제[가-힣\d]+동)$', last_line)
-                    
-                    if apt_match or 동_match:
-                        # 아파트명 또는 동명칭이 있으면 마지막 줄 분리
-                        if 동_match:
-                            result["동명칭"] = 동_match.group(1)
+                    if 지번_end_idx >= 0:
+                        # 지번: 번지까지
+                        result["1동건물표시"] = convert_region(' '.join(content_lines[:지번_end_idx+1]))
                         
-                        if apt_match:
-                            result["아파트명"] = apt_match.group(1)
-                        
-                        # 나머지가 지번
-                        result["1동건물표시"] = convert_region(' '.join(content_lines[:-1]))
+                        # 건물명: 번지 이후 줄들
+                        건물명_lines = content_lines[지번_end_idx+1:]
+                        if 건물명_lines:
+                            건물명_text = ' '.join(건물명_lines)
+                            
+                            # 동명칭 분리 (제X동, 제가동 등)
+                            동_match = re.search(r'(제[가-힣\d]+동)$', 건물명_text)
+                            if 동_match:
+                                result["동명칭"] = 동_match.group(1)
+                                result["아파트명"] = 건물명_text[:동_match.start()].strip()
+                            else:
+                                result["아파트명"] = 건물명_text
                     else:
-                        # 둘 다 없으면 전체가 지번
+                        # 번지 패턴 없으면 전체를 지번으로
                         result["1동건물표시"] = convert_region(' '.join(content_lines))
             
             # ===== 토지: 번호별 마지막 유효 행 =====
@@ -1192,11 +1195,16 @@ def format_estate_text(data):
     # 1동의 건물의 표시
     lines.append("1. 1동의 건물의 표시")
     lines.append(f"   {data['1동건물표시']}")
+    
+    # 아파트명/동명칭 (4가지 케이스 대응)
+    건물명칭_parts = []
     if data["아파트명"]:
-        apt_line = f"   {data['아파트명']}"
-        if data["동명칭"]:
-            apt_line += f" {data['동명칭']}"
-        lines.append(apt_line)
+        건물명칭_parts.append(data["아파트명"])
+    if data["동명칭"]:
+        건물명칭_parts.append(data["동명칭"])
+    if 건물명칭_parts:
+        lines.append(f"   {' '.join(건물명칭_parts)}")
+    
     if data["도로명주소"]:
         lines.append(f"   [도로명주소] {data['도로명주소']}")
     
@@ -1216,7 +1224,8 @@ def format_estate_text(data):
     
     for t in data["토지"]:
         소재지 = convert_region(t['소재지'])
-        lines.append(f"       {t['번호']}. {소재지} {t['지목']} {t['면적']}")
+        lines.append(f"       {t['번호']}. {소재지}")
+        lines.append(f"              {t['지목']} {t['면적']}")
     
     lines.append(f"      대지권의 종류: {data['대지권종류']}")
     lines.append(f"      대지권의 비율: {data['대지권비율']}")

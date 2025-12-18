@@ -1061,35 +1061,58 @@ def parse_registry_pdf(uploaded_file):
         debug["warnings"].append("고유번호 추출 실패")
     
     # =========================================================================
-    # 3. 아파트명 & 도로명주소 - 갑구에서 추출
+    # 3. 도로명주소 - [도로명주소] 태그 뒤 내용에서 추출
+    # =========================================================================
+    시도_pattern = r'서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라북도|전라남도|경상북도|경상남도|제주특별자치도'
+    
+    if '[도로명주소]' in full_text:
+        # [도로명주소] 뒤 내용 가져오기 (줄바꿈 포함)
+        after_tag = full_text.split('[도로명주소]')[1][:300]
+        # 층/면적 패턴 제거 (PDF 테이블에서 섞인 데이터)
+        clean = re.sub(r'\d+층\s+[\d\.]+㎡', '', after_tag)
+        clean = re.sub(r'열\s*람\s*용', '', clean)
+        clean = ' '.join(clean.split()).strip()
+        
+        # 시도/시군/구/도로명/번호 각각 추출
+        addr_match = re.match(rf'({시도_pattern})\s+([가-힣]+[시군])\s+([가-힣]+구)\s+([가-힣0-9]+(?:로|길))\s*(\d+(?:-\d+)?)', clean)
+        if addr_match:
+            result["도로명주소"] = convert_region(f"{addr_match.group(1)} {addr_match.group(2)} {addr_match.group(3)} {addr_match.group(4)} {addr_match.group(5)}")
+            debug["info"].append(f"도로명주소: {result['도로명주소']}")
+        else:
+            debug["warnings"].append("도로명주소 추출 실패")
+    else:
+        # 갑구에서 추출 (표제부에 없는 경우)
+        갑구_match = re.search(r'【\s*갑\s*구\s*】(.+?)【\s*을\s*구\s*】', full_text, re.DOTALL)
+        if 갑구_match:
+            도로명_matches = re.findall(rf'({시도_pattern})\s+([가-힣]+[시군])\s+([가-힣]+구)\s+([가-힣0-9]+(?:로|길))\s+(\d+(?:-\d+)?)', 갑구_match.group(1))
+            if 도로명_matches:
+                last = 도로명_matches[-1]
+                result["도로명주소"] = convert_region(f"{last[0]} {last[1]} {last[2]} {last[3]} {last[4]}")
+                debug["info"].append("도로명주소 추출 (갑구)")
+            else:
+                debug["warnings"].append("도로명주소 추출 실패")
+        else:
+            debug["warnings"].append("도로명주소 추출 실패")
+    
+    # =========================================================================
+    # 4. 아파트명 - 갑구에서 추출
     # =========================================================================
     갑구_match = re.search(r'【\s*갑\s*구\s*】(.+?)【\s*을\s*구\s*】', full_text, re.DOTALL)
     if 갑구_match:
         갑구_text = 갑구_match.group(1)
         
         # 아파트명
-        아파트_match = re.search(r'(\S+아파트|\S+빌라|\S+오피스텔|\S+주상복합)', 갑구_text)
+        아파트_match = re.search(r'(\S+아파트|\S+빌라|\S+오피스텔|\S+주상복합|\S+애비뉴)', 갑구_text)
         if 아파트_match:
             result["아파트명"] = 아파트_match.group(1)
             debug["info"].append(f"아파트명: {result['아파트명']}")
         else:
             debug["warnings"].append("아파트명/건물명 추출 실패")
-        
-        # 도로명주소
-        시도_pattern = r'서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원특별자치도|충청북도|충청남도|전북특별자치도|전라북도|전라남도|경상북도|경상남도|제주특별자치도'
-        도로명_matches = re.findall(rf'({시도_pattern})\s+(\S+[시군])\s*(\S*구)?\s*(\S+(?:로|길))\s*(\d+)', 갑구_text)
-        if 도로명_matches:
-            last = 도로명_matches[-1]
-            시도, 시군, 구, 도로명, 번호 = last
-            result["도로명주소"] = convert_region(f"{시도} {시군} {구} {도로명} {번호}".replace("  ", " ").strip())
-            debug["info"].append("도로명주소 추출 완료")
-        else:
-            debug["warnings"].append("도로명주소 추출 실패")
     else:
         debug["warnings"].append("갑구 섹션을 찾을 수 없음")
     
     # =========================================================================
-    # 4. 전유부분 구조/면적
+    # 5. 전유부분 구조/면적
     # =========================================================================
     전유_section = re.search(r'전유부분의 건물의 표시(.+?)대지권의 표시', full_text, re.DOTALL)
     if 전유_section:
@@ -1697,11 +1720,30 @@ with tab1:
         def copy_from_estate():
             # 부동산표시에서 도로명주소 추출
             estate_text = st.session_state.get('estate_text', '')
+            if not estate_text.strip():
+                st.session_state['_toast_msg'] = "⚠️ 부동산표시가 비어있습니다"
+                return
+            
+            import re
+            # 1. 도로명주소 우선
             if '[도로명주소]' in estate_text:
-                import re
                 match = re.search(r'\[도로명주소\]\s*(.+?)(?:\n|$)', estate_text)
                 if match:
                     st.session_state['input_collateral_addr'] = match.group(1).strip()
+                    st.session_state['_toast_msg'] = "✅ 도로명주소 추출 완료"
+                    return
+            
+            # 2. 1동건물표시에서 추출 (두번째 줄)
+            lines = estate_text.strip().split('\n')
+            for line in lines[1:4]:  # 2~4번째 줄에서 찾기
+                line = line.strip()
+                if line and not line.startswith('[') and not line.startswith('전유') and not line.startswith('1.'):
+                    st.session_state['input_collateral_addr'] = line
+                    st.session_state['_toast_msg'] = "✅ 지번주소 추출 완료"
+                    return
+            
+            st.session_state['_toast_msg'] = "⚠️ 주소를 찾을 수 없습니다"
+        
         with col_addr1:
             collateral_input = st.text_area(
                 "물건지주소 (수기입력가능)", 
@@ -1712,7 +1754,12 @@ with tab1:
             st.session_state['input_collateral_addr'] = collateral_input
         with col_addr2:
             st.button("📋 채무자 주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
-            st.button("🏠 부동산표시 추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)
+            st.button("🏠 부동산표시에서 추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)
+        
+        # 토스트 메시지 표시
+        if st.session_state.get('_toast_msg'):
+            st.toast(st.session_state['_toast_msg'])
+            del st.session_state['_toast_msg']
 
     st.markdown("---")
     st.markdown("### 🏠 부동산의 표시")

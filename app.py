@@ -1199,7 +1199,7 @@ def show_debug(debug):
     if total_errors > 0:
         st.error(f"❌ 오류 {total_errors}건 발생")
     elif total_warnings > 0:
-        st.warning(f⚠️ 경고 {total_warnings}건 (일부 항목 추출 실패)")
+        st.warning(f"⚠️ 경고 {total_warnings}건 (일부 항목 추출 실패)")
     else:
         st.success("✅ 모든 항목 추출 성공")
     

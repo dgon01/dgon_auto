@@ -67,6 +67,23 @@ st.markdown(f"""
         .header-right p {{ font-size: 0.85rem !important; }}
         h3 {{ font-size: 1.2rem !important; }}
         .total-amount {{ font-size: 1.5rem !important; }}
+        
+        /* 버튼 모바일 대응 */
+        [data-testid="stHorizontalBlock"] {{
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+        }}
+        .stButton > button {{
+            font-size: 0.85rem !important;
+            padding: 8px 12px !important;
+        }}
+    }}
+    
+    /* 세로 모니터 대응 (height > width) */
+    @media (max-aspect-ratio: 1/1) {{
+        [data-testid="stHorizontalBlock"] {{
+            flex-wrap: wrap !important;
+        }}
     }}
     
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
@@ -1648,7 +1665,7 @@ with tab1:
         if st.session_state.get('input_amount') and st.session_state['input_amount'] != "0":
             st.info(f"💰 **{number_to_korean(remove_commas(st.session_state['input_amount']))}**")
         
-        col_addr1, col_addr2, col_addr3 = st.columns([5, 1, 1])
+        col_addr1, col_addr2 = st.columns([5, 1])
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
                 st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
@@ -1669,11 +1686,8 @@ with tab1:
             )
             st.session_state['input_collateral_addr'] = collateral_input
         with col_addr2:
-            st.write(""); st.write("")
-            st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
-        with col_addr3:
-            st.write(""); st.write("")
-            st.button("🏠\n부동산\n표시추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)
+            st.button("📋 채무자 주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
+            st.button("🏠 부동산표시 추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)
 
     st.markdown("---")
     st.markdown("### 🏠 부동산의 표시")
@@ -1971,13 +1985,12 @@ with tab2:
             if len(clean_val) == 13:
                 st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:]}"
 
-    # 헤더
-    col_header = st.columns([6, 1, 1])
-    with col_header[0]:
-        st.markdown("### ✍️ 자필서명정보 작성")
+    # 헤더와 버튼을 분리
+    st.markdown("### ✍️ 자필서명정보 작성")
+    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
     
     # [수정됨] 1탭 가져오기 로직 (위젯 Key 강제 동기화 적용)
-    with col_header[1]:
+    with col_btn1:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab2", help="1탭 정보 불러오기"):
             # 1. 1탭 데이터 확보 (위젯 Key 기준)
             contract_type = st.session_state.get('contract_type', '개인')
@@ -2033,7 +2046,7 @@ with tab2:
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
     
-    with col_header[2]:
+    with col_btn2:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2", help="모든 입력 초기화"):
             st.session_state['tab2_owner1_name'] = ''
             st.session_state['tab2_owner1_rrn'] = ''
@@ -2212,15 +2225,14 @@ with tab2:
 
 # Tab 3: 비용 계산 및 영수증 (완전 개편)
 with tab3:
-    # 헤더: 가져오기 + 초기화 버튼
-    col_header3 = st.columns([6, 1, 1])
-    with col_header3[0]:
-        st.markdown("### 🧾 등기비용 계산기")
-    with col_header3[1]:
+    # 헤더와 버튼을 분리
+    st.markdown("### 🧾 등기비용 계산기")
+    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
+    with col_btn1:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="1탭 정보 불러오기"):
             st.success("✅ 1탭 정보가 동기화되었습니다!")
             st.rerun()
-    with col_header3[2]:
+    with col_btn2:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab3", help="모든 입력 초기화"):
             st.session_state['calc_data'] = {}
             st.session_state['show_fee'] = True
@@ -2661,11 +2673,10 @@ with tab3:
 # Tab 4: 말소 문서 작성
 # =============================================================================
 with tab4:
-    # 헤더
-    col_header = st.columns([6, 1, 1])
-    with col_header[0]:
-        st.markdown("### 🗑️ 말소 문서 작성")
-    with col_header[1]:
+    # 헤더와 버튼 분리
+    st.markdown("### 🗑️ 말소 문서 작성")
+    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
+    with col_btn1:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab4", help="1탭 정보 불러오기"):
             # 1탭 데이터 동기화
             contract_type = st.session_state.get('contract_type', '개인')
@@ -2704,7 +2715,7 @@ with tab4:
             
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
-    with col_header[2]:
+    with col_btn2:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4", help="모든 입력 초기화"):
             for key in ['malso_type', 'malso_obligor_name', 'malso_obligor_id', 'malso_obligor_addr', 
                        'malso_obligor_rep', 'malso_holder1_name', 'malso_holder1_rrn', 'malso_holder1_addr',

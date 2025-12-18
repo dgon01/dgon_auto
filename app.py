@@ -1013,42 +1013,28 @@ def parse_registry_pdf(uploaded_file):
         debug["warnings"].append("[집합건물] 표시 없음 - 일반건물이거나 토지등기부일 수 있음")
     
     # =========================================================================
-    # 1. [집합건물] 헤더에서 동/층/호 추출 - 패턴 보완
+    # 1. [집합건물]에서 건물번호 추출 - 다양한 형식 대응 (제에이동, 제이스트-1동, 제비03호 등)
     # =========================================================================
-    header_match = re.search(r'\[집합건물\]\s*(.+?)\s+(제\d+동)\s+(제\d+층)\s+(제\d+호)', full_text)
-    if header_match:
-        result["동명칭"] = header_match.group(2)
-        result["건물번호"] = f"{header_match.group(3)} {header_match.group(4)}"
-        debug["info"].append("건물번호 추출 (제N동 제N층 제N호)")
-    else:
-        header_match = re.search(r'\[집합건물\]\s*(.+?)\s+(제\d+층)\s+(제\d+호)', full_text)
-        if header_match:
-            result["건물번호"] = f"{header_match.group(2)} {header_match.group(3)}"
-            debug["info"].append("건물번호 추출 (제N층 제N호)")
+    집합_match = re.search(r'\[집합건물\]\s*(.+)', full_text)
+    if 집합_match:
+        집합건물 = 집합_match.group(1).strip()
+        
+        # 패턴1: 제xxx동 제xxx층 제xxx호 (동 있음)
+        동층호_match = re.search(r'(제[^\s]+동)\s+(제[^\s]+층)\s+(제[^\s]+호)', 집합건물)
+        if 동층호_match:
+            result["동명칭"] = 동층호_match.group(1)
+            result["건물번호"] = f"{동층호_match.group(1)} {동층호_match.group(2)} {동층호_match.group(3)}"
+            debug["info"].append("건물번호 추출 (동+층+호)")
         else:
-            header_match = re.search(r'\[집합건물\]\s*(.+?)\s+(\d+동)\s+(\d+층)\s+(\d+호)', full_text)
-            if header_match:
-                result["동명칭"] = header_match.group(2)
-                result["건물번호"] = f"{header_match.group(3)} {header_match.group(4)}"
-                debug["info"].append("건물번호 추출 (N동 N층 N호)")
+            # 패턴2: 제xxx층 제xxx호 (동 없음)
+            층호_match = re.search(r'(제[^\s]+층)\s+(제[^\s]+호)', 집합건물)
+            if 층호_match:
+                result["건물번호"] = f"{층호_match.group(1)} {층호_match.group(2)}"
+                debug["info"].append("건물번호 추출 (층+호)")
             else:
-                header_match = re.search(r'\[집합건물\]\s*(.+?)\s+(\d+층)\s+(\d+호)', full_text)
-                if header_match:
-                    result["건물번호"] = f"{header_match.group(2)} {header_match.group(3)}"
-                    debug["info"].append("건물번호 추출 (N층 N호)")
-                else:
-                    header_match = re.search(r'\[집합건물\]\s*(.+?)\s+([가-힣A-Za-z]+동)\s+(제?\d+층)\s+(제?\d+호)', full_text)
-                    if header_match:
-                        result["동명칭"] = header_match.group(2)
-                        result["건물번호"] = f"{header_match.group(3)} {header_match.group(4)}"
-                        debug["info"].append("건물번호 추출 (가/A동)")
-                    else:
-                        header_match = re.search(r'\[집합건물\]\s*(.+?)\s+(제?\d+호)', full_text)
-                        if header_match:
-                            result["건물번호"] = header_match.group(2)
-                            debug["info"].append("건물번호 추출 (호수만)")
-                        else:
-                            debug["warnings"].append("건물번호 추출 실패")
+                debug["warnings"].append("건물번호 추출 실패")
+    else:
+        debug["warnings"].append("[집합건물] 태그를 찾을 수 없음")
     
     # =========================================================================
     # 2. 고유번호
@@ -1070,49 +1056,28 @@ def parse_registry_pdf(uploaded_file):
         after_tag = full_text.split('[도로명주소]')[1][:300]
         # 층/면적 패턴 제거 (PDF 테이블에서 섞인 데이터)
         clean = re.sub(r'\d+층\s+[\d\.]+㎡', '', after_tag)
+        clean = re.sub(r'[\d\.]+㎡', '', clean)  # 면적만 있는 경우도 제거
         clean = re.sub(r'열\s*람\s*용', '', clean)
         clean = ' '.join(clean.split()).strip()
         
-        # 시도/시군/구/도로명/번호 각각 추출
-        addr_match = re.match(rf'({시도_pattern})\s+([가-힣]+[시군])\s+([가-힣]+구)\s+([가-힣0-9]+(?:로|길))\s*(\d+(?:-\d+)?)', clean)
+        # 패턴1: 도 + 시군 + 구 + 도로명 + 번호 (경기도, 경상남도 등)
+        addr_match = re.search(rf'({시도_pattern})\s+([가-힣]+[시군])\s+([가-힣]+구)\s+([가-힣0-9]+(?:로|길))\s*(\d+(?:-\d+)?)', clean)
         if addr_match:
             result["도로명주소"] = convert_region(f"{addr_match.group(1)} {addr_match.group(2)} {addr_match.group(3)} {addr_match.group(4)} {addr_match.group(5)}")
             debug["info"].append(f"도로명주소: {result['도로명주소']}")
         else:
-            debug["warnings"].append("도로명주소 추출 실패")
-    else:
-        # 갑구에서 추출 (표제부에 없는 경우)
-        갑구_match = re.search(r'【\s*갑\s*구\s*】(.+?)【\s*을\s*구\s*】', full_text, re.DOTALL)
-        if 갑구_match:
-            도로명_matches = re.findall(rf'({시도_pattern})\s+([가-힣]+[시군])\s+([가-힣]+구)\s+([가-힣0-9]+(?:로|길))\s+(\d+(?:-\d+)?)', 갑구_match.group(1))
-            if 도로명_matches:
-                last = 도로명_matches[-1]
-                result["도로명주소"] = convert_region(f"{last[0]} {last[1]} {last[2]} {last[3]} {last[4]}")
-                debug["info"].append("도로명주소 추출 (갑구)")
+            # 패턴2: 광역시/특별시 + 구 + 도로명 + 번호 (부산광역시, 서울특별시 등)
+            addr_match = re.search(rf'({시도_pattern})\s+([가-힣]+구)\s+([가-힣0-9]+(?:로|길))\s*(\d+(?:-\d+)?)', clean)
+            if addr_match:
+                result["도로명주소"] = convert_region(f"{addr_match.group(1)} {addr_match.group(2)} {addr_match.group(3)} {addr_match.group(4)}")
+                debug["info"].append(f"도로명주소: {result['도로명주소']}")
             else:
                 debug["warnings"].append("도로명주소 추출 실패")
-        else:
-            debug["warnings"].append("도로명주소 추출 실패")
-    
-    # =========================================================================
-    # 4. 아파트명 - 갑구에서 추출
-    # =========================================================================
-    갑구_match = re.search(r'【\s*갑\s*구\s*】(.+?)【\s*을\s*구\s*】', full_text, re.DOTALL)
-    if 갑구_match:
-        갑구_text = 갑구_match.group(1)
-        
-        # 아파트명
-        아파트_match = re.search(r'(\S+아파트|\S+빌라|\S+오피스텔|\S+주상복합|\S+애비뉴)', 갑구_text)
-        if 아파트_match:
-            result["아파트명"] = 아파트_match.group(1)
-            debug["info"].append(f"아파트명: {result['아파트명']}")
-        else:
-            debug["warnings"].append("아파트명/건물명 추출 실패")
     else:
-        debug["warnings"].append("갑구 섹션을 찾을 수 없음")
+        debug["warnings"].append("[도로명주소] 태그 없음")
     
     # =========================================================================
-    # 5. 전유부분 구조/면적
+    # 4. 전유부분 구조/면적
     # =========================================================================
     전유_section = re.search(r'전유부분의 건물의 표시(.+?)대지권의 표시', full_text, re.DOTALL)
     if 전유_section:
@@ -1172,20 +1137,66 @@ def parse_registry_pdf(uploaded_file):
         debug["warnings"].append("토지 섹션을 찾을 수 없음")
     
     # =========================================================================
-    # 6. 1동 건물 표시 - 토지에서 조합
+    # 6. 1동 건물 표시 - 테이블에서 [도로명주소] 앞 내용 추출
     # =========================================================================
-    if result["토지"]:
-        동별_지번 = defaultdict(list)
-        for t in result["토지"]:
-            match = re.match(r'(.+[동리가읍면])\s+(\S+)$', t['소재지'])
-            if match:
-                동별_지번[match.group(1)].append(match.group(2))
+    일동건물표시_list = []
+    
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                tables = page.extract_tables()
+                for table in tables:
+                    if not table:
+                        continue
+                    for row in table:
+                        if not row:
+                            continue
+                        for cell in row:
+                            if cell and '[도로명주소]' in str(cell):
+                                # [도로명주소] 앞까지만 추출
+                                content = cell.split('[도로명주소]')[0]
+                                content = content.replace('열', '').replace('\n', ' ').strip()
+                                content = ' '.join(content.split())
+                                if content:
+                                    일동건물표시_list.append(convert_region(content))
+    except Exception as e:
+        debug["warnings"].append(f"테이블 추출 실패: {str(e)}")
+    
+    if 일동건물표시_list:
+        # 마지막 유효한 표시 사용 (최신)
+        raw_표시 = 일동건물표시_list[-1]
         
-        for 동주소, 지번들 in 동별_지번.items():
-            result["1동건물표시"] = f"{convert_region(동주소)} {', '.join(지번들)}"
-        debug["info"].append("1동 건물표시 조합 완료")
+        # 제x동 분리
+        동_match = re.search(r'(제[^\s]+동)$', raw_표시)
+        if 동_match:
+            동 = 동_match.group(1)
+            나머지 = raw_표시[:동_match.start()].strip()
+            result["동명칭"] = 동  # 동명칭 업데이트
+        else:
+            나머지 = raw_표시
+        
+        # 건물명 분리
+        건물명_match = re.search(r'([가-힣A-Za-z0-9]+(?:아파트|빌라|오피스텔|애비뉴|타워|파크|힐스|주상복합|타운|팰리스|하이츠))', 나머지)
+        if 건물명_match:
+            건물명 = 건물명_match.group(1)
+            주소 = 나머지.replace(건물명, '').strip()
+            result["아파트명"] = 건물명
+        else:
+            주소 = 나머지
+        
+        result["1동건물표시"] = 주소
+        debug["info"].append("1동 건물표시 추출 (테이블)")
     else:
-        debug["warnings"].append("1동 건물표시 생성 실패 (토지정보 없음)")
+        debug["warnings"].append("1동 건물표시 추출 실패")
+    
+    # 아파트명이 없으면 갑구에서 찾기
+    if not result["아파트명"]:
+        갑구_match = re.search(r'【\s*갑\s*구\s*】(.+?)【\s*을\s*구\s*】', full_text, re.DOTALL)
+        if 갑구_match:
+            아파트_match = re.search(r'([가-힣A-Za-z0-9]+(?:아파트|빌라|오피스텔|주상복합|타운|파크|힐스|뷰|애비뉴|타워|팰리스|하이츠))', 갑구_match.group(1))
+            if 아파트_match:
+                result["아파트명"] = 아파트_match.group(1)
+                debug["info"].append(f"아파트명 (갑구): {result['아파트명']}")
     
     # =========================================================================
     # 7. 대지권 종류/비율
@@ -1239,8 +1250,8 @@ def format_estate_text(data):
     
     # 전유부분의 건물의 표시
     lines.append("전유부분의 건물의 표시")
-    건물번호_full = f"{data['동명칭']} {data['건물번호']}".strip()
-    lines.append(f"  1. 건물의 번호 : {건물번호_full} [고유번호: {data['고유번호']}]")
+    # 건물번호에 이미 동이 포함되어 있음 (예: 제110동 제10층 제1002호)
+    lines.append(f"  1. 건물의 번호 : {data['건물번호']} [고유번호: {data['고유번호']}]")
     lines.append(f"      구조 및 면적 : {data['구조']} {data['면적']}")
     
     lines.append("")  # 빈 줄

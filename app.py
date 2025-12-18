@@ -15,7 +15,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 st.set_page_config(
     layout="wide", 
-    page_title="DG-Form | 등기온 전자설정 자동화",
+    page_title="DG-Form | 전자설정 자동화시스템",
     page_icon=os.path.join(APP_ROOT, "my_icon.ico"),
     initial_sidebar_state="collapsed"
 )
@@ -118,11 +118,8 @@ if logo_base64:
             <img src="data:image/x-icon;base64,{logo_base64}" class="header-logo" alt="DG-ON Logo">
             <div>
                 <h1 class="header-title"><span class="title-dg">DG</span><span class="title-form">-Form</span></h1>
-                <p class="header-subtitle">등기온 전자설정 자동화 시스템 | 법무법인 시화</p>
+                <p class="header-subtitle">전자설정 자동화시스템 | <span style="color: #FDD000;">등기온</span></p>
             </div>
-        </div>
-        <div class="header-right">
-            <p style="margin: 0; font-size: 1.1rem; font-weight: 600;">부동산 등기는 등기온</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -131,10 +128,7 @@ else:
     <div class="header-container">
         <div>
             <h1 class="header-title">🏠 <span class="title-dg">DG</span><span class="title-form">-Form</span></h1>
-            <p class="header-subtitle">등기온 전자설정 자동화 시스템 | 법무법인 시화</p>
-        </div>
-        <div class="header-right">
-            <p style="margin: 0; font-size: 1.1rem; font-weight: 600;">부동산 등기는 등기온</p>
+            <p class="header-subtitle">전자설정 자동화시스템 | <span style="color: #FDD000;">등기온</span></p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1653,11 +1647,15 @@ with tab1:
         col_addr1, col_addr2 = st.columns([5, 1])
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
-                st.session_state['collateral_addr_input'] = st.session_state['t1_debtor_addr']
                 st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
         with col_addr1:
-            st.text_area("물건지 주소 (수기 입력)", key='collateral_addr_input', height=100)
-            if 'collateral_addr_input' in st.session_state: st.session_state['input_collateral_addr'] = st.session_state['collateral_addr_input']
+            collateral_input = st.text_area(
+                "물건지 주소 (수기 입력)", 
+                value=st.session_state.get('input_collateral_addr', ''),
+                height=100,
+                key='collateral_addr_input_widget'
+            )
+            st.session_state['input_collateral_addr'] = collateral_input
         with col_addr2:
             st.write(""); st.write("")
             st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
@@ -1690,7 +1688,6 @@ with tab1:
                     # 위택스용 물건지 주소 자동 채움
                     if data["도로명주소"]:
                         st.session_state['input_collateral_addr'] = data["도로명주소"]
-                        st.session_state['collateral_addr_input'] = data["도로명주소"]
                     
                     st.rerun()
     
@@ -3066,5 +3063,4 @@ with tab4:
 # =============================================================================
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>
-    <p style='margin: 0; font-size: 1rem; color: #00428B;'><strong>DG-Form 등기온 전자설정 자동화 시스템 | 법무법인 시화</strong></p>
-    <p style='margin: 5px 0 0 0; font-size: 0.85rem; color: #6c757d;'>부동산 등기는 등기온</p></div>""", unsafe_allow_html=True)
+    <p style='margin: 0; font-size: 1rem;'><strong><span style="color: #00428B;">DG-Form</span></strong> <span style="color: #6c757d;">전자설정 자동화시스템</span> | <strong><span style="color: #FDD000;">등기온</span></strong></p></div>""", unsafe_allow_html=True)

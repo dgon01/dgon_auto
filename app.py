@@ -1107,20 +1107,29 @@ def parse_registry_pdf(uploaded_file):
                         # 번지 패턴 없으면 전체를 지번으로
                         result["1동건물표시"] = convert_region(' '.join(content_lines))
             
-            # ===== 토지: 번호별 마지막 유효 행 =====
-            토지_by_번호 = {}
+            # ===== 토지: 같은 번지면 마지막만 (말소 제외) =====
+            토지_by_번지 = {}
             for row in sections["토지"]:
-                번호_match = re.match(r'^(\d+)', str(row[0]).strip())
-                번호 = 번호_match.group(1) if 번호_match else "1"
-                토지_by_번호[번호] = row
+                소재지_raw = (row[1] or "").replace('\n', ' ').strip()
+                소재지_raw = re.sub(r'^\d+\.\s*', '', 소재지_raw)
+                
+                # 번지 추출 (숫자-숫자 또는 숫자로 끝나는 부분)
+                번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_raw.strip())
+                번지 = 번지_match.group(1) if 번지_match else 소재지_raw
+                
+                # 같은 번지면 덮어쓰기 (마지막이 현행)
+                토지_by_번지[번지] = row
             
-            for 번호, row in 토지_by_번호.items():
+            # 번지 순서대로 정렬해서 추가
+            토지_items = sorted(토지_by_번지.items(), key=lambda x: (int(re.search(r'^(\d+)', x[0]).group(1)) if re.search(r'^(\d+)', x[0]) else 0))
+            
+            for idx, (번지, row) in enumerate(토지_items, 1):
                 소재지 = (row[1] or "").replace('\n', ' ').strip()
                 소재지 = re.sub(r'^\d+\.\s*', '', 소재지)
                 지목 = (row[3] or "").strip() if len(row) > 3 else ""
                 면적 = (row[4] or "").strip() if len(row) > 4 else ""
                 result["토지"].append({
-                    "번호": 번호,
+                    "번호": str(idx),
                     "소재지": convert_region(소재지),
                     "지목": 지목,
                     "면적": 면적

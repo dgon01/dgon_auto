@@ -955,7 +955,7 @@ for key in manual_keys:
 # 등기부 PDF 파싱 함수
 # =============================================================================
 def parse_registry_pdf(uploaded_file):
-    """집합건물 등기부 PDF에서 부동산표시 추출 - 테이블 기반 파싱"""
+    """집합건물 등기부 PDF에서 부동산표시 추출 - 섹션별 마지막 유효 행 방식"""
     
     # 행정구역 변환
     행정구역_변환 = {"전라북도": "전북특별자치도", "강원도": "강원특별자치도"}
@@ -978,14 +978,12 @@ def parse_registry_pdf(uploaded_file):
         "대지권비율": ""
     }
     
-    # 디버깅 정보
     debug = {
         "errors": [],
         "warnings": [],
         "info": []
     }
     
-    # 라이브러리 체크
     if not PDFPLUMBER_OK:
         debug["errors"].append("pdfplumber 라이브러리가 설치되지 않았습니다.")
         return result, debug
@@ -994,18 +992,11 @@ def parse_registry_pdf(uploaded_file):
         with pdfplumber.open(uploaded_file) as pdf:
             debug["info"].append(f"PDF 페이지 수: {len(pdf.pages)}")
             
-            # 고유번호 추출 (첫 페이지 텍스트에서)
+            # 고유번호 추출
             first_page_text = pdf.pages[0].extract_text() or ""
             고유번호_match = re.search(r'고유번호\s*(\d{4}-\d{4}-\d{6})', first_page_text)
             if 고유번호_match:
                 result["고유번호"] = 고유번호_match.group(1)
-                debug["info"].append(f"고유번호: {result['고유번호']}")
-            else:
-                debug["warnings"].append("고유번호 추출 실패")
-            
-            # 집합건물 여부 확인
-            if "[집합건물]" not in first_page_text:
-                debug["warnings"].append("[집합건물] 표시 없음 - 일반건물이거나 토지등기부일 수 있음")
             
             # 모든 테이블 수집
             all_tables = []
@@ -1013,140 +1004,130 @@ def parse_registry_pdf(uploaded_file):
                 tables = page.extract_tables()
                 all_tables.extend(tables)
             
-            # 테이블별 섹션 파싱
+            # 섹션별 데이터 행 수집
+            sections = {"1동건물": [], "토지": [], "전유부분": [], "대지권": []}
+            current_section = None
+            대지권_header = []
+            
             for table in all_tables:
-                if not table or len(table) < 2:
+                if not table:
                     continue
                 
-                current_section = None
-                section_header_row = None
-                
-                for row_idx, row in enumerate(table):
+                for row in table:
                     row_text = str(row[0]) if row[0] else ""
                     
                     # 섹션 헤더 감지
                     if "1동의 건물의 표시" in row_text:
                         current_section = "1동건물"
-                        section_header_row = row_idx + 1
                         continue
                     elif "대지권의 목적인 토지의 표시" in row_text:
                         current_section = "토지"
-                        section_header_row = row_idx + 1
                         continue
                     elif "전유부분의 건물의 표시" in row_text:
                         current_section = "전유부분"
-                        section_header_row = row_idx + 1
                         continue
                     elif "대지권의 표시" in row_text and "목적인 토지" not in row_text:
                         current_section = "대지권"
-                        section_header_row = row_idx + 1
                         continue
                     elif "갑 구" in row_text or "을 구" in row_text:
                         current_section = None
                         continue
                     
-                    # 컬럼 헤더 행 스킵
-                    if row_idx == section_header_row:
+                    # 대지권 헤더 저장
+                    if current_section == "대지권" and row_text.strip() == "표시번호":
+                        대지권_header = row
                         continue
                     
-                    # 데이터 행 처리 (표시번호가 숫자인 행)
-                    if current_section and row[0] and re.match(r'^\d+$', str(row[0]).strip()):
-                        
-                        # ===== 1동의 건물의 표시 (2열) =====
-                        if current_section == "1동건물":
-                            col2 = (row[2] or "") if len(row) > 2 else ""
-                            col2_clean = col2.replace('\n', ' ')
-                            
-                            # 동명칭 추출 (제X동, 제가동 등)
-                            동_match = re.search(r'(제[가-힣\d]+동)', col2)
-                            if 동_match:
-                                result["동명칭"] = 동_match.group(1)
-                            
-                            # 아파트/빌라명 추출
-                            apt_match = re.search(r'([가-힣A-Za-z0-9]+(?:아파트|빌라|타운|오피스텔|빌|파크|힐스|애비뉴|타워|팰리스|하이츠|주상복합))', col2)
-                            if apt_match:
-                                result["아파트명"] = apt_match.group(1)
-                            
-                            # 도로명주소 추출
-                            road_match = re.search(r'\[도로명주소\]\s*(.+?)(?:열|람|용|$)', col2_clean)
-                            if road_match:
-                                road_addr = road_match.group(1).strip()
-                                result["도로명주소"] = convert_region(re.sub(r'\s+', ' ', road_addr))
-                            
-                            # 1동건물표시 ([도로명주소] 앞까지)
-                            소재지_text = col2_clean.split('[도로명주소]')[0] if '[도로명주소]' in col2_clean else col2_clean
-                            소재지_text = re.sub(r'(열|람|용)', '', 소재지_text).strip()
-                            result["1동건물표시"] = convert_region(re.sub(r'\s+', ' ', 소재지_text))
-                            # 마지막 행이 현행이므로 계속 덮어씀
-                        
-                        # ===== 대지권의 목적인 토지의 표시 (2열, 3열, 4열) =====
-                        elif current_section == "토지":
-                            번호 = row[0].strip()
-                            소재지 = (row[1] or "").replace('\n', ' ').strip()
-                            소재지 = re.sub(r'^\d+\.\s*', '', 소재지)  # "1. " 제거
-                            
-                            지목 = (row[3] or "").strip() if len(row) > 3 else ""
-                            면적 = (row[4] or "").strip() if len(row) > 4 else ""
-                            
-                            result["토지"].append({
-                                "번호": 번호,
-                                "소재지": convert_region(소재지),
-                                "지목": 지목,
-                                "면적": 면적
-                            })
-                        
-                        # ===== 전유부분의 건물의 표시 (3열) =====
-                        elif current_section == "전유부분":
-                            건물번호 = (row[2] or "").replace('\n', ' ').strip() if len(row) > 2 else ""
-                            건물내역 = (row[3] or "").replace('\n', ' ').strip() if len(row) > 3 else ""
-                            
-                            # 동명칭이 있고 건물번호에 없으면 앞에 붙이기
-                            if result["동명칭"] and result["동명칭"] not in 건물번호:
-                                건물번호 = f"{result['동명칭']} {건물번호}"
-                            
-                            result["건물번호"] = 건물번호
-                            
-                            # 구조/면적 분리
-                            구조_match = re.search(r'([가-힣]+조)', 건물내역)
-                            면적_match = re.search(r'([\d.]+㎡)', 건물내역)
-                            result["구조"] = 구조_match.group(1) if 구조_match else ""
-                            result["면적"] = 면적_match.group(1) if 면적_match else ""
-                            debug["info"].append(f"건물번호: {result['건물번호']}")
-                        
-                        # ===== 대지권의 표시 (2열: 종류, 3열: 비율) =====
-                        elif current_section == "대지권":
-                            # 헤더 행에서 열 인덱스 동적 파악
-                            header_row = table[section_header_row] if section_header_row and section_header_row < len(table) else []
-                            
-                            대지권종류_idx = 1  # 기본값
-                            대지권비율_idx = 2  # 기본값
-                            
-                            for idx, col in enumerate(header_row):
-                                if col and "대지권종류" in str(col):
-                                    대지권종류_idx = idx
-                                if col and "대지권비율" in str(col):
-                                    대지권비율_idx = idx
-                            
-                            # 대지권종류 (2열)
-                            if len(row) > 대지권종류_idx:
-                                종류_raw = (row[대지권종류_idx] or "").replace('\n', ' ').strip()
-                                종류_match = re.search(r'(소유권|지상권|전세권)', 종류_raw)
-                                result["대지권종류"] = 종류_match.group(1) if 종류_match else 종류_raw
-                                debug["info"].append(f"대지권종류: {result['대지권종류']}")
-                            
-                            # 대지권비율 (3열)
-                            if len(row) > 대지권비율_idx:
-                                비율_raw = (row[대지권비율_idx] or "").replace('\n', ' ').strip()
-                                result["대지권비율"] = 비율_raw
-                                debug["info"].append(f"대지권비율: {result['대지권비율']}")
+                    # 컬럼 헤더 스킵
+                    if row_text.strip() in ["표시번호", "순위번호"]:
+                        continue
+                    
+                    # 현행 데이터: "1", "2" 또는 "1\n(전 1)" 형태 (변경 등기 "1-1" 제외)
+                    if current_section and row[0]:
+                        row0_clean = str(row[0]).strip()
+                        if re.match(r'^\d+$', row0_clean) or re.match(r'^\d+\n\(전', row0_clean):
+                            sections[current_section].append(row)
             
-            # 토지 정보 로그
-            if result["토지"]:
-                debug["info"].append(f"토지 {len(result['토지'])}필지 추출 완료")
-            else:
-                debug["warnings"].append("토지 정보 추출 실패")
+            # ===== 1동건물: 마지막 유효 행 =====
+            if sections["1동건물"]:
+                row = sections["1동건물"][-1]
+                col2 = (row[2] or "") if len(row) > 2 else ""
+                col2_clean = col2.replace('\n', ' ')
+                
+                동_match = re.search(r'(제[가-힣\d]+동)', col2)
+                if 동_match:
+                    result["동명칭"] = 동_match.group(1)
+                
+                apt_match = re.search(r'([가-힣A-Za-z0-9]+(?:아파트|빌라|타운|오피스텔|빌|파크|힐스|애비뉴|타워|팰리스|하이츠|주상복합))', col2)
+                if apt_match:
+                    result["아파트명"] = apt_match.group(1)
+                
+                road_match = re.search(r'\[도로명주소\]\s*(.+?)(?:열|람|용|$)', col2_clean)
+                if road_match:
+                    result["도로명주소"] = convert_region(re.sub(r'\s+', ' ', road_match.group(1).strip()))
+                
+                소재지_text = col2_clean.split('[도로명주소]')[0] if '[도로명주소]' in col2_clean else col2_clean
+                소재지_text = re.sub(r'(열|람|용)', '', 소재지_text).strip()
+                result["1동건물표시"] = convert_region(re.sub(r'\s+', ' ', 소재지_text))
             
-            # 아파트명이 없으면 갑구에서 찾기
+            # ===== 토지: 번호별 마지막 유효 행 =====
+            토지_by_번호 = {}
+            for row in sections["토지"]:
+                번호_match = re.match(r'^(\d+)', str(row[0]).strip())
+                번호 = 번호_match.group(1) if 번호_match else "1"
+                토지_by_번호[번호] = row
+            
+            for 번호, row in 토지_by_번호.items():
+                소재지 = (row[1] or "").replace('\n', ' ').strip()
+                소재지 = re.sub(r'^\d+\.\s*', '', 소재지)
+                지목 = (row[3] or "").strip() if len(row) > 3 else ""
+                면적 = (row[4] or "").strip() if len(row) > 4 else ""
+                result["토지"].append({
+                    "번호": 번호,
+                    "소재지": convert_region(소재지),
+                    "지목": 지목,
+                    "면적": 면적
+                })
+            
+            # ===== 전유부분: 마지막 유효 행 =====
+            if sections["전유부분"]:
+                row = sections["전유부분"][-1]
+                건물번호 = (row[2] or "").replace('\n', ' ').strip() if len(row) > 2 else ""
+                건물내역 = (row[3] or "").replace('\n', ' ').strip() if len(row) > 3 else ""
+                
+                if result["동명칭"] and result["동명칭"] not in 건물번호:
+                    건물번호 = f"{result['동명칭']} {건물번호}"
+                
+                result["건물번호"] = 건물번호
+                
+                구조_match = re.search(r'([가-힣]+조)', 건물내역)
+                면적_match = re.search(r'([\d.]+㎡)', 건물내역)
+                result["구조"] = 구조_match.group(1) if 구조_match else ""
+                result["면적"] = 면적_match.group(1) if 면적_match else ""
+            
+            # ===== 대지권: 마지막 유효 행 =====
+            if sections["대지권"]:
+                row = sections["대지권"][-1]
+                
+                # 헤더에서 인덱스 찾기
+                대지권종류_idx = 1
+                대지권비율_idx = 3
+                for idx, col in enumerate(대지권_header):
+                    if col and "대지권종류" in str(col):
+                        대지권종류_idx = idx
+                    if col and "대지권비율" in str(col):
+                        대지권비율_idx = idx
+                
+                if len(row) > 대지권종류_idx:
+                    종류_raw = (row[대지권종류_idx] or "").replace('\n', ' ').strip()
+                    종류_match = re.search(r'(소유권|지상권|전세권)', 종류_raw)
+                    result["대지권종류"] = 종류_match.group(1) if 종류_match else 종류_raw
+                
+                if len(row) > 대지권비율_idx:
+                    비율_raw = (row[대지권비율_idx] or "").replace('\n', ' ').strip()
+                    result["대지권비율"] = 비율_raw
+            
+            # 아파트명 없으면 갑구에서 찾기
             if not result["아파트명"]:
                 full_text = "\n".join([p.extract_text() or "" for p in pdf.pages])
                 갑구_match = re.search(r'【\s*갑\s*구\s*】(.+?)【\s*을\s*구\s*】', full_text, re.DOTALL)
@@ -1154,13 +1135,13 @@ def parse_registry_pdf(uploaded_file):
                     아파트_match = re.search(r'([가-힣A-Za-z0-9]+(?:아파트|빌라|오피스텔|주상복합|타운|파크|힐스|뷰|애비뉴|타워|팰리스|하이츠))', 갑구_match.group(1))
                     if 아파트_match:
                         result["아파트명"] = 아파트_match.group(1)
-                        debug["info"].append(f"아파트명 (갑구): {result['아파트명']}")
     
     except Exception as e:
         debug["errors"].append(f"PDF 파싱 오류: {str(e)}")
         return result, debug
     
     return result, debug
+
 
 
 def format_estate_text(data):
@@ -1218,7 +1199,7 @@ def show_debug(debug):
     if total_errors > 0:
         st.error(f"❌ 오류 {total_errors}건 발생")
     elif total_warnings > 0:
-        st.warning(f"⚠️ 경고 {total_warnings}건 (일부 항목 추출 실패)")
+        st.warning(f⚠️ 경고 {total_warnings}건 (일부 항목 추출 실패)")
     else:
         st.success("✅ 모든 항목 추출 성공")
     

@@ -1052,23 +1052,57 @@ def parse_registry_pdf(uploaded_file):
             if sections["1동건물"]:
                 row = sections["1동건물"][-1]
                 col2 = (row[2] or "") if len(row) > 2 else ""
-                col2_clean = col2.replace('\n', ' ')
                 
-                동_match = re.search(r'(제[가-힣\d]+동)', col2)
-                if 동_match:
-                    result["동명칭"] = 동_match.group(1)
+                # 워터마크 문자 제거 (열람용)
+                col2 = re.sub(r'열\s*람\s*용', '', col2)
+                col2 = re.sub(r'(?<=[가-힣])(열|람|용)(?=[가-힣])', '', col2)  # 글자 사이에 끼인 경우
                 
-                apt_match = re.search(r'([가-힣A-Za-z0-9]+(?:아파트|빌라|타운|오피스텔|빌|파크|힐스|애비뉴|타워|팰리스|하이츠|주상복합))', col2)
-                if apt_match:
-                    result["아파트명"] = apt_match.group(1)
+                # 줄바꿈으로 분리
+                lines = col2.split('\n')
                 
-                road_match = re.search(r'\[도로명주소\]\s*(.+?)(?:열|람|용|$)', col2_clean)
-                if road_match:
-                    result["도로명주소"] = convert_region(re.sub(r'\s+', ' ', road_match.group(1).strip()))
+                # [도로명주소] 위치 찾기
+                road_idx = -1
+                for i, line in enumerate(lines):
+                    if '[도로명주소]' in line:
+                        road_idx = i
+                        break
                 
-                소재지_text = col2_clean.split('[도로명주소]')[0] if '[도로명주소]' in col2_clean else col2_clean
-                소재지_text = re.sub(r'(열|람|용)', '', 소재지_text).strip()
-                result["1동건물표시"] = convert_region(re.sub(r'\s+', ' ', 소재지_text))
+                # 도로명주소 추출
+                if road_idx > 0:
+                    road_lines = []
+                    for i in range(road_idx + 1, len(lines)):
+                        line = lines[i].strip()
+                        if line and line not in ['열', '람', '용']:
+                            road_lines.append(line)
+                    result["도로명주소"] = convert_region(' '.join(road_lines))
+                
+                # [도로명주소] 앞부분만 사용
+                content_lines = lines[:road_idx] if road_idx > 0 else lines
+                content_lines = [l.strip() for l in content_lines if l.strip() and l.strip() not in ['열', '람', '용']]
+                
+                if content_lines:
+                    last_line = content_lines[-1]
+                    
+                    # 아파트명 패턴 체크
+                    apt_pattern = r'([가-힣A-Za-z0-9]+(?:아파트|빌라|타운|오피스텔|빌|파크|힐스|애비뉴|타워|팰리스|하이츠|주상복합))'
+                    apt_match = re.search(apt_pattern, last_line)
+                    
+                    # 동명칭 패턴 체크
+                    동_match = re.search(r'(제[가-힣\d]+동)$', last_line)
+                    
+                    if apt_match or 동_match:
+                        # 아파트명 또는 동명칭이 있으면 마지막 줄 분리
+                        if 동_match:
+                            result["동명칭"] = 동_match.group(1)
+                        
+                        if apt_match:
+                            result["아파트명"] = apt_match.group(1)
+                        
+                        # 나머지가 지번
+                        result["1동건물표시"] = convert_region(' '.join(content_lines[:-1]))
+                    else:
+                        # 둘 다 없으면 전체가 지번
+                        result["1동건물표시"] = convert_region(' '.join(content_lines))
             
             # ===== 토지: 번호별 마지막 유효 행 =====
             토지_by_번호 = {}

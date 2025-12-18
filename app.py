@@ -1178,16 +1178,44 @@ def parse_registry_pdf(uploaded_file):
             토지_items = sorted(토지_by_번지.items(), key=lambda x: (int(re.search(r'^(\d+)', x[0]).group(1)) if x[0] and re.search(r'^(\d+)', x[0]) else 0))
             
             for idx, (번지, row) in enumerate(토지_items, 1):
-                소재지 = (row[1] or "").replace('\n', ' ').strip()
-                소재지 = re.sub(r'^\d+\.\s*', '', 소재지)
-                지목 = (row[3] or "").strip() if len(row) > 3 else ""
-                면적 = (row[4] or "").strip() if len(row) > 4 else ""
-                result["토지"].append({
-                    "번호": str(idx),
-                    "소재지": convert_region(소재지),
-                    "지목": 지목,
-                    "면적": 면적
-                })
+                소재지_raw = (row[1] or "").replace('\n', ' ').strip()
+                지목_raw = (row[3] or "").strip() if len(row) > 3 else ""
+                면적_raw = (row[4] or "").strip() if len(row) > 4 else ""
+                
+                # 여러 필지가 한 행에 있는 경우 분리 (1. xxx 2. xxx 3. xxx 형태)
+                필지_matches = re.split(r'(?=\d+\.\s*[가-힣])', 소재지_raw)
+                필지_matches = [p.strip() for p in 필지_matches if p.strip()]
+                
+                if len(필지_matches) > 1:
+                    # 지목과 면적도 분리
+                    지목_list = re.findall(r'(대|전|답|임야|잡종지|도로|하천|공장용지|학교용지|주차장|창고용지|목장용지|광천지|염전|유지|양어장|수도용지|공원|체육용지|유원지|종교용지|사적지|묘지|주유소용지)', 지목_raw)
+                    면적_list = re.findall(r'([\d.]+㎡)', 면적_raw)
+                    
+                    for i, 필지 in enumerate(필지_matches):
+                        소재지 = re.sub(r'^\d+\.\s*', '', 필지).strip()
+                        지목 = 지목_list[i] if i < len(지목_list) else (지목_list[0] if 지목_list else "")
+                        면적 = 면적_list[i] if i < len(면적_list) else ""
+                        
+                        result["토지"].append({
+                            "번호": str(len(result["토지"]) + 1),
+                            "소재지": convert_region(소재지),
+                            "지목": 지목,
+                            "면적": 면적
+                        })
+                else:
+                    # 단일 필지
+                    소재지 = re.sub(r'^\d+\.\s*', '', 소재지_raw)
+                    지목 = re.search(r'(대|전|답|임야|잡종지)', 지목_raw)
+                    지목 = 지목.group(1) if 지목 else 지목_raw
+                    면적_match = re.search(r'([\d.]+㎡)', 면적_raw)
+                    면적 = 면적_match.group(1) if 면적_match else 면적_raw
+                    
+                    result["토지"].append({
+                        "번호": str(len(result["토지"]) + 1),
+                        "소재지": convert_region(소재지),
+                        "지목": 지목,
+                        "면적": 면적
+                    })
             
             # ===== 전유부분: 마지막 유효 행 =====
             if sections["전유부분"]:
@@ -1205,26 +1233,29 @@ def parse_registry_pdf(uploaded_file):
                 result["구조"] = 구조_match.group(1) if 구조_match else ""
                 result["면적"] = 면적_match.group(1) if 면적_match else ""
             
-            # ===== 대지권: 마지막 유효 행 =====
+            # ===== 대지권: 소유권/지상권/전세권이 있는 마지막 유효 행 =====
             if sections["대지권"]:
-                row = sections["대지권"][-1]
+                # 대지권종류가 있는 행 찾기
+                valid_대지권_row = None
+                for row in sections["대지권"]:
+                    종류_raw = (row[1] or "").replace('\n', ' ').strip() if len(row) > 1 else ""
+                    if re.search(r'(소유권|지상권|전세권)', 종류_raw):
+                        valid_대지권_row = row
                 
-                대지권종류_idx = 1
-                대지권비율_idx = 3
-                for idx, col in enumerate(대지권_header):
-                    if col and "대지권종류" in str(col):
-                        대지권종류_idx = idx
-                    if col and "대지권비율" in str(col):
-                        대지권비율_idx = idx
-                
-                if len(row) > 대지권종류_idx:
-                    종류_raw = (row[대지권종류_idx] or "").replace('\n', ' ').strip()
-                    종류_match = re.search(r'(소유권|지상권|전세권)', 종류_raw)
-                    result["대지권종류"] = 종류_match.group(1) if 종류_match else 종류_raw
-                
-                if len(row) > 대지권비율_idx:
-                    비율_raw = (row[대지권비율_idx] or "").replace('\n', ' ').strip()
-                    result["대지권비율"] = 비율_raw
+                if valid_대지권_row:
+                    row = valid_대지권_row
+                    
+                    종류_raw = (row[1] or "").replace('\n', ' ').strip() if len(row) > 1 else ""
+                    # "1, 2, 3 소유권대지권" 또는 "소유권" 형태 지원
+                    종류_match = re.search(r'([\d,\s]*(?:소유권|지상권|전세권)(?:대지권)?)', 종류_raw)
+                    result["대지권종류"] = 종류_match.group(1).strip() if 종류_match else 종류_raw
+                    
+                    # 대지권비율: "분의" 패턴이 있는 컬럼 찾기
+                    for col in row[2:]:
+                        col_str = (col or "").replace('\n', ' ').strip()
+                        if "분의" in col_str:
+                            result["대지권비율"] = col_str
+                            break
             
             # 아파트명 없으면 갑구에서 찾기
             if not result["아파트명"]:

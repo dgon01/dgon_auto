@@ -1179,8 +1179,8 @@ def parse_registry_pdf(uploaded_file):
             
             for idx, (번지, row) in enumerate(토지_items, 1):
                 소재지_raw = (row[1] or "").replace('\n', ' ').strip()
-                지목_raw = (row[3] or "").strip() if len(row) > 3 else ""
-                면적_raw = (row[4] or "").strip() if len(row) > 4 else ""
+                지목_raw = (row[2] or "").strip() if len(row) > 2 else ""
+                면적_raw = (row[3] or "").strip() if len(row) > 3 else ""
                 
                 # 여러 필지가 한 행에 있는 경우 분리 (1. xxx 2. xxx 3. xxx 형태)
                 필지_matches = re.split(r'(?=\d+\.\s*[가-힣])', 소재지_raw)
@@ -1205,8 +1205,8 @@ def parse_registry_pdf(uploaded_file):
                 else:
                     # 단일 필지
                     소재지 = re.sub(r'^\d+\.\s*', '', 소재지_raw)
-                    지목 = re.search(r'(대|전|답|임야|잡종지)', 지목_raw)
-                    지목 = 지목.group(1) if 지목 else 지목_raw
+                    지목_match = re.search(r'(대|전|답|임야|잡종지)', 지목_raw)
+                    지목 = 지목_match.group(1) if 지목_match else 지목_raw
                     면적_match = re.search(r'([\d.]+㎡)', 면적_raw)
                     면적 = 면적_match.group(1) if 면적_match else 면적_raw
                     
@@ -1246,9 +1246,9 @@ def parse_registry_pdf(uploaded_file):
                     row = valid_대지권_row
                     
                     종류_raw = (row[1] or "").replace('\n', ' ').strip() if len(row) > 1 else ""
-                    # "1, 2, 3 소유권대지권" 또는 "소유권" 형태 지원
-                    종류_match = re.search(r'([\d,\s]*(?:소유권|지상권|전세권)(?:대지권)?)', 종류_raw)
-                    result["대지권종류"] = 종류_match.group(1).strip() if 종류_match else 종류_raw
+                    # "1, 2, 3 소유권대지권" → "소유권" 으로 단순화
+                    종류_match = re.search(r'(소유권|지상권|전세권)', 종류_raw)
+                    result["대지권종류"] = 종류_match.group(1) if 종류_match else 종류_raw
                     
                     # 대지권비율: "분의" 패턴이 있는 컬럼 찾기
                     for col in row[2:]:

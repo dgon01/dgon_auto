@@ -1941,34 +1941,15 @@ with tab1:
     st.markdown("---")
     st.markdown("### 🏛️ 위택스 등록면허세 신고")
     
-    # 위택스 서버 URL 설정
-    if 'wetax_server_url' not in st.session_state:
-        st.session_state['wetax_server_url'] = ''
-    
-    with st.expander("⚙️ 위택스 서버 설정", expanded=not st.session_state.get('wetax_server_url')):
-        st.caption("wetax_launcher.exe 실행 후 생성된 URL을 붙여넣으세요")
-        wetax_url = st.text_input(
-            "서버 URL",
-            value=st.session_state.get('wetax_server_url', ''),
-            placeholder="https://xxxx.trycloudflare.com",
-            key='wetax_url_input',
-            label_visibility='collapsed'
-        )
-        if wetax_url != st.session_state.get('wetax_server_url', ''):
-            st.session_state['wetax_server_url'] = wetax_url
-        
-        # 연결 테스트 버튼
-        if wetax_url:
-            if st.button("🔗 연결 테스트", key='wetax_test_conn'):
-                try:
-                    test_url = wetax_url.rstrip('/') + "/"
-                    resp = requests.get(test_url, timeout=5)
-                    if resp.status_code == 200:
-                        st.success("✅ 연결 성공!")
-                    else:
-                        st.error(f"❌ 연결 실패 (상태코드: {resp.status_code})")
-                except Exception as e:
-                    st.error(f"❌ 연결 실패: {e}")
+    # 위택스 서버 상태 표시 (localhost 자동 사용)
+    try:
+        resp = requests.get("http://localhost:8000/", timeout=2)
+        if resp.status_code == 200:
+            st.success("✅ 위택스 서버 연결됨")
+        else:
+            st.warning("⚠️ 위택스 서버 응답 없음")
+    except:
+        st.error("❌ 위택스 서버에 연결할 수 없습니다. wetax_launcher.exe를 실행하세요.")
     
     # 초기화
     if 'wetax_include_addr_change' not in st.session_state:
@@ -2138,20 +2119,15 @@ with tab1:
                             "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
                         })
             
-            # URL 확인
-            wetax_url = st.session_state.get('wetax_server_url', '')
-            if not wetax_url:
-                st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
+            # API 호출 (localhost 자동 사용)
+            st.info(f"📤 총 {len(cases)}건 신고 중...")
+            result, error = call_wetax_api(cases, base_url="http://localhost:8000")
+            
+            if error:
+                st.error(f"❌ 오류: {error}")
             else:
-                # API 호출
-                st.info(f"📤 총 {len(cases)}건 신고 중...")
-                result, error = call_wetax_api(cases, base_url=wetax_url)
-                
-                if error:
-                    st.error(f"❌ 오류: {error}")
-                else:
-                    st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
-                    st.json(result)
+                st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
+                st.json(result)
 
 # =============================================================================
 # Tab 2: 자필서명정보 작성
@@ -3253,19 +3229,15 @@ with tab4:
                     "tax_base": None
                 }]
                 
-                # URL 확인
-                wetax_url = st.session_state.get('wetax_server_url', '')
-                if not wetax_url:
-                    st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
+                # API 호출 (localhost 자동 사용)
+                st.info("📤 말소 신고 중...")
+                result, error = call_wetax_api(cases, base_url="http://localhost:8000")
+                
+                if error:
+                    st.error(f"❌ 오류: {error}")
                 else:
-                    st.info("📤 말소 신고 중...")
-                    result, error = call_wetax_api(cases, base_url=wetax_url)
-                    
-                    if error:
-                        st.error(f"❌ 오류: {error}")
-                    else:
-                        st.success("✅ 위택스 말소 신고 완료!")
-                        st.json(result)
+                    st.success("✅ 위택스 말소 신고 완료!")
+                    st.json(result)
     
     # 안내 메시지
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")

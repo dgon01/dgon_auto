@@ -1793,29 +1793,49 @@ with tab1:
             if st.session_state.get('t1_debtor_addr'):
                 st.session_state['_pending_collateral_addr'] = st.session_state['t1_debtor_addr']
         def copy_from_estate():
-            # 부동산표시에서 도로명주소 추출
+            # 부동산표시에서 물건지주소 추출 (도로명주소 + 동 + 호)
             estate_text = st.session_state.get('estate_text', '')
             if not estate_text.strip():
                 st.session_state['_toast_msg'] = "⚠️ 부동산표시가 비어있습니다"
                 return
             
             import re
+            
+            # 동 추출 (첫줄에서)
+            lines = estate_text.strip().split('\n')
+            동 = ""
+            for line in lines[:3]:
+                동_match = re.search(r'제?(\d+)동', line)
+                if 동_match:
+                    동 = f"{동_match.group(1)}동"
+                    break
+            
+            # 호 추출 (전유부분에서)
+            호 = ""
+            호_match = re.search(r'제(\d+)호', estate_text)
+            if 호_match:
+                호 = f"{호_match.group(1)}호"
+            
             # 1. 도로명주소 우선
             if '[도로명주소]' in estate_text:
                 match = re.search(r'\[도로명주소\]\s*(.+?)(?:\n|$)', estate_text)
                 if match:
-                    st.session_state['_pending_collateral_addr'] = match.group(1).strip()
+                    주소 = match.group(1).strip()
+                    물건지주소 = f"{주소} {동} {호}".strip()
+                    물건지주소 = re.sub(r'\s+', ' ', 물건지주소)
+                    st.session_state['_pending_collateral_addr'] = 물건지주소
                     st.session_state['_toast_msg'] = "✅ 도로명주소 추출 완료"
                     return
             
-            # 2. 1동건물표시에서 추출 (두번째 줄)
-            lines = estate_text.strip().split('\n')
-            for line in lines[1:4]:  # 2~4번째 줄에서 찾기
-                line = line.strip()
-                if line and not line.startswith('[') and not line.startswith('전유') and not line.startswith('1.'):
-                    st.session_state['_pending_collateral_addr'] = line
-                    st.session_state['_toast_msg'] = "✅ 지번주소 추출 완료"
-                    return
+            # 2. 지번주소에서 추출 (토지의 표시 첫번째)
+            지번_match = re.search(r'토지의 표시\s*\n\s*1\.\s*(.+?)(?:\n|$)', estate_text)
+            if 지번_match:
+                주소 = 지번_match.group(1).strip()
+                물건지주소 = f"{주소} {동} {호}".strip()
+                물건지주소 = re.sub(r'\s+', ' ', 물건지주소)
+                st.session_state['_pending_collateral_addr'] = 물건지주소
+                st.session_state['_toast_msg'] = "✅ 지번주소 추출 완료"
+                return
             
             st.session_state['_toast_msg'] = "⚠️ 주소를 찾을 수 없습니다"
         
@@ -1865,9 +1885,18 @@ with tab1:
                     st.session_state['estate_text'] = formatted
                     st.session_state['estate_text_area'] = formatted
                     
-                    # 위택스용 물건지 주소 자동 채움 (widget 렌더링 전에 적용됨)
+                    # 위택스용 물건지 주소 자동 채움 (도로명주소 + 동 + 호)
+                    # 동명칭: 제1동 → 1동
+                    동 = data.get("동명칭", "").replace("제", "") if data.get("동명칭") else ""
+                    # 전유부분에서 호수 추출: 제5층 제507호 → 507호
+                    호_match = re.search(r'제(\d+)호', data.get("전유부분", ""))
+                    호 = f"{호_match.group(1)}호" if 호_match else ""
+                    
                     if data["도로명주소"]:
-                        st.session_state['_pending_collateral_addr'] = data["도로명주소"]
+                        물건지주소 = f"{data['도로명주소']} {동} {호}".strip()
+                        # 연속 공백 제거
+                        물건지주소 = re.sub(r'\s+', ' ', 물건지주소)
+                        st.session_state['_pending_collateral_addr'] = 물건지주소
                     
                 st.rerun()
     

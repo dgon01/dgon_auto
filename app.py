@@ -53,7 +53,7 @@ st.markdown(f"""
     .title-form {{ color: #FDD000; }}
     .header-subtitle {{ color: #00428B; font-size: 1.2rem; font-weight: 500; margin: 0; }}
     
-    /* 📱 반응형 CSS - 모바일 대응 */
+    /* 📱 반응형 CSS - 모바일 전체 대응 */
     @media (max-width: 768px) {{
         .header-container {{ 
             padding: 15px 20px !important; 
@@ -68,21 +68,46 @@ st.markdown(f"""
         h3 {{ font-size: 1.2rem !important; }}
         .total-amount {{ font-size: 1.5rem !important; }}
         
-        /* 버튼 모바일 대응 */
+        /* 모든 columns를 세로 배치 */
         [data-testid="stHorizontalBlock"] {{
-            flex-wrap: wrap !important;
-            gap: 8px !important;
+            flex-direction: column !important;
+            gap: 10px !important;
         }}
+        
+        /* 각 컬럼 전체 너비 */
+        [data-testid="stHorizontalBlock"] > div {{
+            width: 100% !important;
+            flex: none !important;
+            min-width: 0 !important;
+        }}
+        
+        /* 입력 필드 전체 너비 */
+        .stNumberInput, .stTextInput, .stSelectbox, .stTextArea {{
+            width: 100% !important;
+        }}
+        
+        /* 버튼 전체 너비 */
         .stButton > button {{
+            width: 100% !important;
             font-size: 0.85rem !important;
             padding: 8px 12px !important;
+        }}
+        
+        /* 탭 버튼 축소 */
+        .stTabs [data-baseweb="tab"] {{
+            padding: 8px 12px !important;
+            font-size: 0.8rem !important;
         }}
     }}
     
     /* 세로 모니터 대응 (height > width) */
     @media (max-aspect-ratio: 1/1) {{
         [data-testid="stHorizontalBlock"] {{
-            flex-wrap: wrap !important;
+            flex-direction: column !important;
+        }}
+        [data-testid="stHorizontalBlock"] > div {{
+            width: 100% !important;
+            flex: none !important;
         }}
     }}
     

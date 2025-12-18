@@ -1216,8 +1216,7 @@ def format_estate_text(data):
     
     for t in data["토지"]:
         소재지 = convert_region(t['소재지'])
-        lines.append(f"       {t['번호']}. {소재지}")
-        lines.append(f"              {t['지목']} {t['면적']}")
+        lines.append(f"       {t['번호']}. {소재지} {t['지목']} {t['면적']}")
     
     lines.append(f"      대지권의 종류: {data['대지권종류']}")
     lines.append(f"      대지권의 비율: {data['대지권비율']}")

@@ -1749,7 +1749,7 @@ with tab1:
         col_addr1, col_addr2 = st.columns([5, 1])
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
-                st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
+                st.session_state['_pending_collateral_addr'] = st.session_state['t1_debtor_addr']
         def copy_from_estate():
             # 부동산표시에서 도로명주소 추출
             estate_text = st.session_state.get('estate_text', '')
@@ -1762,7 +1762,7 @@ with tab1:
             if '[도로명주소]' in estate_text:
                 match = re.search(r'\[도로명주소\]\s*(.+?)(?:\n|$)', estate_text)
                 if match:
-                    st.session_state['input_collateral_addr'] = match.group(1).strip()
+                    st.session_state['_pending_collateral_addr'] = match.group(1).strip()
                     st.session_state['_toast_msg'] = "✅ 도로명주소 추출 완료"
                     return
             
@@ -1771,21 +1771,24 @@ with tab1:
             for line in lines[1:4]:  # 2~4번째 줄에서 찾기
                 line = line.strip()
                 if line and not line.startswith('[') and not line.startswith('전유') and not line.startswith('1.'):
-                    st.session_state['input_collateral_addr'] = line
+                    st.session_state['_pending_collateral_addr'] = line
                     st.session_state['_toast_msg'] = "✅ 지번주소 추출 완료"
                     return
             
             st.session_state['_toast_msg'] = "⚠️ 주소를 찾을 수 없습니다"
         
         with col_addr1:
-            # key만 사용하면 session_state와 자동 연동
-            if 'input_collateral_addr' not in st.session_state:
-                st.session_state['input_collateral_addr'] = ''
+            # pending 값이 있으면 적용 (부동산표시 추출 후)
+            if '_pending_collateral_addr' in st.session_state:
+                st.session_state['input_collateral_addr'] = st.session_state.pop('_pending_collateral_addr')
+            
             collateral_input = st.text_area(
                 "물건지주소 (수기입력가능)", 
+                value=st.session_state.get('input_collateral_addr', ''),
                 height=100,
-                key='input_collateral_addr'
+                key='collateral_addr_widget'
             )
+            st.session_state['input_collateral_addr'] = collateral_input
         with col_addr2:
             st.button("📋 채무자 주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
             st.button("🏠 부동산표시에서 추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)
@@ -1820,9 +1823,9 @@ with tab1:
                     st.session_state['estate_text'] = formatted
                     st.session_state['estate_text_area'] = formatted
                     
-                    # 위택스용 물건지 주소 자동 채움
+                    # 위택스용 물건지 주소 자동 채움 (widget 렌더링 전에 적용됨)
                     if data["도로명주소"]:
-                        st.session_state['input_collateral_addr'] = data["도로명주소"]
+                        st.session_state['_pending_collateral_addr'] = data["도로명주소"]
                     
                 st.rerun()
     

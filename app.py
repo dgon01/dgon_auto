@@ -955,7 +955,7 @@ for key in manual_keys:
 # 등기부 PDF 파싱 함수
 # =============================================================================
 def parse_registry_pdf(uploaded_file):
-    """집합건물 등기부 PDF에서 부동산표시 추출 - 섹션별 마지막 유효 행 방식"""
+    """집합건물 등기부 PDF에서 부동산표시 추출 - 삭선 감지 포함"""
     
     # 행정구역 변환
     행정구역_변환 = {"전라북도": "전북특별자치도", "강원도": "강원특별자치도"}
@@ -963,6 +963,37 @@ def parse_registry_pdf(uploaded_file):
         for old, new in 행정구역_변환.items():
             text = text.replace(old, new)
         return text
+    
+    def get_red_lines_from_page(page):
+        """페이지에서 빨간 삭선 y좌표 수집"""
+        red_ys = []
+        for line in page.lines:
+            color = line.get('stroking_color')
+            if color and isinstance(color, (list, tuple)) and len(color) >= 3:
+                r, g, b = color[0], color[1], color[2]
+                if r > 0.9 and g < 0.1 and b < 0.1:
+                    width = line['x1'] - line['x0']
+                    if width > 30:
+                        red_ys.append(line['top'])
+        return red_ys
+    
+    def is_번지_strikethrough(번지, page_words, red_ys):
+        """번지의 모든 위치에서 삭선 여부 확인"""
+        if not red_ys or not 번지:
+            return False
+        
+        found_positions = []
+        for word in page_words:
+            if 번지 in word['text']:
+                word_y = word['top']
+                has_strike = any(word_y < ry < word_y + 12 for ry in red_ys)
+                found_positions.append({'y': word_y, 'strike': has_strike})
+        
+        if not found_positions:
+            return False
+        
+        # 삭선 없는 위치가 하나라도 있으면 False
+        return all(pos['strike'] for pos in found_positions)
     
     result = {
         "1동건물표시": "",
@@ -998,18 +1029,33 @@ def parse_registry_pdf(uploaded_file):
             if 고유번호_match:
                 result["고유번호"] = 고유번호_match.group(1)
             
-            # 모든 테이블 수집
+            # 페이지별 빨간선/텍스트 정보 수집
+            page_info = {}
+            for page_idx, page in enumerate(pdf.pages):
+                page_info[page_idx] = {
+                    'red_ys': get_red_lines_from_page(page),
+                    'words': page.extract_words()
+                }
+            
+            # 컬러 PDF 여부
+            has_color = any(len(info['red_ys']) > 0 for info in page_info.values())
+            if has_color:
+                debug["info"].append("컬러 PDF 감지 - 삭선 기반 필터링")
+            else:
+                debug["info"].append("흑백 PDF - 번지 기반 필터링")
+            
+            # 페이지별 테이블 수집
             all_tables = []
-            for page in pdf.pages:
-                tables = page.extract_tables()
-                all_tables.extend(tables)
+            for page_idx, page in enumerate(pdf.pages):
+                for table in page.extract_tables():
+                    all_tables.append((page_idx, table))
             
             # 섹션별 데이터 행 수집
             sections = {"1동건물": [], "토지": [], "전유부분": [], "대지권": []}
             current_section = None
             대지권_header = []
             
-            for table in all_tables:
+            for page_idx, table in all_tables:
                 if not table:
                     continue
                 
@@ -1042,22 +1088,43 @@ def parse_registry_pdf(uploaded_file):
                     if row_text.strip() in ["표시번호", "순위번호"]:
                         continue
                     
-                    # 현행 데이터: "1", "2" 또는 "1\n(전 1)" 형태 (변경 등기 "1-1" 제외)
+                    # 현행 데이터: "1", "2" 또는 "1\n(전 1)" 형태
                     if current_section and row[0]:
                         row0_clean = str(row[0]).strip()
                         if re.match(r'^\d+$', row0_clean) or re.match(r'^\d+\n\(전', row0_clean):
-                            sections[current_section].append(row)
+                            
+                            # 토지 섹션: 삭선 감지 적용
+                            if current_section == "토지":
+                                소재지 = (row[1] or "") if len(row) > 1 else ""
+                                
+                                # 주소 패턴 체크
+                                if not re.search(r'(시|군|구|동|리|읍|면)\s', 소재지):
+                                    continue
+                                
+                                # 번지 추출
+                                소재지_clean = 소재지.replace('\n', ' ').strip()
+                                번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_clean)
+                                번지 = 번지_match.group(1) if 번지_match else None
+                                
+                                # 컬러 PDF면 삭선 체크
+                                if has_color and 번지:
+                                    info = page_info[page_idx]
+                                    if is_번지_strikethrough(번지, info['words'], info['red_ys']):
+                                        continue  # 말소 스킵
+                                
+                                sections["토지"].append((번지, row))
+                            else:
+                                sections[current_section].append(row)
             
             # ===== 1동건물: 마지막 유효 행 =====
             if sections["1동건물"]:
                 row = sections["1동건물"][-1]
                 col2 = (row[2] or "") if len(row) > 2 else ""
                 
-                # 워터마크 문자 제거 (열람용)
+                # 워터마크 제거
                 col2 = re.sub(r'열\s*람\s*용', '', col2)
-                col2 = re.sub(r'(?<=[가-힣])(열|람|용)(?=[가-힣])', '', col2)  # 글자 사이에 끼인 경우
+                col2 = re.sub(r'(?<=[가-힣])(열|람|용)(?=[가-힣])', '', col2)
                 
-                # 줄바꿈으로 분리
                 lines = col2.split('\n')
                 
                 # [도로명주소] 위치 찾기
@@ -1081,22 +1148,18 @@ def parse_registry_pdf(uploaded_file):
                 content_lines = [l.strip() for l in content_lines if l.strip() and l.strip() not in ['열', '람', '용']]
                 
                 if content_lines:
-                    # 번지(숫자 또는 숫자-숫자)로 끝나는 마지막 줄 찾기 = 지번 끝
+                    # 번지(숫자)로 끝나는 마지막 줄 = 지번 끝
                     지번_end_idx = -1
                     for i, line in enumerate(content_lines):
                         if re.search(r'\d+(-\d+)?$', line.strip()):
                             지번_end_idx = i
                     
                     if 지번_end_idx >= 0:
-                        # 지번: 번지까지
                         result["1동건물표시"] = convert_region(' '.join(content_lines[:지번_end_idx+1]))
                         
-                        # 건물명: 번지 이후 줄들
                         건물명_lines = content_lines[지번_end_idx+1:]
                         if 건물명_lines:
                             건물명_text = ' '.join(건물명_lines)
-                            
-                            # 동명칭 분리 (제X동, 제가동 등)
                             동_match = re.search(r'(제[가-힣\d]+동)$', 건물명_text)
                             if 동_match:
                                 result["동명칭"] = 동_match.group(1)
@@ -1104,24 +1167,15 @@ def parse_registry_pdf(uploaded_file):
                             else:
                                 result["아파트명"] = 건물명_text
                     else:
-                        # 번지 패턴 없으면 전체를 지번으로
                         result["1동건물표시"] = convert_region(' '.join(content_lines))
             
-            # ===== 토지: 같은 번지면 마지막만 (말소 제외) =====
+            # ===== 토지: 같은 번지면 마지막만 =====
             토지_by_번지 = {}
-            for row in sections["토지"]:
-                소재지_raw = (row[1] or "").replace('\n', ' ').strip()
-                소재지_raw = re.sub(r'^\d+\.\s*', '', 소재지_raw)
-                
-                # 번지 추출 (숫자-숫자 또는 숫자로 끝나는 부분)
-                번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_raw.strip())
-                번지 = 번지_match.group(1) if 번지_match else 소재지_raw
-                
-                # 같은 번지면 덮어쓰기 (마지막이 현행)
+            for 번지, row in sections["토지"]:
                 토지_by_번지[번지] = row
             
-            # 번지 순서대로 정렬해서 추가
-            토지_items = sorted(토지_by_번지.items(), key=lambda x: (int(re.search(r'^(\d+)', x[0]).group(1)) if re.search(r'^(\d+)', x[0]) else 0))
+            # 번지 숫자순 정렬
+            토지_items = sorted(토지_by_번지.items(), key=lambda x: (int(re.search(r'^(\d+)', x[0]).group(1)) if x[0] and re.search(r'^(\d+)', x[0]) else 0))
             
             for idx, (번지, row) in enumerate(토지_items, 1):
                 소재지 = (row[1] or "").replace('\n', ' ').strip()
@@ -1146,7 +1200,7 @@ def parse_registry_pdf(uploaded_file):
                 
                 result["건물번호"] = 건물번호
                 
-                구조_match = re.search(r'([가-힣]+조)', 건물내역)
+                구조_match = re.search(r'([가-힣]+조|[가-힣]+구조)', 건물내역)
                 면적_match = re.search(r'([\d.]+㎡)', 건물내역)
                 result["구조"] = 구조_match.group(1) if 구조_match else ""
                 result["면적"] = 면적_match.group(1) if 면적_match else ""
@@ -1155,7 +1209,6 @@ def parse_registry_pdf(uploaded_file):
             if sections["대지권"]:
                 row = sections["대지권"][-1]
                 
-                # 헤더에서 인덱스 찾기
                 대지권종류_idx = 1
                 대지권비율_idx = 3
                 for idx, col in enumerate(대지권_header):
@@ -1187,8 +1240,6 @@ def parse_registry_pdf(uploaded_file):
         return result, debug
     
     return result, debug
-
-
 
 def format_estate_text(data):
     """부동산 표시 포맷팅"""
@@ -1727,13 +1778,14 @@ with tab1:
             st.session_state['_toast_msg'] = "⚠️ 주소를 찾을 수 없습니다"
         
         with col_addr1:
+            # key만 사용하면 session_state와 자동 연동
+            if 'input_collateral_addr' not in st.session_state:
+                st.session_state['input_collateral_addr'] = ''
             collateral_input = st.text_area(
                 "물건지주소 (수기입력가능)", 
-                value=st.session_state.get('input_collateral_addr', ''),
                 height=100,
-                key='collateral_addr_input_widget'
+                key='input_collateral_addr'
             )
-            st.session_state['input_collateral_addr'] = collateral_input
         with col_addr2:
             st.button("📋 채무자 주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
             st.button("🏠 부동산표시에서 추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)

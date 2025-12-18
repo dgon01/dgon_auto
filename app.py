@@ -1179,8 +1179,19 @@ def parse_registry_pdf(uploaded_file):
             
             for idx, (번지, row) in enumerate(토지_items, 1):
                 소재지_raw = (row[1] or "").replace('\n', ' ').strip()
-                지목_raw = (row[2] or "").strip() if len(row) > 2 else ""
-                면적_raw = (row[3] or "").strip() if len(row) > 3 else ""
+                
+                # 지목과 면적: row[2:]에서 패턴으로 찾기 (pdfplumber 파싱 차이 대응)
+                지목_raw = ""
+                면적_raw = ""
+                for col in row[2:]:
+                    col_str = (col or "").strip()
+                    if col_str:
+                        # 지목: 대, 전, 답 등으로만 구성
+                        if re.match(r'^(대|전|답|임야|잡종지|도로|하천)(\n(대|전|답|임야|잡종지|도로|하천))*$', col_str):
+                            지목_raw = col_str
+                        # 면적: ㎡ 포함
+                        elif '㎡' in col_str:
+                            면적_raw = col_str
                 
                 # 여러 필지가 한 행에 있는 경우 분리 (1. xxx 2. xxx 3. xxx 형태)
                 필지_matches = re.split(r'(?=\d+\.\s*[가-힣])', 소재지_raw)

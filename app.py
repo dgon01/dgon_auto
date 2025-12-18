@@ -1170,11 +1170,15 @@ def format_estate_text(data):
     if data["도로명주소"]:
         lines.append(f"   [도로명주소] {data['도로명주소']}")
     
+    lines.append("")  # 빈 줄
+    
     # 전유부분의 건물의 표시
     lines.append("전유부분의 건물의 표시")
     건물번호_full = f"{data['동명칭']} {data['건물번호']}".strip()
     lines.append(f"  1. 건물의 번호 : {건물번호_full} [고유번호: {data['고유번호']}]")
     lines.append(f"      구조 및 면적 : {data['구조']} {data['면적']}")
+    
+    lines.append("")  # 빈 줄
     
     # 전유부분의 대지권의 표시
     lines.append("전유부분의 대지권의 표시")
@@ -1644,13 +1648,21 @@ with tab1:
         if st.session_state.get('input_amount') and st.session_state['input_amount'] != "0":
             st.info(f"💰 **{number_to_korean(remove_commas(st.session_state['input_amount']))}**")
         
-        col_addr1, col_addr2 = st.columns([5, 1])
+        col_addr1, col_addr2, col_addr3 = st.columns([5, 1, 1])
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
                 st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
+        def copy_from_estate():
+            # 부동산표시에서 도로명주소 추출
+            estate_text = st.session_state.get('estate_text', '')
+            if '[도로명주소]' in estate_text:
+                import re
+                match = re.search(r'\[도로명주소\]\s*(.+?)(?:\n|$)', estate_text)
+                if match:
+                    st.session_state['input_collateral_addr'] = match.group(1).strip()
         with col_addr1:
             collateral_input = st.text_area(
-                "물건지 주소 (수기 입력)", 
+                "물건지주소 (수기입력가능)", 
                 value=st.session_state.get('input_collateral_addr', ''),
                 height=100,
                 key='collateral_addr_input_widget'
@@ -1659,6 +1671,9 @@ with tab1:
         with col_addr2:
             st.write(""); st.write("")
             st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
+        with col_addr3:
+            st.write(""); st.write("")
+            st.button("🏠\n부동산\n표시추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)
 
     st.markdown("---")
     st.markdown("### 🏠 부동산의 표시")
@@ -1675,8 +1690,8 @@ with tab1:
             with st.spinner("등기부 분석 중..."):
                 data, debug = parse_registry_pdf(uploaded_registry)
                 
-                # 디버그 정보 표시
-                show_debug(debug)
+                # 디버그 정보를 session_state에 저장
+                st.session_state['estate_debug'] = debug
                 
                 if debug["errors"]:
                     pass  # 오류가 있으면 추출 결과 사용 안함
@@ -1689,7 +1704,11 @@ with tab1:
                     if data["도로명주소"]:
                         st.session_state['input_collateral_addr'] = data["도로명주소"]
                     
-                    st.rerun()
+                st.rerun()
+    
+    # 디버깅 정보 표시 (session_state에서)
+    if 'estate_debug' in st.session_state:
+        show_debug(st.session_state['estate_debug'])
     
     st.caption("※ 등기부등본 내용을 입력하세요")
     col_estate, col_pdf = st.columns([3, 1])

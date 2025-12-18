@@ -1840,9 +1840,11 @@ with tab1:
             st.session_state['_toast_msg'] = "⚠️ 주소를 찾을 수 없습니다"
         
         with col_addr1:
-            # pending 값이 있으면 적용 (부동산표시 추출 후)
+            # pending 값이 있으면 적용 (widget key도 함께 업데이트해야 함!)
             if '_pending_collateral_addr' in st.session_state:
-                st.session_state['input_collateral_addr'] = st.session_state.pop('_pending_collateral_addr')
+                new_addr = st.session_state.pop('_pending_collateral_addr')
+                st.session_state['input_collateral_addr'] = new_addr
+                st.session_state['collateral_addr_widget'] = new_addr  # widget key 업데이트
             
             collateral_input = st.text_area(
                 "물건지주소 (수기입력가능)", 

@@ -2780,7 +2780,7 @@ with tab3:
     # [1] 보수액 (Income)
     with col_income:
         st.markdown("<div class='section-header income-header'>💰 보수액 (Income)</div>", unsafe_allow_html=True)
-        with st.container(border=True):
+        with st.container(border=True, height=650):
             # 기본료: 수기 입력 가능 (자동계산 값 표시)
             auto_base_fee = final_data.get('기본료_자동', 0)
             c1, c2 = st.columns([1, 1.8])
@@ -2827,7 +2827,7 @@ with tab3:
     # [2] 공과금 (Tax)
     with col_tax:
         st.markdown("<div class='section-header tax-header'>🏛️ 공과금 (Tax)</div>", unsafe_allow_html=True)
-        with st.container(border=True):
+        with st.container(border=True, height=650):
             st.caption("[자동 계산] (calculate_all 결과 반영)")
             
             # calculate_all이 이미 계산해준 값(주소변경 포함)을 그대로 표시
@@ -2870,7 +2870,7 @@ with tab3:
     # [3] 결제 및 청구
     with col_payment:
         st.markdown("<div class='section-header total-header'>🧾 결제 및 청구</div>", unsafe_allow_html=True)
-        with st.container(border=True):
+        with st.container(border=True, height=650):
             # 총 청구금액 (calculate_all에서 계산된 값)
             grand_total = final_data.get('총 합계', 0)
             st.markdown("#### 총 청구금액")

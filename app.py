@@ -239,30 +239,6 @@ except Exception:
 LIBS_OK = PDF_OK
 
 # =============================================================================
-# 자동 다운로드 함수 (버튼 없이 바로 다운로드)
-# =============================================================================
-def auto_download(data, filename, mime_type="application/octet-stream"):
-    """파일 자동 다운로드 (JavaScript 사용)"""
-    if isinstance(data, BytesIO):
-        data = data.getvalue()
-    b64 = base64.b64encode(data).decode()
-    
-    # JavaScript로 자동 다운로드 트리거
-    js_code = f"""
-    <script>
-    (function() {{
-        var link = document.createElement('a');
-        link.href = 'data:{mime_type};base64,{b64}';
-        link.download = '{filename}';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }})();
-    </script>
-    """
-    st.components.v1.html(js_code, height=0)
-
-# =============================================================================
 # 2. 상수 및 데이터
 # =============================================================================
 TEMPLATE_FILENAMES = {
@@ -2019,8 +1995,13 @@ with tab1:
                 try:
                     pdf_buffer = make_pdf(selected_template_path, data)
                     filename = f"근저당권설정_{data['debtor_name']}.pdf"
-                    auto_download(pdf_buffer, filename, "application/pdf")
-                    st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                    st.download_button(
+                        label="⬇️ 다운로드",
+                        data=pdf_buffer,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
                 except Exception as e: st.error(f"오류: {e}")
     
     # =========================================================================
@@ -2494,8 +2475,13 @@ with tab2:
                 pdf_buffer = make_signature_pdf(template_path, signature_data)
                 
                 filename = f"자필서명정보_{tab2_owner1_name or '고객'}_{st.session_state['tab2_receipt_type']}.pdf"
-                auto_download(pdf_buffer, filename, "application/pdf")
-                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                st.download_button(
+                    label="⬇️ 다운로드",
+                    data=pdf_buffer,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
                 
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
@@ -2904,191 +2890,123 @@ with tab3:
             st.caption("체크 시 인원별 공과금 추가 (등록면허세 +6,000 / 지방교육세 +1,200 / 증지대 +3,000)")
             
             st.markdown("---")
-            # PDF/Excel 다운로드 버튼
-            if st.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK, use_container_width=True, key="btn_pdf_download"):
-                st.session_state['generate_pdf'] = True
             
-            if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True, key="btn_excel_download"):
-                st.session_state['generate_excel'] = True
-
-
-    st.markdown("---")
-    
-    # PDF 생성 처리
-    if st.session_state.get('generate_pdf', False):
-        if not FPDF_OK:
-            st.error("FPDF 라이브러리가 설치되지 않았습니다.")
-            st.session_state['generate_pdf'] = False
-        else:
-            try:
-                # PDF 데이터 준비 (3탭 위젯 값 사용)
-                pdf_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
-                if pdf_creditor == "🖊️ 직접입력":
-                    pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
-                elif pdf_creditor.startswith("📝 "):
-                    pdf_creditor = pdf_creditor[2:].strip()  # "📝 " 제거
-                
-                pdf_data = {
-                    'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
-                    'client': {
-                        '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
-                        '필지수': str(st.session_state.get('input_parcels', 1)),
-                        '금융사': pdf_creditor,
-                        '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
-                        '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
-                    },
-                    'fee_items': {
-                        '기본료': parse_int_input(final_data.get('기본료', 0)),
-                        '추가보수': parse_int_input(st.session_state.get('add_fee_val', 0)),
-                        '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
-                        '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
-                    },
-                    'fee_totals': {
-                        '보수총액': final_data.get('보수총액', 0)
-                    },
-                    'cost_items': {
-                        '등록면허세': parse_int_input(st.session_state.get('tax_등록면허세', 0)),
-                        '지방교육세': parse_int_input(st.session_state.get('tax_지방교육세', 0)),
-                        '증지대': parse_int_input(st.session_state.get('tax_증지대', 0)),
-                        '채권할인': parse_int_input(st.session_state.get('tax_채권할인', 0)),
-                        '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
-                        '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
-                        '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
-                        '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
-                        '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
-                        '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                    },
-                    'cost_totals': {
-                        '공과금 총액': (
-                            parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
-                            parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
-                            parse_int_input(st.session_state.get('tax_증지대', 0)) +
-                            parse_int_input(st.session_state.get('tax_채권할인', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                        )
-                    },
-                    'cost_section_title': '2. 공과금' if st.session_state.get('show_fee', True) else '1. 공과금',
-                    'grand_total': final_data.get('보수총액', 0) + (
-                        parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
-                        parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
-                        parse_int_input(st.session_state.get('tax_증지대', 0)) +
-                        parse_int_input(st.session_state.get('tax_채권할인', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                    )
-                }
-                
-                # PDF 생성
-                pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
-                pdf_buffer = pdf_converter.output_pdf(pdf_data)
-                
-                # 자동 다운로드 (3탭 위젯 값 사용)
-                debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
-                if not debtor_name or debtor_name.strip() == '':
-                    debtor_name = '고객'
-                
-                filename = f"근저당설정_비용내역_{debtor_name}.pdf"
-                auto_download(pdf_buffer, filename, "application/pdf")
-                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
-                st.session_state['generate_pdf'] = False
-            except Exception as e:
-                st.error(f"PDF 생성 오류: {e}")
-                st.session_state['generate_pdf'] = False
-    
-    # Excel 생성 처리
-    if st.session_state.get('generate_excel', False):
-        if not EXCEL_OK:
-            st.error("openpyxl 라이브러리가 설치되지 않았습니다.")
-            st.session_state['generate_excel'] = False
-        else:
-            try:
-                # Excel 데이터 준비 (3탭 위젯 값 사용)
-                receipt_template = st.session_state['template_status'].get('영수증')
-                
-                excel_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
-                if excel_creditor == "🖊️ 직접입력":
-                    excel_creditor = st.session_state.get('input_creditor_name', '직접입력')
-                elif excel_creditor.startswith("📝 "):
-                    excel_creditor = excel_creditor[2:].strip()  # "📝 " 제거
-                
-                excel_data = {
-                    'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
-                    'client': {
-                        '금융사': excel_creditor,
-                        '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
-                        '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
-                        '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1))
-                    },
-                    'cost_items': {
-                        '등록면허세': parse_int_input(st.session_state.get('tax_등록면허세', 0)),
-                        '지방교육세': parse_int_input(st.session_state.get('tax_지방교육세', 0)),
-                        '증지대': parse_int_input(st.session_state.get('tax_증지대', 0)),
-                        '채권할인': parse_int_input(st.session_state.get('tax_채권할인', 0)),
-                        '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
-                        '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
-                        '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
-                        '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
-                        '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
-                        '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                    },
-                    'cost_totals': {
-                        '공과금 총액': (
-                            parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
-                            parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
-                            parse_int_input(st.session_state.get('tax_증지대', 0)) +
-                            parse_int_input(st.session_state.get('tax_채권할인', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
-                            parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                        )
-                    },
-                    'grand_total': final_data.get('보수총액', 0) + (
-                        parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
-                        parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
-                        parse_int_input(st.session_state.get('tax_증지대', 0)) +
-                        parse_int_input(st.session_state.get('tax_채권할인', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
-                        parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                    )
-                }
-                
-                # Excel 생성 (템플릿 있으면 사용, 없으면 새로 생성)
-                excel_buffer = create_receipt_excel(excel_data, receipt_template)
-                
-                if excel_buffer:
-                    # 자동 다운로드 (3탭 위젯 값 사용)
-                    debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
-                    if not debtor_name or debtor_name.strip() == '':
-                        debtor_name = '고객'
+            # PDF 데이터 준비
+            pdf_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
+            if pdf_creditor == "🖊️ 직접입력":
+                pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
+            elif pdf_creditor and pdf_creditor.startswith("📝 "):
+                pdf_creditor = pdf_creditor[2:].strip()
+            
+            debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
+            if not debtor_name or debtor_name.strip() == '':
+                debtor_name = '고객'
+            
+            # PDF 다운로드 버튼 (클릭 시 바로 다운로드)
+            if FPDF_OK:
+                try:
+                    pdf_data = {
+                        'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
+                        'client': {
+                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
+                            '필지수': str(st.session_state.get('input_parcels', 1)),
+                            '금융사': pdf_creditor,
+                            '채무자': debtor_name,
+                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
+                        },
+                        'fee_items': {
+                            '기본료': parse_int_input(final_data.get('기본료', 0)),
+                            '추가보수': parse_int_input(st.session_state.get('add_fee_val', 0)),
+                            '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
+                            '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
+                        },
+                        'fee_totals': {'보수총액': final_data.get('보수총액', 0)},
+                        'cost_items': {
+                            '등록면허세': final_data.get('등록면허세', 0),
+                            '지방교육세': final_data.get('지방교육세', 0),
+                            '증지대': final_data.get('증지대', 0),
+                            '채권할인': final_data.get('채권할인금액', 0),
+                            '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
+                            '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
+                            '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
+                            '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
+                            '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
+                            '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                        },
+                        'cost_totals': {'공과금 총액': final_data.get('공과금 총액', 0)},
+                        'cost_section_title': '2. 공과금' if st.session_state.get('show_fee', True) else '1. 공과금',
+                        'grand_total': final_data.get('총 합계', 0)
+                    }
+                    pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
+                    pdf_buffer = pdf_converter.output_pdf(pdf_data)
                     
-                    filename = f"영수증_{debtor_name}.xlsx"
-                    auto_download(excel_buffer, filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                    st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
-                    st.session_state['generate_excel'] = False
-                else:
-                    st.error("Excel 생성에 실패했습니다.")
-                    st.session_state['generate_excel'] = False
-            except Exception as e:
-                st.error(f"Excel 생성 오류: {e}")
-                st.session_state['generate_excel'] = False
+                    st.download_button(
+                        label="📄 비용내역 PDF 다운로드",
+                        data=pdf_buffer,
+                        file_name=f"근저당설정_비용내역_{debtor_name}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="btn_pdf_download"
+                    )
+                except Exception as e:
+                    st.button("📄 비용내역 PDF 다운로드", disabled=True, use_container_width=True)
+                    st.error(f"PDF 준비 오류: {e}")
+            else:
+                st.button("📄 비용내역 PDF 다운로드", disabled=True, use_container_width=True)
+            
+            # Excel 다운로드 버튼 (클릭 시 바로 다운로드)
+            if EXCEL_OK:
+                try:
+                    receipt_template = st.session_state['template_status'].get('영수증')
+                    excel_data = {
+                        'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
+                        'client': {
+                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
+                            '필지수': str(st.session_state.get('input_parcels', 1)),
+                            '금융사': pdf_creditor,
+                            '채무자': debtor_name,
+                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
+                        },
+                        'fee_items': {
+                            '기본료': parse_int_input(final_data.get('기본료', 0)),
+                            '추가보수': parse_int_input(st.session_state.get('add_fee_val', 0)),
+                            '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
+                            '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
+                        },
+                        'fee_totals': {'보수총액': final_data.get('보수총액', 0)},
+                        'cost_items': {
+                            '등록면허세': final_data.get('등록면허세', 0),
+                            '지방교육세': final_data.get('지방교육세', 0),
+                            '증지대': final_data.get('증지대', 0),
+                            '채권할인': final_data.get('채권할인금액', 0),
+                            '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
+                            '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
+                            '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
+                            '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
+                            '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
+                            '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                        },
+                        'cost_totals': {'공과금 총액': final_data.get('공과금 총액', 0)}
+                    }
+                    excel_buffer = create_receipt_excel(excel_data, receipt_template)
+                    
+                    if excel_buffer:
+                        st.download_button(
+                            label="🏦 영수증 Excel 다운로드",
+                            data=excel_buffer,
+                            file_name=f"영수증_{debtor_name}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key="btn_excel_download"
+                        )
+                    else:
+                        st.button("🏦 영수증 Excel 다운로드", disabled=True, use_container_width=True)
+                except Exception as e:
+                    st.button("🏦 영수증 Excel 다운로드", disabled=True, use_container_width=True)
+            else:
+                st.button("🏦 영수증 Excel 다운로드", disabled=True, use_container_width=True)
 
-# =============================================================================
+
 # Tab 4: 말소 문서 작성
 # =============================================================================
 with tab4:
@@ -3347,8 +3265,13 @@ with tab4:
                 
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
                 filename = f"{malso_prefix}_{holder_name}_자필서명정보.pdf"
-                auto_download(pdf_buffer, filename, "application/pdf")
-                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                st.download_button(
+                    label="⬇️ 자필서명정보 다운로드",
+                    data=pdf_buffer,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
             else:
                 st.error("자필서명정보 템플릿(자필서명정보_서면_템플릿.pdf)이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
@@ -3383,8 +3306,13 @@ with tab4:
                 if os.path.exists(power_template_path):
                     pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
                     filename = f"{malso_prefix}_{holder_name}_위임장.pdf"
-                    auto_download(pdf_buffer, filename, "application/pdf")
-                    st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                    st.download_button(
+                        label="⬇️ 위임장 다운로드",
+                        data=pdf_buffer,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
                 else:
                     st.error("위임장 템플릿 파일이 없습니다. (말소_위임장.pdf)")
             else:
@@ -3416,8 +3344,13 @@ with tab4:
                 
                 pdf_buffer = make_malso_termination_pdf(term_data)
                 filename = f"{malso_prefix}_{holder_name}_해지증서.pdf"
-                auto_download(pdf_buffer, filename, "application/pdf")
-                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                st.download_button(
+                    label="⬇️ 해지증서 다운로드",
+                    data=pdf_buffer,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
             else:
                 st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
@@ -3447,8 +3380,13 @@ with tab4:
                 
                 pdf_buffer = make_malso_transfer_pdf(transfer_data)
                 filename = f"{malso_prefix}_{holder_name}_이관증명서.pdf"
-                auto_download(pdf_buffer, filename, "application/pdf")
-                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                st.download_button(
+                    label="⬇️ 이관증명서 다운로드",
+                    data=pdf_buffer,
+                    file_name=filename,
+                    mime="application/pdf",
+                    use_container_width=True
+                )
             else:
                 st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:

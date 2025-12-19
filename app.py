@@ -149,6 +149,12 @@ st.markdown(f"""
     .total-box {{ background-color: #ff0033; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3); }}
     .total-amount {{ font-size: 2rem; font-weight: 800; }}
     [data-testid="stContainer"] {{ background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9ecef; }}
+    
+    /* 3탭 컬럼 높이 동일하게 */
+    [data-testid="stHorizontalBlock"] {{ align-items: stretch !important; }}
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div {{ height: 100%; }}
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div > [data-testid="stVerticalBlock"] {{ height: 100%; }}
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div > [data-testid="stVerticalBlock"] > [data-testid="element-container"]:last-child > div {{ height: 100%; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1704,22 +1710,46 @@ with tab1:
     col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
     with col_header[1]:
         if st.button("🔄 초기화", type="secondary", key="reset_tab1", use_container_width=True, help="모든 입력 초기화"):
+            # 날짜
             st.session_state['input_date'] = datetime.now().date()
-            st.session_state['t1_debtor_name'] = "" # 키 초기화
-            st.session_state['t1_debtor_addr'] = ""
-            st.session_state['t1_debtor_rrn'] = ""
-            st.session_state['t1_owner_name'] = ""
-            st.session_state['t1_owner_addr'] = ""
-            st.session_state['t1_owner_rrn'] = ""
-            st.session_state['contract_type'] = "개인"
-            st.session_state['guarantee'] = "한정근담보"
-            st.session_state['amount_raw_input'] = ""
-            st.session_state['input_amount'] = ""
-            st.session_state['input_collateral_addr'] = ""
-            st.session_state['collateral_addr_input'] = ""
+            
+            # 채권자 관련
+            st.session_state['input_creditor'] = list(CREDITORS.keys())[0]
+            st.session_state['t1_creditor_select'] = list(CREDITORS.keys())[0]
+            st.session_state['input_creditor_name'] = ''
+            st.session_state['input_creditor_corp_num'] = ''
+            st.session_state['input_creditor_addr'] = ''
+            st.session_state['direct_creditor_name'] = ''
+            st.session_state['direct_corp_num'] = ''
+            st.session_state['direct_creditor_addr'] = ''
+            
+            # 채무자 관련
+            st.session_state['t1_debtor_name'] = ''
+            st.session_state['t1_debtor_addr'] = ''
+            st.session_state['t1_debtor_rrn'] = ''
+            st.session_state['input_debtor_rrn'] = ''
+            
+            # 소유자 관련
+            st.session_state['t1_owner_name'] = ''
+            st.session_state['t1_owner_addr'] = ''
+            st.session_state['t1_owner_rrn'] = ''
+            st.session_state['input_owner_rrn'] = ''
+            
+            # 계약 유형
+            st.session_state['contract_type'] = '개인'
+            st.session_state['guarantee'] = '한정근담보'
+            
+            # 금액
+            st.session_state['amount_raw_input'] = ''
+            st.session_state['input_amount'] = ''
+            
+            # 물건지
+            st.session_state['input_collateral_addr'] = ''
+            st.session_state['collateral_addr_input'] = ''
             st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
-            st.session_state['input_debtor_rrn'] = ""
-            st.session_state['input_owner_rrn'] = ""
+            st.session_state['estate_text_area'] = st.session_state['estate_text']
+            
+            st.success("✅ 초기화되었습니다!")
             st.rerun()
     st.markdown("---")
     
@@ -2260,13 +2290,29 @@ with tab2:
     
     with col_btn2:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2", help="모든 입력 초기화"):
+            # 등기의무자 1
             st.session_state['tab2_owner1_name'] = ''
+            st.session_state['tab2_owner1_name_input'] = ''
             st.session_state['tab2_owner1_rrn'] = ''
+            st.session_state['tab2_owner1_rrn_input'] = ''
+            
+            # 등기의무자 2
             st.session_state['tab2_owner2_name'] = ''
+            st.session_state['tab2_owner2_name_input'] = ''
             st.session_state['tab2_owner2_rrn'] = ''
+            st.session_state['tab2_owner2_rrn_input'] = ''
+            
+            # 부동산 표시
             st.session_state['tab2_estate'] = ''
+            st.session_state['tab2_estate_input'] = ''
+            
+            # 날짜
             st.session_state['tab2_date'] = datetime.now().date()
+            st.session_state['tab2_date_input'] = datetime.now().date()
+            
+            # 신청서 구분
             st.session_state['tab2_receipt_type'] = '전자신청'
+            
             st.success("✅ 초기화되었습니다!")
             st.rerun()
     
@@ -2456,17 +2502,62 @@ with tab3:
             st.session_state['calc_amount_input'] = amount_val
             st.session_state['tab3_estate_input'] = estate_val
             
+            # 수기입력 기본값 설정 (금융사에 따라)
+            if "(주)유노스프레스티지대부" in creditor_val:
+                st.session_state['cost_manual_제증명'] = "20,000"
+                st.session_state['cost_manual_교통비'] = "100,000"
+                st.session_state['cost_manual_원인증서'] = "50,000"
+            else:
+                st.session_state['cost_manual_제증명'] = "50,000"
+                st.session_state['cost_manual_교통비'] = "100,000"
+                st.session_state['cost_manual_원인증서'] = "50,000"
+            
             st.success("✅ 1탭 정보가 동기화되었습니다!")
             st.rerun()
     with col_btn2:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab3", help="모든 입력 초기화"):
+            # 기본 정보
             st.session_state['calc_data'] = {}
             st.session_state['show_fee'] = True
             st.session_state['input_parcels'] = 1
+            st.session_state['calc_parcels_input'] = 1
             st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
+            st.session_state['calc_rate_input'] = st.session_state['input_rate']
+            
+            # 주소변경
             st.session_state['use_address_change'] = False
             st.session_state['address_change_count'] = 1
-            handle_creditor_change()
+            
+            # 금액
+            st.session_state['calc_amount_input'] = ''
+            st.session_state['input_amount'] = ''
+            
+            # 채무자, 채권자, 물건지
+            st.session_state['tab3_creditor_select'] = list(CREDITORS.keys())[0]
+            st.session_state['tab3_debtor_input'] = ''
+            st.session_state['tab3_estate_input'] = ''
+            
+            # 공과금 자동계산 항목
+            st.session_state['tax_등록면허세'] = '0'
+            st.session_state['tax_지방교육세'] = '0'
+            st.session_state['tax_증지대'] = '0'
+            st.session_state['tax_채권할인'] = '0'
+            
+            # 수기입력 항목
+            st.session_state['cost_manual_제증명'] = '0'
+            st.session_state['cost_manual_교통비'] = '0'
+            st.session_state['cost_manual_원인증서'] = '0'
+            st.session_state['cost_manual_주소변경'] = '0'
+            st.session_state['cost_manual_확인서면'] = '0'
+            st.session_state['cost_manual_선순위 말소'] = '0'
+            
+            # 보수 항목
+            st.session_state['base_fee_val'] = '0'
+            st.session_state['add_fee_val'] = '0'
+            st.session_state['etc_fee_val'] = '0'
+            st.session_state['disc_fee_val'] = '0'
+            
+            st.success("✅ 초기화되었습니다!")
             st.rerun()
     st.markdown("---")
 
@@ -2697,8 +2788,6 @@ with tab3:
             st.markdown("---")
             # 참고 기준 (보수액 섹션 하단으로 이동)
             st.info("**ℹ️ 참고 기준 (주소변경비용)**\n* 유노스/드림앤캐쉬: 20,000원/인\n* 기타 금융사: 50,000원/인\n* (체크 시 수기입력란에 자동반영)")
-            # 공과금 섹션과 높이 맞추기 위한 여백
-            st.markdown("<div style='height: 185px;'></div>", unsafe_allow_html=True)
 
     # [2] 공과금 (Tax)
     with col_tax:
@@ -2792,7 +2881,9 @@ with tab3:
 
             cp1, cp2 = st.columns([1.5, 1])
             with cp1: st.checkbox("주소변경 포함", key='use_address_change', on_change=update_address_cost)
-            with cp2: st.number_input("", min_value=1, value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
+            with cp2: 
+                addr_count = st.session_state.get('address_change_count', 1)
+                st.number_input("", min_value=1, value=int(addr_count), key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
             st.caption("체크 시 공과금 + 수기비용 자동 합산")
             
             st.markdown("---")
@@ -2802,9 +2893,6 @@ with tab3:
             
             if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True, key="btn_excel_download"):
                 st.session_state['generate_excel'] = True
-            
-            # 공과금 섹션과 높이 맞추기 위한 여백
-            st.markdown("<div style='height: 230px;'></div>", unsafe_allow_html=True)
 
 
     st.markdown("---")
@@ -3047,13 +3135,39 @@ with tab4:
             st.rerun()
     with col_btn2:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4", help="모든 입력 초기화"):
-            for key in ['malso_type', 'malso_obligor_name', 'malso_obligor_id', 'malso_obligor_addr', 
-                       'malso_obligor_rep', 'malso_holder1_name', 'malso_holder1_rrn', 'malso_holder1_addr',
-                       'malso_holder2_name', 'malso_holder2_rrn', 'malso_holder2_addr',
-                       'malso_estate_detail', 'malso_cancel_text', 'malso_from_branch', 'malso_to_branch']:
-                st.session_state[key] = ''
-            st.session_state['malso_type'] = "근저당권"
+            # 말소 유형
+            st.session_state['malso_type'] = '근저당권'
+            
+            # 등기의무자 (채권자)
+            st.session_state['malso_obligor_name'] = ''
+            st.session_state['malso_obligor_id'] = ''
+            st.session_state['malso_obligor_addr'] = ''
+            st.session_state['malso_obligor_rep'] = ''
+            
+            # 등기권리자 1
+            st.session_state['malso_holder1_name'] = ''
+            st.session_state['malso_holder1_rrn'] = ''
+            st.session_state['malso_holder1_addr'] = ''
+            
+            # 등기권리자 2
+            st.session_state['malso_holder2_name'] = ''
+            st.session_state['malso_holder2_rrn'] = ''
+            st.session_state['malso_holder2_addr'] = ''
+            
+            # 부동산 표시
+            st.session_state['malso_estate_detail'] = ''
+            
+            # 말소 내역
+            st.session_state['malso_cancel_text'] = ''
+            
+            # 이전등기소
+            st.session_state['malso_from_branch'] = ''
+            st.session_state['malso_to_branch'] = ''
+            
+            # 원인일자
             st.session_state['malso_cause_date'] = datetime.now().date()
+            st.session_state['malso_cause_date_input'] = datetime.now().date()
+            
             st.success("✅ 초기화되었습니다!")
             st.rerun()
     

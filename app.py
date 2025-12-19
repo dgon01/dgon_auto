@@ -2811,7 +2811,21 @@ with tab3:
             
             # 주소변경 추가 금액 계산
             use_addr = st.session_state.get('use_address_change', False)
-            addr_count = int(st.session_state.get('address_change_count', 1)) if use_addr else 0
+            
+            # 체크박스가 방금 체크된 경우 인원수 1로 강제
+            if st.session_state.get('_addr_just_checked', False):
+                st.session_state['_addr_just_checked'] = False
+                addr_count = 1 if use_addr else 0
+            else:
+                # 상태 변경 감지 (이전 상태와 비교)
+                prev_use_addr = st.session_state.get('_prev_use_address_change', False)
+                if use_addr and not prev_use_addr:
+                    # 방금 체크됨 - 인원수 1로 초기화
+                    addr_count = 1
+                else:
+                    addr_count = int(st.session_state.get('address_change_count', 1)) if use_addr else 0
+            
+            st.session_state['_prev_use_address_change'] = use_addr
             
             # 최종값 = 기본값 + 주소변경 추가값
             final_reg_tax = auto_reg_tax + (6000 * addr_count)
@@ -2898,15 +2912,14 @@ with tab3:
             
             def on_addr_checkbox_change():
                 """주소변경 체크박스 변경 시 - 인원수 1로 초기화"""
-                if st.session_state.get('use_address_change', False):
-                    st.session_state['address_change_count'] = 1
+                st.session_state['address_change_count'] = 1
+                st.session_state['_addr_just_checked'] = True  # 플래그 설정
                 update_address_cost()
 
             cp1, cp2 = st.columns([1.5, 1])
             with cp1: 
                 st.checkbox("주소변경 포함", key='use_address_change', on_change=on_addr_checkbox_change)
             with cp2: 
-                # 인원수 입력 - key만 사용 (session_state에서 자동으로 값 가져옴)
                 st.number_input("인원", min_value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
             st.caption("체크 시 인원별 공과금 자동 추가 (등록면허세/지방교육세/증지대)")
             

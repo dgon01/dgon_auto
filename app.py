@@ -925,7 +925,8 @@ def make_malso_transfer_pdf(data):
 keys_to_init = [
     'base_fee_val', 'add_fee_val', 'etc_fee_val', 'disc_fee_val', 
     'cost_manual_제증명', 'cost_manual_교통비', 'cost_manual_원인증서', 
-    'cost_manual_주소변경', 'cost_manual_확인서면', 'cost_manual_선순위 말소'
+    'cost_manual_주소변경', 'cost_manual_확인서면', 'cost_manual_선순위 말소',
+    'tax_등록면허세', 'tax_지방교육세', 'tax_증지대', 'tax_채권할인'
 ]
 for k in keys_to_init:
     if k not in st.session_state: st.session_state[k] = "0"
@@ -1457,18 +1458,18 @@ def handle_creditor_change():
         st.session_state['input_creditor_corp_num'] = ""
         st.session_state['input_creditor_addr'] = ""
     else:
-        # 유노스프레스티지일 경우만 제증명 20,000원, 나머지는 모두 0원
+        # 유노스프레스티지일 경우 제증명 20,000원, 나머지 기본값
         if "(주)유노스프레스티지대부" in creditor_key:
-            st.session_state['cost_manual_제증명'] = format_number_with_comma("20000")
-            st.session_state['cost_manual_교통비'] = "0"
-            st.session_state['cost_manual_원인증서'] = "0"
+            st.session_state['cost_manual_제증명'] = "20,000"
+            st.session_state['cost_manual_교통비'] = "100,000"
+            st.session_state['cost_manual_원인증서'] = "50,000"
             st.session_state['cost_manual_확인서면'] = "0"
             st.session_state['cost_manual_선순위 말소'] = "0"
         else:
-            # 유노스프레스티지가 아닌 경우 모두 0원
-            st.session_state['cost_manual_제증명'] = "0"
-            st.session_state['cost_manual_교통비'] = "0"
-            st.session_state['cost_manual_원인증서'] = "0"
+            # 기타 금융사: 제증명 50,000, 교통비 100,000, 원인증서 50,000
+            st.session_state['cost_manual_제증명'] = "50,000"
+            st.session_state['cost_manual_교통비'] = "100,000"
+            st.session_state['cost_manual_원인증서'] = "50,000"
             st.session_state['cost_manual_확인서면'] = "0"
             st.session_state['cost_manual_선순위 말소'] = "0"
         st.session_state['cost_manual_주소변경'] = "0" # 주소변경은 체크박스로만 제어
@@ -2586,15 +2587,15 @@ with tab3:
                 on_change=on_tab3_direct_name_change
             )
         
-        # 유노스프레스티지 선택 시 제증명 20,000원 자동 설정 (최초 렌더링 시에도 적용)
+        # 유노스프레스티지 선택 시 제증명 20,000원 자동 설정
         if "(주)유노스프레스티지대부" in selected_creditor_tab3:
             current_cert_fee = st.session_state.get('cost_manual_제증명', '0')
-            # 숫자 0, 문자열 "0", 빈값 등 모두 체크
             try:
                 cert_fee_val = int(str(current_cert_fee).replace(',', '').replace('원', '').strip() or '0')
             except:
                 cert_fee_val = 0
-            if cert_fee_val == 0:
+            # 0이거나 기본값(50,000)이면 20,000으로 변경
+            if cert_fee_val == 0 or cert_fee_val == 50000:
                 st.session_state['cost_manual_제증명'] = "20,000"
     
     # 채무자 입력
@@ -2696,46 +2697,42 @@ with tab3:
             st.markdown("---")
             # 참고 기준 (보수액 섹션 하단으로 이동)
             st.info("**ℹ️ 참고 기준 (주소변경비용)**\n* 유노스/드림앤캐쉬: 20,000원/인\n* 기타 금융사: 50,000원/인\n* (체크 시 수기입력란에 자동반영)")
+            # 공과금 섹션과 높이 맞추기 위한 여백
+            st.markdown("<div style='height: 185px;'></div>", unsafe_allow_html=True)
 
     # [2] 공과금 (Tax)
     with col_tax:
         st.markdown("<div class='section-header tax-header'>🏛️ 공과금 (Tax)</div>", unsafe_allow_html=True)
         with st.container(border=True):
-            st.caption("[자동 계산]")
+            st.caption("[자동 계산] (수정 가능)")
             
-            # 세부내역을 확실하게 표시
-            tax_col1, tax_col2 = st.columns([1.5, 1])
+            # 자동계산 값 가져오기
+            auto_reg_tax = final_data.get("등록면허세", 0)
+            auto_edu_tax = final_data.get("지방교육세", 0)
+            auto_stamp = final_data.get("증지대", 0)
+            auto_bond = final_data.get("채권할인금액", 0)
+            
+            # 수기입력 값이 0이면 자동계산 값으로 초기화
+            if st.session_state.get('tax_등록면허세', "0") == "0" and auto_reg_tax > 0:
+                st.session_state['tax_등록면허세'] = format_number_with_comma(auto_reg_tax)
+            if st.session_state.get('tax_지방교육세', "0") == "0" and auto_edu_tax > 0:
+                st.session_state['tax_지방교육세'] = format_number_with_comma(auto_edu_tax)
+            if st.session_state.get('tax_증지대', "0") == "0" and auto_stamp > 0:
+                st.session_state['tax_증지대'] = format_number_with_comma(auto_stamp)
+            if st.session_state.get('tax_채권할인', "0") == "0" and auto_bond > 0:
+                st.session_state['tax_채권할인'] = format_number_with_comma(auto_bond)
             
             # 등록면허세
-            with tax_col1:
-                st.markdown("<div class='row-label'>등록면허세</div>", unsafe_allow_html=True)
-            with tax_col2:
-                reg_tax = final_data.get("등록면허세", 0)
-                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(reg_tax)} 원</div>", unsafe_allow_html=True)
+            make_row("등록면허세", st.session_state['tax_등록면허세'], "tax_등록면허세", format_cost_input)
             
             # 지방교육세
-            tax_col1, tax_col2 = st.columns([1.5, 1])
-            with tax_col1:
-                st.markdown("<div class='row-label'>지방교육세</div>", unsafe_allow_html=True)
-            with tax_col2:
-                edu_tax = final_data.get("지방교육세", 0)
-                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(edu_tax)} 원</div>", unsafe_allow_html=True)
+            make_row("지방교육세", st.session_state['tax_지방교육세'], "tax_지방교육세", format_cost_input)
             
             # 증지대
-            tax_col1, tax_col2 = st.columns([1.5, 1])
-            with tax_col1:
-                st.markdown("<div class='row-label'>증지대</div>", unsafe_allow_html=True)
-            with tax_col2:
-                stamp = final_data.get("증지대", 0)
-                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(stamp)} 원</div>", unsafe_allow_html=True)
+            make_row("증지대", st.session_state['tax_증지대'], "tax_증지대", format_cost_input)
             
             # 채권할인
-            tax_col1, tax_col2 = st.columns([1.5, 1])
-            with tax_col1:
-                st.markdown("<div class='row-label'>채권할인</div>", unsafe_allow_html=True)
-            with tax_col2:
-                bond = final_data.get("채권할인금액", 0)
-                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(bond)} 원</div>", unsafe_allow_html=True)
+            make_row("채권할인", st.session_state['tax_채권할인'], "tax_채권할인", format_cost_input)
             
             st.markdown("---")
             st.caption("[수기 입력]")
@@ -2749,16 +2746,31 @@ with tab3:
             make_row("선순위말소", st.session_state['cost_manual_선순위 말소'], "cost_manual_선순위 말소", format_cost_input)
             
             st.markdown("---")
+            # 공과금 소계 계산 (수기입력 값 합산)
+            tax_subtotal = (
+                parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
+                parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
+                parse_int_input(st.session_state.get('tax_증지대', 0)) +
+                parse_int_input(st.session_state.get('tax_채권할인', 0)) +
+                parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
+                parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
+                parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
+                parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
+                parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
+                parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+            )
             c_label, c_val = st.columns([1, 1])
             c_label.markdown("#### 공과금 소계")
-            c_val.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</div>", unsafe_allow_html=True)
+            c_val.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(tax_subtotal)} 원</div>", unsafe_allow_html=True)
 
     # [3] 결제 및 청구
     with col_payment:
         st.markdown("<div class='section-header total-header'>🧾 결제 및 청구</div>", unsafe_allow_html=True)
         with st.container(border=True):
+            # 총 청구금액 계산 (보수총액 + 공과금 소계)
+            grand_total = final_data.get('보수총액', 0) + tax_subtotal
             st.markdown("#### 총 청구금액")
-            st.markdown(f"<div class='total-box'><div class='total-amount'>{format_number_with_comma(final_data.get('총 합계'))} 원</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='total-box'><div class='total-amount'>{format_number_with_comma(grand_total)} 원</div></div>", unsafe_allow_html=True)
             st.markdown("---")
             
             def toggle_show_fee(): st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
@@ -2790,6 +2802,9 @@ with tab3:
             
             if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True, key="btn_excel_download"):
                 st.session_state['generate_excel'] = True
+            
+            # 공과금 섹션과 높이 맞추기 위한 여백
+            st.markdown("<div style='height: 230px;'></div>", unsafe_allow_html=True)
 
 
     st.markdown("---")
@@ -2827,10 +2842,10 @@ with tab3:
                         '보수총액': final_data.get('보수총액', 0)
                     },
                     'cost_items': {
-                        '등록면허세': final_data.get('등록면허세', 0),
-                        '지방교육세': final_data.get('지방교육세', 0),
-                        '증지대': final_data.get('증지대', 0),
-                        '채권할인': final_data.get('채권할인금액', 0),
+                        '등록면허세': parse_int_input(st.session_state.get('tax_등록면허세', 0)),
+                        '지방교육세': parse_int_input(st.session_state.get('tax_지방교육세', 0)),
+                        '증지대': parse_int_input(st.session_state.get('tax_증지대', 0)),
+                        '채권할인': parse_int_input(st.session_state.get('tax_채권할인', 0)),
                         '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
                         '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
                         '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
@@ -2839,10 +2854,32 @@ with tab3:
                         '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
                     },
                     'cost_totals': {
-                        '공과금 총액': final_data.get('공과금 총액', 0)
+                        '공과금 총액': (
+                            parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
+                            parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
+                            parse_int_input(st.session_state.get('tax_증지대', 0)) +
+                            parse_int_input(st.session_state.get('tax_채권할인', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                        )
                     },
                     'cost_section_title': '2. 공과금' if st.session_state.get('show_fee', True) else '1. 공과금',
-                    'grand_total': final_data.get('총 합계', 0)
+                    'grand_total': final_data.get('보수총액', 0) + (
+                        parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
+                        parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
+                        parse_int_input(st.session_state.get('tax_증지대', 0)) +
+                        parse_int_input(st.session_state.get('tax_채권할인', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                    )
                 }
                 
                 # PDF 생성
@@ -2895,10 +2932,10 @@ with tab3:
                         '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1))
                     },
                     'cost_items': {
-                        '등록면허세': final_data.get('등록면허세', 0),
-                        '지방교육세': final_data.get('지방교육세', 0),
-                        '증지대': final_data.get('증지대', 0),
-                        '채권할인': final_data.get('채권할인금액', 0),
+                        '등록면허세': parse_int_input(st.session_state.get('tax_등록면허세', 0)),
+                        '지방교육세': parse_int_input(st.session_state.get('tax_지방교육세', 0)),
+                        '증지대': parse_int_input(st.session_state.get('tax_증지대', 0)),
+                        '채권할인': parse_int_input(st.session_state.get('tax_채권할인', 0)),
                         '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
                         '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
                         '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
@@ -2907,9 +2944,31 @@ with tab3:
                         '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
                     },
                     'cost_totals': {
-                        '공과금 총액': final_data.get('공과금 총액', 0)
+                        '공과금 총액': (
+                            parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
+                            parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
+                            parse_int_input(st.session_state.get('tax_증지대', 0)) +
+                            parse_int_input(st.session_state.get('tax_채권할인', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
+                            parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                        )
                     },
-                    'grand_total': final_data.get('총 합계', 0)
+                    'grand_total': final_data.get('보수총액', 0) + (
+                        parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
+                        parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
+                        parse_int_input(st.session_state.get('tax_증지대', 0)) +
+                        parse_int_input(st.session_state.get('tax_채권할인', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
+                        parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                    )
                 }
                 
                 # Excel 생성 (템플릿 있으면 사용, 없으면 새로 생성)

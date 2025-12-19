@@ -1995,7 +1995,7 @@ with tab1:
                 try:
                     pdf_buffer = make_pdf(selected_template_path, data)
                     st.download_button(label="⬇️ 다운로드", data=pdf_buffer, file_name=f"근저당권설정_{data['debtor_name']}.pdf", mime="application/pdf", use_container_width=True)
-                    st.success("✅ PDF 생성완료!")
+                    st.toast("✅ PDF 생성완료!", icon="✅")
                 except Exception as e: st.error(f"오류: {e}")
     
     # =========================================================================
@@ -2476,7 +2476,7 @@ with tab2:
                     use_container_width=True
                 )
                 
-                st.success("✅ PDF 생성 완료!")
+                st.toast("✅ PDF 생성 완료!", icon="✅")
                 
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
@@ -2787,11 +2787,24 @@ with tab3:
             make_row("기타보수", st.session_state['etc_fee_val'], "etc_fee_val", format_cost_input)
             make_row("할인금액", st.session_state['disc_fee_val'], "disc_fee_val", format_cost_input)
             st.markdown("---")
-            c_label, c_val = st.columns([1, 1])
-            c_label.markdown("**공급가액**"); c_val.markdown(f"<div style='text-align:right; color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액'))} 원</div>", unsafe_allow_html=True)
-            c_label.markdown("**부가세**"); c_val.markdown(f"<div style='text-align:right; color:#28a745;'>{format_number_with_comma(final_data.get('부가세'))} 원</div>", unsafe_allow_html=True)
+            
+            # 공급가액
+            r1c1, r1c2 = st.columns([1, 1.5])
+            r1c1.markdown("**공급가액**")
+            r1c2.markdown(f"<div style='text-align:right; color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액', 0))} 원</div>", unsafe_allow_html=True)
+            
+            # 부가세
+            r2c1, r2c2 = st.columns([1, 1.5])
+            r2c1.markdown("**부가세**")
+            r2c2.markdown(f"<div style='text-align:right; color:#28a745;'>{format_number_with_comma(final_data.get('부가세', 0))} 원</div>", unsafe_allow_html=True)
+            
             st.markdown("---")
-            c_label.markdown("#### 보수 총액"); c_val.markdown(f"<div style='text-align:right; color:#28a745; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('보수총액'))} 원</div>", unsafe_allow_html=True)
+            
+            # 보수 총액
+            r3c1, r3c2 = st.columns([1, 1.5])
+            r3c1.markdown("#### 보수 총액")
+            r3c2.markdown(f"<div style='text-align:right; color:#28a745; font-size:1.3rem; font-weight:bold; padding-top:5px;'>{format_number_with_comma(final_data.get('보수총액', 0))} 원</div>", unsafe_allow_html=True)
+            
             st.markdown("---")
             # 참고 기준 (보수액 섹션 하단으로 이동)
             st.info("**ℹ️ 참고 기준 (주소변경)**\n* **주소변경비용**: 유노스/드림 20,000원/인, 기타 50,000원/인\n* **공과금 추가** (인원별): 등록면허세 +6,000원, 지방교육세 +1,200원, 증지대 +3,000원")
@@ -2832,9 +2845,9 @@ with tab3:
             st.markdown("---")
             # 공과금 소계 (calculate_all에서 계산된 값 사용)
             tax_subtotal = final_data.get('공과금 총액', 0)
-            c_label, c_val = st.columns([1, 1])
-            c_label.markdown("#### 공과금 소계")
-            c_val.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(tax_subtotal)} 원</div>", unsafe_allow_html=True)
+            tc1, tc2 = st.columns([1, 1.5])
+            tc1.markdown("#### 공과금 소계")
+            tc2.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.3rem; font-weight:bold; padding-top:5px;'>{format_number_with_comma(tax_subtotal)} 원</div>", unsafe_allow_html=True)
 
     # [3] 결제 및 청구
     with col_payment:
@@ -2975,7 +2988,7 @@ with tab3:
                     use_container_width=True,
                     on_click=clear_pdf_flag
                 )
-                st.success("✅ PDF 생성 완료!")
+                st.toast("✅ PDF 생성 완료!", icon="✅")
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
                 st.session_state['generate_pdf'] = False
@@ -3064,7 +3077,7 @@ with tab3:
                         use_container_width=True,
                         on_click=clear_excel_flag
                     )
-                    st.success("✅ Excel 생성 완료!")
+                    st.toast("✅ Excel 생성 완료!", icon="✅")
                 else:
                     st.error("Excel 생성에 실패했습니다.")
                     st.session_state['generate_excel'] = False
@@ -3337,7 +3350,7 @@ with tab4:
                     mime="application/pdf",
                     use_container_width=True
                 )
-                st.success("✅ 자필서명정보 생성 완료!")
+                st.toast("✅ 자필서명정보 생성 완료!", icon="✅")
             else:
                 st.error("자필서명정보 템플릿(자필서명정보_서면_템플릿.pdf)이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
@@ -3378,7 +3391,7 @@ with tab4:
                         mime="application/pdf",
                         use_container_width=True
                     )
-                    st.success("✅ 위임장 생성 완료!")
+                    st.toast("✅ 위임장 생성 완료!", icon="✅")
                 else:
                     st.error("위임장 템플릿 파일이 없습니다. (말소_위임장.pdf)")
             else:
@@ -3416,7 +3429,7 @@ with tab4:
                     mime="application/pdf",
                     use_container_width=True
                 )
-                st.success("✅ 해지증서 생성 완료!")
+                st.toast("✅ 해지증서 생성 완료!", icon="✅")
             else:
                 st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
@@ -3452,7 +3465,7 @@ with tab4:
                     mime="application/pdf",
                     use_container_width=True
                 )
-                st.success("✅ 이관증명서 생성 완료!")
+                st.toast("✅ 이관증명서 생성 완료!", icon="✅")
             else:
                 st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:

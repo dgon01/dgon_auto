@@ -2539,29 +2539,52 @@ with tab3:
     
     # 금융사 선택 (1탭 값 기준)
     with row2_c1:
-        creditor_list = list(CREDITORS.keys()) + ["🖊️ 직접입력"]
+        # 기본 목록
+        creditor_list = list(CREDITORS.keys())
+        
+        # 직접입력한 채권자가 있으면 목록에 추가
+        direct_creditor_name = st.session_state.get('input_creditor_name', '')
+        if direct_creditor_name:
+            creditor_list.append(f"📝 {direct_creditor_name}")
+        
+        creditor_list.append("🖊️ 직접입력")
         
         # 1탭 값을 우선 사용
         current_creditor = creditor_from_tab1 if creditor_from_tab1 else creditor_list[0]
+        
+        # "🖊️ 직접입력"이면서 이름이 있으면 → "📝 이름"으로 변환
+        if current_creditor == "🖊️ 직접입력" and direct_creditor_name:
+            current_creditor = f"📝 {direct_creditor_name}"
+        
         if current_creditor not in creditor_list:
             current_creditor = creditor_list[0]
         default_index = creditor_list.index(current_creditor)
         
         def on_tab3_creditor_change():
             selected = st.session_state.get('tab3_creditor_select')
+            # "📝 이름" 선택 시 내부적으로는 직접입력으로 처리
+            if selected.startswith("📝 "):
+                st.session_state['input_creditor'] = "🖊️ 직접입력"
+                st.session_state['input_creditor_name'] = selected[2:].strip()
+            else:
+                st.session_state['input_creditor'] = selected
             st.session_state['calc_creditor_view'] = selected
-            st.session_state['input_creditor'] = selected
-            st.session_state['t1_creditor_select'] = selected  # 이 줄 추가!
-            # 금융사 변경 시 수기입력 기본값 적용
+            st.session_state['t1_creditor_select'] = st.session_state['input_creditor']
             handle_creditor_change()
         
         selected_creditor_tab3 = st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change)
         
-        # 직접입력 선택 시 채권자명 표시
+        # 직접입력 선택 시 입력 필드 표시
         if selected_creditor_tab3 == "🖊️ 직접입력":
-            direct_name = st.session_state.get('input_creditor_name', '')
-            if direct_name:
-                st.caption(f"📝 채권자: **{direct_name}**")
+            def on_tab3_direct_name_change():
+                st.session_state['input_creditor_name'] = st.session_state.get('tab3_direct_name', '')
+            
+            new_name = st.text_input(
+                "채권자 성명/상호", 
+                value=st.session_state.get('input_creditor_name', ''),
+                key='tab3_direct_name',
+                on_change=on_tab3_direct_name_change
+            )
         
         # 유노스프레스티지 선택 시 제증명 20,000원 자동 설정 (최초 렌더링 시에도 적용)
         if "(주)유노스프레스티지대부" in selected_creditor_tab3:
@@ -2597,6 +2620,8 @@ with tab3:
     creditor_for_calc = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
     if creditor_for_calc == "🖊️ 직접입력":
         creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
+    elif creditor_for_calc.startswith("📝 "):
+        creditor_for_calc = creditor_for_calc[2:].strip()  # "📝 " 제거
     
     calc_input_data = {
         '채권최고액': st.session_state.get('calc_amount_input', amount_from_tab1), 
@@ -2668,6 +2693,9 @@ with tab3:
             c_label.markdown("**부가세**"); c_val.markdown(f"<div style='text-align:right; color:#28a745;'>{format_number_with_comma(final_data.get('부가세'))} 원</div>", unsafe_allow_html=True)
             st.markdown("---")
             c_label.markdown("#### 보수 총액"); c_val.markdown(f"<div style='text-align:right; color:#28a745; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('보수총액'))} 원</div>", unsafe_allow_html=True)
+            st.markdown("---")
+            # 참고 기준 (보수액 섹션 하단으로 이동)
+            st.info("**ℹ️ 참고 기준 (주소변경비용)**\n* 유노스/드림앤캐쉬: 20,000원/인\n* 기타 금융사: 50,000원/인\n* (체크 시 수기입력란에 자동반영)")
 
     # [2] 공과금 (Tax)
     with col_tax:
@@ -2736,181 +2764,181 @@ with tab3:
             def toggle_show_fee(): st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'], key='show_fee_checkbox', on_change=toggle_show_fee)
             
-            st.markdown("#### ➕ 주소변경 추가")
-            st.caption("체크 시 공과금 + 수기비용 자동 합산")
-            
             def update_address_cost():
                 if st.session_state.get('use_address_change', False):
                     # 3탭 위젯 값 사용
                     cur_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
                     if cur_creditor == "🖊️ 직접입력": 
                         cur_creditor = st.session_state.get('input_creditor_name', '')
+                    elif cur_creditor.startswith("📝 "):
+                        cur_creditor = cur_creditor[2:].strip()
                     count = st.session_state.get('address_change_count', 1)
                     fee = (20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000) * count
                     st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
                 else:
                     st.session_state['cost_manual_주소변경'] = "0"
 
-            cp1, cp2 = st.columns([1, 1])
+            cp1, cp2 = st.columns([1.5, 1])
             with cp1: st.checkbox("주소변경 포함", key='use_address_change', on_change=update_address_cost)
-            with cp2: st.number_input("인원수", min_value=1, value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
+            with cp2: st.number_input("", min_value=1, value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
+            st.caption("체크 시 공과금 + 수기비용 자동 합산")
             
             st.markdown("---")
-            st.info("**ℹ️ 참고 기준 (주소변경비용)**\n* 유노스/드림앤캐쉬: 20,000원/인\n* 기타 금융사: 50,000원/인\n* (체크 시 수기입력란에 자동반영)")
+            # PDF/Excel 다운로드 버튼
+            if st.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK, use_container_width=True, key="btn_pdf_download"):
+                st.session_state['generate_pdf'] = True
+            
+            if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True, key="btn_excel_download"):
+                st.session_state['generate_excel'] = True
 
 
     st.markdown("---")
-    d_col1, d_col2 = st.columns(2)
     
-    # [1] 비용내역 PDF 다운로드
-    with d_col1:
-        if st.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK, use_container_width=True, key="btn_pdf_download"):
-            st.session_state['generate_pdf'] = True
-        
-        if st.session_state.get('generate_pdf', False):
-            if not FPDF_OK:
-                st.error("FPDF 라이브러리가 설치되지 않았습니다.")
+    # PDF 생성 처리
+    if st.session_state.get('generate_pdf', False):
+        if not FPDF_OK:
+            st.error("FPDF 라이브러리가 설치되지 않았습니다.")
+            st.session_state['generate_pdf'] = False
+        else:
+            try:
+                # PDF 데이터 준비 (3탭 위젯 값 사용)
+                pdf_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
+                if pdf_creditor == "🖊️ 직접입력":
+                    pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
+                elif pdf_creditor.startswith("📝 "):
+                    pdf_creditor = pdf_creditor[2:].strip()  # "📝 " 제거
+                
+                pdf_data = {
+                    'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
+                    'client': {
+                        '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
+                        '필지수': str(st.session_state.get('input_parcels', 1)),
+                        '금융사': pdf_creditor,
+                        '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
+                        '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
+                    },
+                    'fee_items': {
+                        '기본료': parse_int_input(final_data.get('기본료', 0)),
+                        '추가보수': parse_int_input(st.session_state.get('add_fee_val', 0)),
+                        '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
+                        '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
+                    },
+                    'fee_totals': {
+                        '보수총액': final_data.get('보수총액', 0)
+                    },
+                    'cost_items': {
+                        '등록면허세': final_data.get('등록면허세', 0),
+                        '지방교육세': final_data.get('지방교육세', 0),
+                        '증지대': final_data.get('증지대', 0),
+                        '채권할인': final_data.get('채권할인금액', 0),
+                        '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
+                        '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
+                        '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
+                        '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
+                        '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
+                        '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                    },
+                    'cost_totals': {
+                        '공과금 총액': final_data.get('공과금 총액', 0)
+                    },
+                    'cost_section_title': '2. 공과금' if st.session_state.get('show_fee', True) else '1. 공과금',
+                    'grand_total': final_data.get('총 합계', 0)
+                }
+                
+                # PDF 생성
+                pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
+                pdf_buffer = pdf_converter.output_pdf(pdf_data)
+                
+                # 다운로드 버튼 (3탭 위젯 값 사용)
+                debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
+                if not debtor_name or debtor_name.strip() == '':
+                    debtor_name = '고객'
+                
+                def clear_pdf_flag():
+                    st.session_state['generate_pdf'] = False
+                
+                st.download_button(
+                    label="⬇️ PDF 파일 다운로드",
+                    data=pdf_buffer,
+                    file_name=f"근저당설정_비용내역_{debtor_name}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    on_click=clear_pdf_flag
+                )
+                st.success("✅ PDF 생성 완료!")
+            except Exception as e:
+                st.error(f"PDF 생성 오류: {e}")
                 st.session_state['generate_pdf'] = False
-            else:
-                try:
-                    # PDF 데이터 준비 (3탭 위젯 값 사용)
-                    pdf_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
-                    if pdf_creditor == "🖊️ 직접입력":
-                        pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
-                    
-                    pdf_data = {
-                        'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
-                        'client': {
-                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
-                            '필지수': str(st.session_state.get('input_parcels', 1)),
-                            '금융사': pdf_creditor,
-                            '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
-                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
-                        },
-                        'fee_items': {
-                            '기본료': parse_int_input(final_data.get('기본료', 0)),
-                            '추가보수': parse_int_input(st.session_state.get('add_fee_val', 0)),
-                            '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
-                            '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
-                        },
-                        'fee_totals': {
-                            '보수총액': final_data.get('보수총액', 0)
-                        },
-                        'cost_items': {
-                            '등록면허세': final_data.get('등록면허세', 0),
-                            '지방교육세': final_data.get('지방교육세', 0),
-                            '증지대': final_data.get('증지대', 0),
-                            '채권할인': final_data.get('채권할인금액', 0),
-                            '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
-                            '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
-                            '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
-                            '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
-                            '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
-                            '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                        },
-                        'cost_totals': {
-                            '공과금 총액': final_data.get('공과금 총액', 0)
-                        },
-                        'cost_section_title': '2. 공과금' if st.session_state.get('show_fee', True) else '1. 공과금',
-                        'grand_total': final_data.get('총 합계', 0)
-                    }
-                    
-                    # PDF 생성
-                    pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
-                    pdf_buffer = pdf_converter.output_pdf(pdf_data)
-                    
+    
+    # Excel 생성 처리
+    if st.session_state.get('generate_excel', False):
+        if not EXCEL_OK:
+            st.error("openpyxl 라이브러리가 설치되지 않았습니다.")
+            st.session_state['generate_excel'] = False
+        else:
+            try:
+                # Excel 데이터 준비 (3탭 위젯 값 사용)
+                receipt_template = st.session_state['template_status'].get('영수증')
+                
+                excel_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
+                if excel_creditor == "🖊️ 직접입력":
+                    excel_creditor = st.session_state.get('input_creditor_name', '직접입력')
+                elif excel_creditor.startswith("📝 "):
+                    excel_creditor = excel_creditor[2:].strip()  # "📝 " 제거
+                
+                excel_data = {
+                    'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
+                    'client': {
+                        '금융사': excel_creditor,
+                        '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
+                        '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
+                        '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1))
+                    },
+                    'cost_items': {
+                        '등록면허세': final_data.get('등록면허세', 0),
+                        '지방교육세': final_data.get('지방교육세', 0),
+                        '증지대': final_data.get('증지대', 0),
+                        '채권할인': final_data.get('채권할인금액', 0),
+                        '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
+                        '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
+                        '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
+                        '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
+                        '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
+                        '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                    },
+                    'cost_totals': {
+                        '공과금 총액': final_data.get('공과금 총액', 0)
+                    },
+                    'grand_total': final_data.get('총 합계', 0)
+                }
+                
+                # Excel 생성 (템플릿 있으면 사용, 없으면 새로 생성)
+                excel_buffer = create_receipt_excel(excel_data, receipt_template)
+                
+                if excel_buffer:
                     # 다운로드 버튼 (3탭 위젯 값 사용)
                     debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
                     if not debtor_name or debtor_name.strip() == '':
                         debtor_name = '고객'
                     
-                    def clear_pdf_flag():
-                        st.session_state['generate_pdf'] = False
+                    def clear_excel_flag():
+                        st.session_state['generate_excel'] = False
                     
                     st.download_button(
-                        label="⬇️ PDF 파일 다운로드",
-                        data=pdf_buffer,
-                        file_name=f"근저당설정_비용내역_{debtor_name}.pdf",
-                        mime="application/pdf",
+                        label="⬇️ Excel 파일 다운로드",
+                        data=excel_buffer,
+                        file_name=f"영수증_{debtor_name}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True,
-                        on_click=clear_pdf_flag
+                        on_click=clear_excel_flag
                     )
-                    st.success("✅ PDF 생성 완료!")
-                except Exception as e:
-                    st.error(f"PDF 생성 오류: {e}")
-                    st.session_state['generate_pdf'] = False
-    
-    # [2] 영수증 Excel 다운로드
-    with d_col2:
-        if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True, key="btn_excel_download"):
-            st.session_state['generate_excel'] = True
-        
-        if st.session_state.get('generate_excel', False):
-            if not EXCEL_OK:
-                st.error("openpyxl 라이브러리가 설치되지 않았습니다.")
-                st.session_state['generate_excel'] = False
-            else:
-                try:
-                    # Excel 데이터 준비 (3탭 위젯 값 사용)
-                    receipt_template = st.session_state['template_status'].get('영수증')
-                    
-                    excel_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
-                    if excel_creditor == "🖊️ 직접입력":
-                        excel_creditor = st.session_state.get('input_creditor_name', '직접입력')
-                    
-                    excel_data = {
-                        'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
-                        'client': {
-                            '금융사': excel_creditor,
-                            '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
-                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
-                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1))
-                        },
-                        'cost_items': {
-                            '등록면허세': final_data.get('등록면허세', 0),
-                            '지방교육세': final_data.get('지방교육세', 0),
-                            '증지대': final_data.get('증지대', 0),
-                            '채권할인': final_data.get('채권할인금액', 0),
-                            '제증명': parse_int_input(st.session_state.get('cost_manual_제증명', 0)),
-                            '교통비': parse_int_input(st.session_state.get('cost_manual_교통비', 0)),
-                            '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
-                            '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
-                            '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
-                            '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-                        },
-                        'cost_totals': {
-                            '공과금 총액': final_data.get('공과금 총액', 0)
-                        },
-                        'grand_total': final_data.get('총 합계', 0)
-                    }
-                    
-                    # Excel 생성 (템플릿 있으면 사용, 없으면 새로 생성)
-                    excel_buffer = create_receipt_excel(excel_data, receipt_template)
-                    
-                    if excel_buffer:
-                        # 다운로드 버튼 (3탭 위젯 값 사용)
-                        debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
-                        if not debtor_name or debtor_name.strip() == '':
-                            debtor_name = '고객'
-                        
-                        def clear_excel_flag():
-                            st.session_state['generate_excel'] = False
-                        
-                        st.download_button(
-                            label="⬇️ Excel 파일 다운로드",
-                            data=excel_buffer,
-                            file_name=f"영수증_{debtor_name}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
-                            on_click=clear_excel_flag
-                        )
-                        st.success("✅ Excel 생성 완료!")
-                    else:
-                        st.error("Excel 생성에 실패했습니다.")
-                        st.session_state['generate_excel'] = False
-                except Exception as e:
-                    st.error(f"Excel 생성 오류: {e}")
+                    st.success("✅ Excel 생성 완료!")
+                else:
+                    st.error("Excel 생성에 실패했습니다.")
                     st.session_state['generate_excel'] = False
+            except Exception as e:
+                st.error(f"Excel 생성 오류: {e}")
+                st.session_state['generate_excel'] = False
 
 # =============================================================================
 # Tab 4: 말소 문서 작성

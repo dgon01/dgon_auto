@@ -3208,7 +3208,7 @@ with tab4:
     
     st.markdown("---")
     
-    # 5. PDF 생성 - 체크박스 선택 후 한번에 출력
+    # 5. PDF 생성 - 체크박스 선택 시 바로 다운로드 버튼 표시
     st.markdown("### 📥 문서 생성")
     
     # 체크박스로 문서 선택
@@ -3222,23 +3222,15 @@ with tab4:
     with col_chk[3]:
         chk_transfer = st.checkbox("📄 이관증명서", value=False, key="chk_malso_transfer")
     
-    # 생성 버튼
-    if st.button("🚀 선택한 문서 생성", type="primary", use_container_width=True, key="generate_malso_docs"):
-        if not any([chk_sig, chk_power, chk_term, chk_transfer]):
-            st.warning("⚠️ 생성할 문서를 선택해주세요.")
-        else:
-            st.session_state['generate_malso_sig'] = chk_sig
-            st.session_state['generate_malso_power'] = chk_power
-            st.session_state['generate_malso_term'] = chk_term
-            st.session_state['generate_malso_transfer'] = chk_transfer
+    # 말소타입 약어 및 holder_name 미리 설정
+    malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+    holder_name = st.session_state.get('malso_holder1_name', '고객') or '고객'
     
-    # PDF 생성 처리
-    if st.session_state.get('generate_malso_sig', False):
+    # 체크된 항목에 대해 바로 다운로드 버튼 표시
+    if chk_sig and PDF_OK:
         try:
-            # 자필서명정보 생성 - 서면 템플릿 사용
             sig_template = resource_path("자필서명정보_서면_템플릿.pdf")
-            if os.path.exists(sig_template) and PDF_OK:
-                # 권리자 목록 생성
+            if os.path.exists(sig_template):
                 holders = []
                 if st.session_state.get('malso_holder1_name'):
                     holders.append({
@@ -3252,35 +3244,27 @@ with tab4:
                         'rrn': st.session_state.get('malso_holder2_rrn', ''),
                         'addr': st.session_state.get('malso_holder2_addr', '')
                     })
-                
                 sig_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
                     'estate_list': st.session_state.get('malso_estate_detail', '').strip().split('\n'),
                     'holders': holders
                 }
-                
-                # 말소타입 약어
-                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
-                holder_name = st.session_state.get('malso_holder1_name', '고객')
-                
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
-                filename = f"{malso_prefix}_{holder_name}_자필서명정보.pdf"
                 st.download_button(
                     label="⬇️ 자필서명정보 다운로드",
                     data=pdf_buffer,
-                    file_name=filename,
+                    file_name=f"{malso_prefix}_{holder_name}_자필서명정보.pdf",
                     mime="application/pdf",
-                    use_container_width=True
+                    use_container_width=True,
+                    key="dl_malso_sig"
                 )
-            else:
-                st.error("자필서명정보 템플릿(자필서명정보_서면_템플릿.pdf)이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
-            st.error(f"생성 오류: {e}")
-        st.session_state['generate_malso_sig'] = False
+            st.error(f"자필서명정보 생성 오류: {e}")
     
-    if st.session_state.get('generate_malso_power', False):
+    if chk_power and PDF_OK:
         try:
-            if PDF_OK:
+            power_template_path = resource_path("말소_위임장.pdf")
+            if os.path.exists(power_template_path):
                 power_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
                     'malso_type': malso_type,
@@ -3296,102 +3280,71 @@ with tab4:
                     'estate_text': st.session_state.get('malso_estate_detail', ''),
                     'cancel_text': st.session_state.get('malso_cancel_text', '')
                 }
-                
-                # 말소타입 약어
-                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
-                holder_name = st.session_state.get('malso_holder1_name', '고객')
-                
-                # 위임장 템플릿 사용
-                power_template_path = resource_path("말소_위임장.pdf")
-                if os.path.exists(power_template_path):
-                    pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
-                    filename = f"{malso_prefix}_{holder_name}_위임장.pdf"
-                    st.download_button(
-                        label="⬇️ 위임장 다운로드",
-                        data=pdf_buffer,
-                        file_name=filename,
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                else:
-                    st.error("위임장 템플릿 파일이 없습니다. (말소_위임장.pdf)")
-            else:
-                st.error("PDF 라이브러리가 설치되지 않았습니다.")
-        except Exception as e:
-            st.error(f"생성 오류: {e}")
-        st.session_state['generate_malso_power'] = False
-    
-    if st.session_state.get('generate_malso_term', False):
-        try:
-            if PDF_OK:
-                term_data = {
-                    'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
-                    'malso_type': malso_type,
-                    'obligor_label': obligor_label,
-                    'obligor_name': st.session_state.get('malso_obligor_name', ''),
-                    'obligor_id': st.session_state.get('malso_obligor_id', ''),
-                    'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
-                    'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
-                    'holder1_name': st.session_state.get('malso_holder1_name', ''),
-                    'holder2_name': st.session_state.get('malso_holder2_name', ''),
-                    'estate_text': st.session_state.get('malso_estate_detail', ''),
-                    'cancel_text': st.session_state.get('malso_cancel_text', '')
-                }
-                
-                # 말소타입 약어
-                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
-                holder_name = st.session_state.get('malso_holder1_name', '고객')
-                
-                pdf_buffer = make_malso_termination_pdf(term_data)
-                filename = f"{malso_prefix}_{holder_name}_해지증서.pdf"
+                pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
                 st.download_button(
-                    label="⬇️ 해지증서 다운로드",
+                    label="⬇️ 위임장 다운로드",
                     data=pdf_buffer,
-                    file_name=filename,
+                    file_name=f"{malso_prefix}_{holder_name}_위임장.pdf",
                     mime="application/pdf",
-                    use_container_width=True
+                    use_container_width=True,
+                    key="dl_malso_power"
                 )
-            else:
-                st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
-            st.error(f"생성 오류: {e}")
-        st.session_state['generate_malso_term'] = False
+            st.error(f"위임장 생성 오류: {e}")
     
-    if st.session_state.get('generate_malso_transfer', False):
+    if chk_term and PDF_OK:
         try:
-            if PDF_OK:
-                transfer_data = {
-                    'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
-                    'malso_type': malso_type,
-                    'obligor_label': obligor_label,
-                    'obligor_name': st.session_state.get('malso_obligor_name', ''),
-                    'obligor_id': st.session_state.get('malso_obligor_id', ''),
-                    'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
-                    'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
-                    'estate_text': st.session_state.get('malso_estate_detail', ''),
-                    'cancel_text': st.session_state.get('malso_cancel_text', ''),
-                    'from_branch': st.session_state.get('malso_from_branch', ''),
-                    'to_branch': st.session_state.get('malso_to_branch', '')
-                }
-                
-                # 말소타입 약어
-                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
-                holder_name = st.session_state.get('malso_holder1_name', '고객')
-                
-                pdf_buffer = make_malso_transfer_pdf(transfer_data)
-                filename = f"{malso_prefix}_{holder_name}_이관증명서.pdf"
-                st.download_button(
-                    label="⬇️ 이관증명서 다운로드",
-                    data=pdf_buffer,
-                    file_name=filename,
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-            else:
-                st.error("PDF 라이브러리가 설치되지 않았습니다.")
+            term_data = {
+                'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
+                'malso_type': malso_type,
+                'obligor_label': obligor_label,
+                'obligor_name': st.session_state.get('malso_obligor_name', ''),
+                'obligor_id': st.session_state.get('malso_obligor_id', ''),
+                'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
+                'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
+                'holder1_name': st.session_state.get('malso_holder1_name', ''),
+                'holder2_name': st.session_state.get('malso_holder2_name', ''),
+                'estate_text': st.session_state.get('malso_estate_detail', ''),
+                'cancel_text': st.session_state.get('malso_cancel_text', '')
+            }
+            pdf_buffer = make_malso_termination_pdf(term_data)
+            st.download_button(
+                label="⬇️ 해지증서 다운로드",
+                data=pdf_buffer,
+                file_name=f"{malso_prefix}_{holder_name}_해지증서.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="dl_malso_term"
+            )
         except Exception as e:
-            st.error(f"생성 오류: {e}")
-        st.session_state['generate_malso_transfer'] = False
+            st.error(f"해지증서 생성 오류: {e}")
+    
+    if chk_transfer and PDF_OK:
+        try:
+            transfer_data = {
+                'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
+                'malso_type': malso_type,
+                'obligor_label': obligor_label,
+                'obligor_name': st.session_state.get('malso_obligor_name', ''),
+                'obligor_id': st.session_state.get('malso_obligor_id', ''),
+                'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
+                'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
+                'estate_text': st.session_state.get('malso_estate_detail', ''),
+                'cancel_text': st.session_state.get('malso_cancel_text', ''),
+                'from_branch': st.session_state.get('malso_from_branch', ''),
+                'to_branch': st.session_state.get('malso_to_branch', '')
+            }
+            pdf_buffer = make_malso_transfer_pdf(transfer_data)
+            st.download_button(
+                label="⬇️ 이관증명서 다운로드",
+                data=pdf_buffer,
+                file_name=f"{malso_prefix}_{holder_name}_이관증명서.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="dl_malso_transfer"
+            )
+        except Exception as e:
+            st.error(f"이관증명서 생성 오류: {e}")
     
     # =========================================================================
     # 위택스 말소 신고 섹션

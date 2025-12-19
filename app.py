@@ -1519,10 +1519,10 @@ def calculate_all(data):
     # 공과금 계산
     # (주소변경 체크 시 비용 계산 로직은 UI 콜백에서 선행 처리됨)
     use_addr_change = st.session_state.get('use_address_change', False)
-    addr_count = st.session_state.get('address_change_count', 1)
+    addr_count = int(st.session_state.get('address_change_count', 1)) if use_addr_change else 0
     
     addr_reg = 0; addr_edu = 0; addr_jeungji = 0
-    if use_addr_change and addr_count > 0:
+    if addr_count > 0:
         addr_reg = 6000 * addr_count
         addr_edu = 1200 * addr_count
         addr_jeungji = 3000 * addr_count
@@ -2625,15 +2625,19 @@ with tab3:
 
     with row1_c4:
         col_rate, col_btn = st.columns([2, 0.5])
-        rate_val = st.session_state.get('input_rate', '12.00000')
-        new_rate = col_rate.text_input("할인율(%)", value=rate_val, key='calc_rate_input')
-        if col_btn.button("🔄", help="갱신"):
-            st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
-            st.session_state['calc_rate_input'] = st.session_state['input_rate']
+        
+        # 갱신 버튼 처리 (먼저 처리)
+        if col_btn.button("🔄", help="오늘 할인율 가져오기"):
+            new_rate_val = f"{get_rate()*100:.5f}"
+            st.session_state['input_rate'] = new_rate_val
+            st.session_state['calc_rate_input'] = new_rate_val
             st.rerun()
-        # 버튼 클릭이 아닐 때만 값 동기화
-        if new_rate != rate_val:
-            st.session_state['input_rate'] = new_rate
+        
+        # 할인율 입력 (key만 사용)
+        if 'calc_rate_input' not in st.session_state:
+            st.session_state['calc_rate_input'] = st.session_state.get('input_rate', '12.00000')
+        new_rate = col_rate.text_input("할인율(%)", key='calc_rate_input')
+        st.session_state['input_rate'] = new_rate
 
     row2_c1, row2_c2 = st.columns([1, 1])
     
@@ -2743,17 +2747,14 @@ with tab3:
         with c2:
             formatted_val = str(value)
             
-            # disabled(수정불가) 항목은 계산된 값을 강제로 session_state에 주입
-            if disabled and key:
+            # disabled(수정불가) 항목은 텍스트로 표시
+            if disabled:
                 st.session_state[key] = formatted_val
-            
-            if on_change:
-                st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
+                st.markdown(f"<div style='text-align:right; padding:8px 12px; background:#2a2a2a; border-radius:4px; color:#00d26a; font-weight:bold;'>{formatted_val} 원</div>", unsafe_allow_html=True)
+            elif on_change:
+                st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed")
             else:
-                if disabled and key:
-                    st.text_input(label, key=key, label_visibility="collapsed", disabled=disabled)
-                else:
-                    st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed", disabled=disabled)
+                st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed")
 
     def format_cost_input(key):
         val = st.session_state[key]
@@ -2810,7 +2811,7 @@ with tab3:
             
             # 주소변경 추가 금액 계산
             use_addr = st.session_state.get('use_address_change', False)
-            addr_count = st.session_state.get('address_change_count', 1) if use_addr else 0
+            addr_count = int(st.session_state.get('address_change_count', 1)) if use_addr else 0
             
             # 최종값 = 기본값 + 주소변경 추가값
             final_reg_tax = auto_reg_tax + (6000 * addr_count)
@@ -2823,11 +2824,11 @@ with tab3:
             st.session_state['tax_증지대'] = format_number_with_comma(final_stamp) if final_stamp > 0 else "0"
             st.session_state['tax_채권할인'] = format_number_with_comma(auto_bond) if auto_bond > 0 else "0"
             
-            # 자동계산 항목 표시 (읽기 전용 - st.markdown 사용)
+            # 자동계산 항목 표시 (읽기 전용)
             def display_tax_row(label, value):
-                c1, c2 = st.columns([1, 1.8])
-                with c1: st.markdown(f"<div class='row-label'>{label}</div>", unsafe_allow_html=True)
-                with c2: st.markdown(f"<div style='background:#f0f0f0; padding:8px 12px; border-radius:4px; text-align:right;'>{value} 원</div>", unsafe_allow_html=True)
+                c1, c2 = st.columns([1, 1.5])
+                c1.markdown(f"**{label}**")
+                c2.markdown(f"<div style='text-align:right; padding:8px; border:1px solid #444; border-radius:4px; background:rgba(255,255,255,0.05);'>{value} 원</div>", unsafe_allow_html=True)
             
             display_tax_row("등록면허세", st.session_state['tax_등록면허세'])
             display_tax_row("지방교육세", st.session_state['tax_지방교육세'])
@@ -2877,29 +2878,35 @@ with tab3:
             st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'], key='show_fee_checkbox', on_change=toggle_show_fee)
             
             def update_address_cost():
-                """주소변경 비용 계산 및 rerun 트리거"""
+                """주소변경 비용 계산"""
                 use_addr = st.session_state.get('use_address_change', False)
-                count = st.session_state.get('address_change_count', 1)
+                count = int(st.session_state.get('address_change_count', 1))
                 
                 if use_addr:
                     # 3탭 위젯 값 사용
                     cur_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
                     if cur_creditor == "🖊️ 직접입력": 
                         cur_creditor = st.session_state.get('input_creditor_name', '')
-                    elif cur_creditor.startswith("📝 "):
+                    elif cur_creditor and cur_creditor.startswith("📝 "):
                         cur_creditor = cur_creditor[2:].strip()
                     
                     # 주소변경 비용 (금융사별)
-                    fee = (20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000) * count
+                    fee = (20000 if (cur_creditor and ("유노스" in cur_creditor or "드림" in cur_creditor)) else 50000) * count
                     st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
                 else:
                     st.session_state['cost_manual_주소변경'] = "0"
-                # 공과금은 페이지 렌더링 시 자동 재계산됨
+            
+            def on_addr_checkbox_change():
+                """주소변경 체크박스 변경 시 - 인원수 1로 초기화"""
+                if st.session_state.get('use_address_change', False):
+                    st.session_state['address_change_count'] = 1
+                update_address_cost()
 
             cp1, cp2 = st.columns([1.5, 1])
-            with cp1: st.checkbox("주소변경 포함", key='use_address_change', on_change=update_address_cost)
+            with cp1: 
+                st.checkbox("주소변경 포함", key='use_address_change', on_change=on_addr_checkbox_change)
             with cp2: 
-                # 인원수 입력
+                # 인원수 입력 - key만 사용 (session_state에서 자동으로 값 가져옴)
                 st.number_input("인원", min_value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
             st.caption("체크 시 인원별 공과금 자동 추가 (등록면허세/지방교육세/증지대)")
             

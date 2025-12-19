@@ -292,11 +292,23 @@ def remove_commas(v):
 def floor_10(v): return math.floor(v / 10) * 10
 
 def lookup_base_fee(amount):
-    LOOKUP_KEYS = [0, 30_000_000, 45_000_000, 60_000_000, 106_500_000, 150_000_000, 225_000_000]
-    LOOKUP_VALS = [150_000, 200_000, 250_000, 300_000, 350_000, 400_000, 450_000]
-    for i in range(len(LOOKUP_KEYS) - 1, -1, -1):
-        if amount > LOOKUP_KEYS[i]: return LOOKUP_VALS[i]
-    return LOOKUP_VALS[0]
+    """법무사 보수표 기준 기본료 계산 (2024.9.12 시행)"""
+    if amount <= 50_000_000:
+        return 210_000
+    elif amount <= 100_000_000:
+        return 210_000 + int((amount - 50_000_000) * 10 / 10000)
+    elif amount <= 300_000_000:
+        return 260_000 + int((amount - 100_000_000) * 9 / 10000)
+    elif amount <= 500_000_000:
+        return 440_000 + int((amount - 300_000_000) * 8 / 10000)
+    elif amount <= 1_000_000_000:
+        return 600_000 + int((amount - 500_000_000) * 7 / 10000)
+    elif amount <= 2_000_000_000:
+        return 950_000 + int((amount - 1_000_000_000) * 5 / 10000)
+    elif amount <= 20_000_000_000:
+        return 1_450_000 + int((amount - 2_000_000_000) * 4 / 10000)
+    else:
+        return 8_650_000 + int((amount - 20_000_000_000) * 1 / 10000)
 
 def get_rate():
     try:
@@ -911,7 +923,7 @@ def make_malso_transfer_pdf(data):
 
 # 상태 변수 초기화
 keys_to_init = [
-    'add_fee_val', 'etc_fee_val', 'disc_fee_val', 
+    'base_fee_val', 'add_fee_val', 'etc_fee_val', 'disc_fee_val', 
     'cost_manual_제증명', 'cost_manual_교통비', 'cost_manual_원인증서', 
     'cost_manual_주소변경', 'cost_manual_확인서면', 'cost_manual_선순위 말소'
 ]
@@ -1473,9 +1485,14 @@ def calculate_all(data):
     # 원본 데이터 보존
     data['input_amount'] = data.get('채권최고액', '')
     
-    # 기본료
-    base_fee = lookup_base_fee(amount)
+    # 기본료 (수기입력 우선, 없으면 자동계산)
+    manual_base_fee = parse_int_input(data.get('기본료_val', 0))
+    if manual_base_fee > 0:
+        base_fee = manual_base_fee
+    else:
+        base_fee = lookup_base_fee(amount)
     data['기본료'] = base_fee
+    data['기본료_자동'] = lookup_base_fee(amount)  # 자동계산 값 별도 저장
     
     add_fee = parse_int_input(data.get('추가보수_val'))
     etc_fee = parse_int_input(data.get('기타보수_val'))
@@ -1941,15 +1958,34 @@ with tab1:
     st.markdown("---")
     st.markdown("### 🏛️ 위택스 등록면허세 신고")
     
-    # 위택스 서버 상태 표시 (localhost 자동 사용)
-    try:
-        resp = requests.get("http://localhost:8000/", timeout=2)
-        if resp.status_code == 200:
-            st.success("✅ 위택스 서버 연결됨")
-        else:
-            st.warning("⚠️ 위택스 서버 응답 없음")
-    except:
-        st.error("❌ 위택스 서버에 연결할 수 없습니다. wetax_launcher.exe를 실행하세요.")
+    # 위택스 서버 URL 설정
+    if 'wetax_server_url' not in st.session_state:
+        st.session_state['wetax_server_url'] = ''
+    
+    with st.expander("⚙️ 위택스 서버 설정", expanded=not st.session_state.get('wetax_server_url')):
+        st.caption("wetax_launcher.exe 실행 후 생성된 URL을 붙여넣으세요")
+        wetax_url = st.text_input(
+            "서버 URL",
+            value=st.session_state.get('wetax_server_url', ''),
+            placeholder="https://xxxx.trycloudflare.com",
+            key='wetax_url_input',
+            label_visibility='collapsed'
+        )
+        if wetax_url != st.session_state.get('wetax_server_url', ''):
+            st.session_state['wetax_server_url'] = wetax_url
+        
+        # 연결 테스트 버튼
+        if wetax_url:
+            if st.button("🔗 연결 테스트", key='wetax_test_conn'):
+                try:
+                    test_url = wetax_url.rstrip('/') + "/"
+                    resp = requests.get(test_url, timeout=5)
+                    if resp.status_code == 200:
+                        st.success("✅ 연결 성공!")
+                    else:
+                        st.error(f"❌ 연결 실패 (상태코드: {resp.status_code})")
+                except Exception as e:
+                    st.error(f"❌ 연결 실패: {e}")
     
     # 초기화
     if 'wetax_include_addr_change' not in st.session_state:
@@ -2119,15 +2155,20 @@ with tab1:
                             "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
                         })
             
-            # API 호출 (localhost 자동 사용)
-            st.info(f"📤 총 {len(cases)}건 신고 중...")
-            result, error = call_wetax_api(cases, base_url="http://localhost:8000")
-            
-            if error:
-                st.error(f"❌ 오류: {error}")
+            # URL 확인
+            wetax_url = st.session_state.get('wetax_server_url', '')
+            if not wetax_url:
+                st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
             else:
-                st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
-                st.json(result)
+                # API 호출
+                st.info(f"📤 총 {len(cases)}건 신고 중...")
+                result, error = call_wetax_api(cases, base_url=wetax_url)
+                
+                if error:
+                    st.error(f"❌ 오류: {error}")
+                else:
+                    st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
+                    st.json(result)
 
 # =============================================================================
 # Tab 2: 자필서명정보 작성
@@ -2532,6 +2573,7 @@ with tab3:
         '금융사': creditor_for_calc,
         '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
         '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
+        '기본료_val': st.session_state.get('base_fee_val', "0"),
         '추가보수_val': st.session_state.get('add_fee_val', "0"),
         '기타보수_val': st.session_state.get('etc_fee_val', "0"),
         '할인금액': st.session_state.get('disc_fee_val', "0"),
@@ -2573,7 +2615,18 @@ with tab3:
     with col_income:
         st.markdown("<div class='section-header income-header'>💰 보수액 (Income)</div>", unsafe_allow_html=True)
         with st.container(border=True):
-            make_row("기본료", format_number_with_comma(final_data.get('기본료')), "disp_base", disabled=True)
+            # 기본료: 수기 입력 가능 (자동계산 값 표시)
+            auto_base_fee = final_data.get('기본료_자동', 0)
+            c1, c2 = st.columns([1, 1.8])
+            with c1: 
+                st.markdown("<div class='row-label'>기본료</div>", unsafe_allow_html=True)
+                st.caption(f"(자동: {format_number_with_comma(auto_base_fee)})")
+            with c2:
+                # 수기입력 값이 0이면 자동계산 값으로 초기화
+                if st.session_state.get('base_fee_val', "0") == "0" and auto_base_fee > 0:
+                    st.session_state['base_fee_val'] = format_number_with_comma(auto_base_fee)
+                st.text_input("기본료", value=st.session_state.get('base_fee_val', "0"), key="base_fee_val", on_change=format_cost_input, args=("base_fee_val",), label_visibility="collapsed")
+            
             make_row("추가보수", st.session_state['add_fee_val'], "add_fee_val", format_cost_input)
             make_row("기타보수", st.session_state['etc_fee_val'], "etc_fee_val", format_cost_input)
             make_row("할인금액", st.session_state['disc_fee_val'], "disc_fee_val", format_cost_input)
@@ -3229,15 +3282,19 @@ with tab4:
                     "tax_base": None
                 }]
                 
-                # API 호출 (localhost 자동 사용)
-                st.info("📤 말소 신고 중...")
-                result, error = call_wetax_api(cases, base_url="http://localhost:8000")
-                
-                if error:
-                    st.error(f"❌ 오류: {error}")
+                # URL 확인
+                wetax_url = st.session_state.get('wetax_server_url', '')
+                if not wetax_url:
+                    st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
                 else:
-                    st.success("✅ 위택스 말소 신고 완료!")
-                    st.json(result)
+                    st.info("📤 말소 신고 중...")
+                    result, error = call_wetax_api(cases, base_url=wetax_url)
+                    
+                    if error:
+                        st.error(f"❌ 오류: {error}")
+                    else:
+                        st.success("✅ 위택스 말소 신고 완료!")
+                        st.json(result)
     
     # 안내 메시지
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")

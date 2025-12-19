@@ -2441,11 +2441,20 @@ with tab3:
     col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
     with col_btn1:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="1탭 정보 불러오기"):
-            # 기존 위젯 키 삭제 (새 값으로 강제 동기화)
-            keys_to_delete = ['tab3_creditor_select', 'tab3_debtor_input', 'tab3_estate_input', 'calc_amount_input']
-            for k in keys_to_delete:
-                if k in st.session_state:
-                    del st.session_state[k]
+            # 1탭 값 직접 가져와서 Tab3 위젯에 설정
+            creditor_val = st.session_state.get('input_creditor', '')
+            debtor_val = st.session_state.get('t1_debtor_name', '')
+            amount_val = st.session_state.get('input_amount', '')
+            estate_val = st.session_state.get('input_collateral_addr', '')
+            if not estate_val:
+                estate_val = extract_address_from_estate(st.session_state.get('estate_text') or "")
+            
+            # Tab3 위젯에 직접 설정 (selectbox는 이 값을 사용함)
+            st.session_state['tab3_creditor_select'] = creditor_val
+            st.session_state['tab3_debtor_input'] = debtor_val
+            st.session_state['calc_amount_input'] = amount_val
+            st.session_state['tab3_estate_input'] = estate_val
+            
             st.success("✅ 1탭 정보가 동기화되었습니다!")
             st.rerun()
     with col_btn2:

@@ -938,7 +938,7 @@ for k in keys_to_init:
     if k not in st.session_state: st.session_state[k] = "0"
 
 if 'use_address_change' not in st.session_state: st.session_state['use_address_change'] = False
-if 'address_change_count' not in st.session_state: st.session_state['address_change_count'] = 1
+if 'address_change_count' not in st.session_state: st.session_state['address_change_count'] = 0
 if 'addr_count_input' not in st.session_state: st.session_state['addr_count_input'] = 1
 
 if 'calc_data' not in st.session_state:
@@ -1518,9 +1518,7 @@ def calculate_all(data):
         data['공급가액'] = 0; data['부가세'] = 0; data['보수총액'] = 0
     
     # 공과금 계산
-    # (주소변경 체크 시 비용 계산 로직은 UI 콜백에서 선행 처리됨)
-    use_addr_change = st.session_state.get('use_address_change', False)
-    addr_count = int(st.session_state.get('addr_count_input', 1)) if use_addr_change else 0
+    addr_count = int(st.session_state.get('address_change_count', 0))  # 계산 로직에서 미리 설정됨
     
     addr_reg = 0; addr_edu = 0; addr_jeungji = 0
     if addr_count > 0:
@@ -2535,7 +2533,7 @@ with tab3:
             
             # 주소변경
             st.session_state['use_address_change'] = False
-            st.session_state['address_change_count'] = 1
+            st.session_state['address_change_count'] = 0
             st.session_state['addr_count_input'] = 1
             
             # 금액
@@ -2715,6 +2713,11 @@ with tab3:
     # =========================================================
     # 2. 계산 로직 수행
     # =========================================================
+    # 주소변경 인원수 처리 (체크되어 있으면 인원수 반영, 아니면 0명)
+    current_addr_use = st.session_state.get('use_address_change', False)
+    current_addr_count = int(st.session_state.get('addr_count_input', 1)) if current_addr_use else 0
+    st.session_state['address_change_count'] = current_addr_count
+    
     # 3탭 위젯 값 사용 (사용자가 수정한 경우 그 값 반영)
     creditor_for_calc = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
     if creditor_for_calc == "🖊️ 직접입력":
@@ -2797,36 +2800,14 @@ with tab3:
     with col_tax:
         st.markdown("<div class='section-header tax-header'>🏛️ 공과금 (Tax)</div>", unsafe_allow_html=True)
         with st.container(border=True):
-            st.caption("[자동 계산] (주소변경 시 자동 반영)")
+            st.caption("[자동 계산] (calculate_all 결과 반영)")
             
-            # 자동계산 기본값 (채권최고액 기준)
-            auto_reg_tax = final_data.get("등록면허세", 0)
-            auto_edu_tax = final_data.get("지방교육세", 0)
-            auto_stamp = final_data.get("증지대", 0)
-            auto_bond = final_data.get("채권할인금액", 0)
+            # calculate_all이 이미 계산해준 값(주소변경 포함)을 그대로 표시
+            st.session_state['tax_등록면허세'] = format_number_with_comma(final_data.get("등록면허세", 0))
+            st.session_state['tax_지방교육세'] = format_number_with_comma(final_data.get("지방교육세", 0))
+            st.session_state['tax_증지대'] = format_number_with_comma(final_data.get("증지대", 0))
+            st.session_state['tax_채권할인'] = format_number_with_comma(final_data.get("채권할인금액", 0))
             
-            # base 값 저장 (주소변경 계산의 기준)
-            st.session_state['tax_등록면허세_base'] = auto_reg_tax
-            st.session_state['tax_지방교육세_base'] = auto_edu_tax
-            st.session_state['tax_증지대_base'] = auto_stamp
-            st.session_state['tax_채권할인_base'] = auto_bond
-            
-            # 주소변경 추가 금액 계산 (단순하게!)
-            use_addr = st.session_state.get('use_address_change', False)
-            addr_count = int(st.session_state.get('addr_count_input', 1)) if use_addr else 0
-            
-            # 최종값 = 기본값 + 주소변경 추가값
-            final_reg_tax = auto_reg_tax + (6000 * addr_count)
-            final_edu_tax = auto_edu_tax + (1200 * addr_count)
-            final_stamp = auto_stamp + (3000 * addr_count)
-            
-            # session_state에 최종값 저장
-            st.session_state['tax_등록면허세'] = format_number_with_comma(final_reg_tax) if final_reg_tax > 0 else "0"
-            st.session_state['tax_지방교육세'] = format_number_with_comma(final_edu_tax) if final_edu_tax > 0 else "0"
-            st.session_state['tax_증지대'] = format_number_with_comma(final_stamp) if final_stamp > 0 else "0"
-            st.session_state['tax_채권할인'] = format_number_with_comma(auto_bond) if auto_bond > 0 else "0"
-            
-            # 자동계산 항목 표시 (읽기 전용)
             def display_tax_row(label, value):
                 c1, c2 = st.columns([1, 1.5])
                 c1.markdown(f"**{label}**")
@@ -2849,19 +2830,8 @@ with tab3:
             make_row("선순위말소", st.session_state['cost_manual_선순위 말소'], "cost_manual_선순위 말소", format_cost_input)
             
             st.markdown("---")
-            # 공과금 소계 계산 (수기입력 값 합산)
-            tax_subtotal = (
-                parse_int_input(st.session_state.get('tax_등록면허세', 0)) +
-                parse_int_input(st.session_state.get('tax_지방교육세', 0)) +
-                parse_int_input(st.session_state.get('tax_증지대', 0)) +
-                parse_int_input(st.session_state.get('tax_채권할인', 0)) +
-                parse_int_input(st.session_state.get('cost_manual_제증명', 0)) +
-                parse_int_input(st.session_state.get('cost_manual_교통비', 0)) +
-                parse_int_input(st.session_state.get('cost_manual_원인증서', 0)) +
-                parse_int_input(st.session_state.get('cost_manual_주소변경', 0)) +
-                parse_int_input(st.session_state.get('cost_manual_확인서면', 0)) +
-                parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
-            )
+            # 공과금 소계 (calculate_all에서 계산된 값 사용)
+            tax_subtotal = final_data.get('공과금 총액', 0)
             c_label, c_val = st.columns([1, 1])
             c_label.markdown("#### 공과금 소계")
             c_val.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(tax_subtotal)} 원</div>", unsafe_allow_html=True)
@@ -2870,8 +2840,8 @@ with tab3:
     with col_payment:
         st.markdown("<div class='section-header total-header'>🧾 결제 및 청구</div>", unsafe_allow_html=True)
         with st.container(border=True):
-            # 총 청구금액 계산 (보수총액 + 공과금 소계)
-            grand_total = final_data.get('보수총액', 0) + tax_subtotal
+            # 총 청구금액 (calculate_all에서 계산된 값)
+            grand_total = final_data.get('총 합계', 0)
             st.markdown("#### 총 청구금액")
             st.markdown(f"<div class='total-box'><div class='total-amount'>{format_number_with_comma(grand_total)} 원</div></div>", unsafe_allow_html=True)
             st.markdown("---")
@@ -2879,60 +2849,26 @@ with tab3:
             def toggle_show_fee(): st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'], key='show_fee_checkbox', on_change=toggle_show_fee)
             
-            def on_checkbox_change():
-                """체크박스 변경 시 - 인원수 1로 초기화 + 공과금 계산"""
-                st.session_state['address_change_count'] = 1
-                st.session_state['addr_count_input'] = 1  # 위젯 값도 초기화
-                
-                if st.session_state.get('use_address_change', False):
-                    # 공과금 추가 (1명 = 10,200원)
-                    base_reg = st.session_state.get('tax_등록면허세_base', 0)
-                    base_edu = st.session_state.get('tax_지방교육세_base', 0)
-                    base_stamp = st.session_state.get('tax_증지대_base', 0)
-                    
-                    st.session_state['tax_등록면허세'] = format_number_with_comma(base_reg + 6000)
-                    st.session_state['tax_지방교육세'] = format_number_with_comma(base_edu + 1200)
-                    st.session_state['tax_증지대'] = format_number_with_comma(base_stamp + 3000)
-                    
-                    # 주소변경 비용
-                    cur_creditor = st.session_state.get('tab3_creditor_select', '')
-                    fee = 20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000
-                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
-                else:
-                    # 체크 해제 시 원래 값으로 복원
-                    base_reg = st.session_state.get('tax_등록면허세_base', 0)
-                    base_edu = st.session_state.get('tax_지방교육세_base', 0)
-                    base_stamp = st.session_state.get('tax_증지대_base', 0)
-                    
-                    st.session_state['tax_등록면허세'] = format_number_with_comma(base_reg) if base_reg > 0 else "0"
-                    st.session_state['tax_지방교육세'] = format_number_with_comma(base_edu) if base_edu > 0 else "0"
-                    st.session_state['tax_증지대'] = format_number_with_comma(base_stamp) if base_stamp > 0 else "0"
-                    st.session_state['cost_manual_주소변경'] = "0"
-            
-            def on_count_change():
-                """인원수 변경 시 - 공과금 재계산"""
+            def update_manual_addr_cost():
+                """체크박스/인원수 변경 시 -> 주소변경(수기입력) 비용만 업데이트"""
                 if st.session_state.get('use_address_change', False):
                     count = int(st.session_state.get('addr_count_input', 1))
-                    st.session_state['address_change_count'] = count
                     
-                    base_reg = st.session_state.get('tax_등록면허세_base', 0)
-                    base_edu = st.session_state.get('tax_지방교육세_base', 0)
-                    base_stamp = st.session_state.get('tax_증지대_base', 0)
-                    
-                    st.session_state['tax_등록면허세'] = format_number_with_comma(base_reg + 6000 * count)
-                    st.session_state['tax_지방교육세'] = format_number_with_comma(base_edu + 1200 * count)
-                    st.session_state['tax_증지대'] = format_number_with_comma(base_stamp + 3000 * count)
-                    
-                    # 주소변경 비용
+                    # 금융사별 단가 (유노스/드림: 2만, 나머지: 5만)
                     cur_creditor = st.session_state.get('tab3_creditor_select', '')
-                    fee = (20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000) * count
-                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
+                    unit_price = 20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000
+                    
+                    # 수기 입력칸 값 업데이트
+                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(unit_price * count)
+                else:
+                    # 체크 해제 시 0원
+                    st.session_state['cost_manual_주소변경'] = "0"
 
             cp1, cp2 = st.columns([1.5, 1])
             with cp1: 
-                st.checkbox("주소변경 포함", key='use_address_change', on_change=on_checkbox_change)
+                st.checkbox("주소변경 포함", key='use_address_change', on_change=update_manual_addr_cost)
             with cp2:
-                st.number_input("인원", min_value=1, key='addr_count_input', label_visibility="collapsed", on_change=on_count_change)
+                st.number_input("인원", min_value=1, key='addr_count_input', label_visibility="collapsed", on_change=update_manual_addr_cost)
             st.caption("체크 시 인원별 공과금 추가 (등록면허세 +6,000 / 지방교육세 +1,200 / 증지대 +3,000)")
             
             st.markdown("---")

@@ -150,11 +150,16 @@ st.markdown(f"""
     .total-amount {{ font-size: 2rem; font-weight: 800; }}
     [data-testid="stContainer"] {{ background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9ecef; }}
     
-    /* 3탭 컬럼 높이 동일하게 */
-    [data-testid="stHorizontalBlock"] {{ align-items: stretch !important; }}
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div {{ height: 100%; }}
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div > [data-testid="stVerticalBlock"] {{ height: 100%; }}
-    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div > [data-testid="stVerticalBlock"] > [data-testid="element-container"]:last-child > div {{ height: 100%; }}
+    /* 3탭 컬럼 높이 동일 - 강화 */
+    [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]) {{
+        align-items: stretch !important;
+    }}
+    [data-testid="stColumn"] > [data-testid="stVerticalBlockBorderWrapper"] {{
+        height: 100% !important;
+    }}
+    [data-testid="stColumn"] > [data-testid="stVerticalBlockBorderWrapper"] > div {{
+        height: 100% !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2793,22 +2798,27 @@ with tab3:
             make_row("할인금액", st.session_state['disc_fee_val'], "disc_fee_val", format_cost_input)
             st.markdown("---")
             
-            # 공급가액
-            r1c1, r1c2 = st.columns([1, 1.5])
-            r1c1.markdown("**공급가액**")
-            r1c2.markdown(f"<div style='text-align:right; color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액', 0))} 원</div>", unsafe_allow_html=True)
-            
-            # 부가세
-            r2c1, r2c2 = st.columns([1, 1.5])
-            r2c1.markdown("**부가세**")
-            r2c2.markdown(f"<div style='text-align:right; color:#28a745;'>{format_number_with_comma(final_data.get('부가세', 0))} 원</div>", unsafe_allow_html=True)
+            # 공급가액, 부가세, 보수총액 - 통일된 스타일
+            st.markdown(f"""
+            <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
+                <span style='font-weight:bold;'>공급가액</span>
+                <span style='color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액', 0))} 원</span>
+            </div>
+            <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
+                <span style='font-weight:bold;'>부가세</span>
+                <span style='color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('부가세', 0))} 원</span>
+            </div>
+            """, unsafe_allow_html=True)
             
             st.markdown("---")
             
             # 보수 총액
-            r3c1, r3c2 = st.columns([1, 1.5])
-            r3c1.markdown("#### 보수 총액")
-            r3c2.markdown(f"<div style='text-align:right; color:#28a745; font-size:1.3rem; font-weight:bold; padding-top:5px;'>{format_number_with_comma(final_data.get('보수총액', 0))} 원</div>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <span style='font-size:1.2rem; font-weight:bold;'>보수 총액</span>
+                <span style='color:#28a745; font-size:1.3rem; font-weight:bold;'>{format_number_with_comma(final_data.get('보수총액', 0))} 원</span>
+            </div>
+            """, unsafe_allow_html=True)
             
             st.markdown("---")
             # 참고 기준 (보수액 섹션 하단으로 이동)
@@ -2850,9 +2860,12 @@ with tab3:
             st.markdown("---")
             # 공과금 소계 (calculate_all에서 계산된 값 사용)
             tax_subtotal = final_data.get('공과금 총액', 0)
-            tc1, tc2 = st.columns([1, 1.5])
-            tc1.markdown("#### 공과금 소계")
-            tc2.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.3rem; font-weight:bold; padding-top:5px;'>{format_number_with_comma(tax_subtotal)} 원</div>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <span style='font-size:1.2rem; font-weight:bold;'>공과금 소계</span>
+                <span style='color:#fd7e14; font-size:1.3rem; font-weight:bold;'>{format_number_with_comma(tax_subtotal)} 원</span>
+            </div>
+            """, unsafe_allow_html=True)
 
     # [3] 결제 및 청구
     with col_payment:

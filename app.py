@@ -2441,6 +2441,11 @@ with tab3:
     col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
     with col_btn1:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="1탭 정보 불러오기"):
+            # 기존 위젯 키 삭제 (새 값으로 강제 동기화)
+            keys_to_delete = ['tab3_creditor_select', 'tab3_debtor_input', 'tab3_estate_input', 'calc_amount_input']
+            for k in keys_to_delete:
+                if k in st.session_state:
+                    del st.session_state[k]
             st.success("✅ 1탭 정보가 동기화되었습니다!")
             st.rerun()
     with col_btn2:
@@ -2542,6 +2547,12 @@ with tab3:
             handle_creditor_change()
         
         selected_creditor_tab3 = st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change)
+        
+        # 직접입력 선택 시 채권자명 표시
+        if selected_creditor_tab3 == "🖊️ 직접입력":
+            direct_name = st.session_state.get('input_creditor_name', '')
+            if direct_name:
+                st.caption(f"📝 채권자: **{direct_name}**")
         
         # 유노스프레스티지 선택 시 제증명 20,000원 자동 설정 (최초 렌더링 시에도 적용)
         if "(주)유노스프레스티지대부" in selected_creditor_tab3:

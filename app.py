@@ -239,6 +239,30 @@ except Exception:
 LIBS_OK = PDF_OK
 
 # =============================================================================
+# 자동 다운로드 함수 (버튼 없이 바로 다운로드)
+# =============================================================================
+def auto_download(data, filename, mime_type="application/octet-stream"):
+    """파일 자동 다운로드 (JavaScript 사용)"""
+    if isinstance(data, BytesIO):
+        data = data.getvalue()
+    b64 = base64.b64encode(data).decode()
+    
+    # JavaScript로 자동 다운로드 트리거
+    js_code = f"""
+    <script>
+    (function() {{
+        var link = document.createElement('a');
+        link.href = 'data:{mime_type};base64,{b64}';
+        link.download = '{filename}';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }})();
+    </script>
+    """
+    st.components.v1.html(js_code, height=0)
+
+# =============================================================================
 # 2. 상수 및 데이터
 # =============================================================================
 TEMPLATE_FILENAMES = {
@@ -1994,8 +2018,9 @@ with tab1:
                 }
                 try:
                     pdf_buffer = make_pdf(selected_template_path, data)
-                    st.download_button(label="⬇️ 다운로드", data=pdf_buffer, file_name=f"근저당권설정_{data['debtor_name']}.pdf", mime="application/pdf", use_container_width=True)
-                    st.toast("✅ PDF 생성완료!", icon="✅")
+                    filename = f"근저당권설정_{data['debtor_name']}.pdf"
+                    auto_download(pdf_buffer, filename, "application/pdf")
+                    st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
                 except Exception as e: st.error(f"오류: {e}")
     
     # =========================================================================
@@ -2468,15 +2493,9 @@ with tab2:
                 # make_signature_pdf 함수 사용
                 pdf_buffer = make_signature_pdf(template_path, signature_data)
                 
-                st.download_button(
-                    label="⬇️ 자필서명정보 다운로드",
-                    data=pdf_buffer,
-                    file_name=f"자필서명정보_{tab2_owner1_name or '고객'}_{st.session_state['tab2_receipt_type']}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-                
-                st.toast("✅ PDF 생성 완료!", icon="✅")
+                filename = f"자필서명정보_{tab2_owner1_name or '고객'}_{st.session_state['tab2_receipt_type']}.pdf"
+                auto_download(pdf_buffer, filename, "application/pdf")
+                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
                 
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
@@ -2972,23 +2991,15 @@ with tab3:
                 pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
                 pdf_buffer = pdf_converter.output_pdf(pdf_data)
                 
-                # 다운로드 버튼 (3탭 위젯 값 사용)
+                # 자동 다운로드 (3탭 위젯 값 사용)
                 debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
                 if not debtor_name or debtor_name.strip() == '':
                     debtor_name = '고객'
                 
-                def clear_pdf_flag():
-                    st.session_state['generate_pdf'] = False
-                
-                st.download_button(
-                    label="⬇️ PDF 파일 다운로드",
-                    data=pdf_buffer,
-                    file_name=f"근저당설정_비용내역_{debtor_name}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    on_click=clear_pdf_flag
-                )
-                st.toast("✅ PDF 생성 완료!", icon="✅")
+                filename = f"근저당설정_비용내역_{debtor_name}.pdf"
+                auto_download(pdf_buffer, filename, "application/pdf")
+                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                st.session_state['generate_pdf'] = False
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
                 st.session_state['generate_pdf'] = False
@@ -3061,23 +3072,15 @@ with tab3:
                 excel_buffer = create_receipt_excel(excel_data, receipt_template)
                 
                 if excel_buffer:
-                    # 다운로드 버튼 (3탭 위젯 값 사용)
+                    # 자동 다운로드 (3탭 위젯 값 사용)
                     debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
                     if not debtor_name or debtor_name.strip() == '':
                         debtor_name = '고객'
                     
-                    def clear_excel_flag():
-                        st.session_state['generate_excel'] = False
-                    
-                    st.download_button(
-                        label="⬇️ Excel 파일 다운로드",
-                        data=excel_buffer,
-                        file_name=f"영수증_{debtor_name}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
-                        on_click=clear_excel_flag
-                    )
-                    st.toast("✅ Excel 생성 완료!", icon="✅")
+                    filename = f"영수증_{debtor_name}.xlsx"
+                    auto_download(excel_buffer, filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
+                    st.session_state['generate_excel'] = False
                 else:
                     st.error("Excel 생성에 실패했습니다.")
                     st.session_state['generate_excel'] = False
@@ -3343,14 +3346,9 @@ with tab4:
                 holder_name = st.session_state.get('malso_holder1_name', '고객')
                 
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
-                st.download_button(
-                    label="⬇️ 자필서명정보 다운로드",
-                    data=pdf_buffer,
-                    file_name=f"{malso_prefix}_{holder_name}_자필서명정보.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-                st.toast("✅ 자필서명정보 생성 완료!", icon="✅")
+                filename = f"{malso_prefix}_{holder_name}_자필서명정보.pdf"
+                auto_download(pdf_buffer, filename, "application/pdf")
+                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
             else:
                 st.error("자필서명정보 템플릿(자필서명정보_서면_템플릿.pdf)이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
@@ -3384,14 +3382,9 @@ with tab4:
                 power_template_path = resource_path("말소_위임장.pdf")
                 if os.path.exists(power_template_path):
                     pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
-                    st.download_button(
-                        label="⬇️ 위임장 다운로드",
-                        data=pdf_buffer,
-                        file_name=f"{malso_prefix}_{holder_name}_위임장.pdf",
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-                    st.toast("✅ 위임장 생성 완료!", icon="✅")
+                    filename = f"{malso_prefix}_{holder_name}_위임장.pdf"
+                    auto_download(pdf_buffer, filename, "application/pdf")
+                    st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
                 else:
                     st.error("위임장 템플릿 파일이 없습니다. (말소_위임장.pdf)")
             else:
@@ -3422,14 +3415,9 @@ with tab4:
                 holder_name = st.session_state.get('malso_holder1_name', '고객')
                 
                 pdf_buffer = make_malso_termination_pdf(term_data)
-                st.download_button(
-                    label="⬇️ 해지증서 다운로드",
-                    data=pdf_buffer,
-                    file_name=f"{malso_prefix}_{holder_name}_해지증서.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-                st.toast("✅ 해지증서 생성 완료!", icon="✅")
+                filename = f"{malso_prefix}_{holder_name}_해지증서.pdf"
+                auto_download(pdf_buffer, filename, "application/pdf")
+                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
             else:
                 st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
@@ -3458,14 +3446,9 @@ with tab4:
                 holder_name = st.session_state.get('malso_holder1_name', '고객')
                 
                 pdf_buffer = make_malso_transfer_pdf(transfer_data)
-                st.download_button(
-                    label="⬇️ 이관증명서 다운로드",
-                    data=pdf_buffer,
-                    file_name=f"{malso_prefix}_{holder_name}_이관증명서.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-                st.toast("✅ 이관증명서 생성 완료!", icon="✅")
+                filename = f"{malso_prefix}_{holder_name}_이관증명서.pdf"
+                auto_download(pdf_buffer, filename, "application/pdf")
+                st.toast(f"✅ {filename} 다운로드 완료!", icon="✅")
             else:
                 st.error("PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:

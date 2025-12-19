@@ -2809,23 +2809,9 @@ with tab3:
             st.session_state['tax_증지대_base'] = auto_stamp
             st.session_state['tax_채권할인_base'] = auto_bond
             
-            # 주소변경 추가 금액 계산
+            # 주소변경 추가 금액 계산 (단순하게!)
             use_addr = st.session_state.get('use_address_change', False)
-            
-            # 체크박스가 방금 체크된 경우 인원수 1로 강제
-            if st.session_state.get('_addr_just_checked', False):
-                st.session_state['_addr_just_checked'] = False
-                addr_count = 1 if use_addr else 0
-            else:
-                # 상태 변경 감지 (이전 상태와 비교)
-                prev_use_addr = st.session_state.get('_prev_use_address_change', False)
-                if use_addr and not prev_use_addr:
-                    # 방금 체크됨 - 인원수 1로 초기화
-                    addr_count = 1
-                else:
-                    addr_count = int(st.session_state.get('address_change_count', 1)) if use_addr else 0
-            
-            st.session_state['_prev_use_address_change'] = use_addr
+            addr_count = int(st.session_state.get('address_change_count', 1)) if use_addr else 0
             
             # 최종값 = 기본값 + 주소변경 추가값
             final_reg_tax = auto_reg_tax + (6000 * addr_count)
@@ -2891,36 +2877,31 @@ with tab3:
             def toggle_show_fee(): st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'], key='show_fee_checkbox', on_change=toggle_show_fee)
             
-            def update_address_cost():
-                """주소변경 비용 계산"""
-                use_addr = st.session_state.get('use_address_change', False)
-                count = int(st.session_state.get('address_change_count', 1))
-                
-                if use_addr:
-                    # 3탭 위젯 값 사용
-                    cur_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
-                    if cur_creditor == "🖊️ 직접입력": 
-                        cur_creditor = st.session_state.get('input_creditor_name', '')
-                    elif cur_creditor and cur_creditor.startswith("📝 "):
-                        cur_creditor = cur_creditor[2:].strip()
-                    
-                    # 주소변경 비용 (금융사별)
-                    fee = (20000 if (cur_creditor and ("유노스" in cur_creditor or "드림" in cur_creditor)) else 50000) * count
+            def on_checkbox_change():
+                """체크박스 변경 시 인원수 1로 초기화"""
+                st.session_state['address_change_count'] = 1
+                # 주소변경 비용 계산
+                if st.session_state.get('use_address_change', False):
+                    cur_creditor = st.session_state.get('tab3_creditor_select', '')
+                    fee = 20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000
                     st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
                 else:
                     st.session_state['cost_manual_주소변경'] = "0"
-            
-            def on_addr_checkbox_change():
-                """주소변경 체크박스 변경 시 - 인원수 1로 초기화"""
-                st.session_state['address_change_count'] = 1
-                st.session_state['_addr_just_checked'] = True  # 플래그 설정
-                update_address_cost()
 
             cp1, cp2 = st.columns([1.5, 1])
             with cp1: 
-                st.checkbox("주소변경 포함", key='use_address_change', on_change=on_addr_checkbox_change)
-            with cp2: 
-                st.number_input("인원", min_value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
+                st.checkbox("주소변경 포함", key='use_address_change', on_change=on_checkbox_change)
+            with cp2:
+                # 인원수 입력 - key 없이 value로 관리 (key와 value 충돌 방지)
+                current_count = int(st.session_state.get('address_change_count', 1))
+                new_count = st.number_input("인원", min_value=1, value=current_count, label_visibility="collapsed")
+                if new_count != current_count:
+                    st.session_state['address_change_count'] = new_count
+                    # 주소변경 비용도 업데이트
+                    if st.session_state.get('use_address_change', False):
+                        cur_creditor = st.session_state.get('tab3_creditor_select', '')
+                        fee = (20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000) * new_count
+                        st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
             st.caption("체크 시 인원별 공과금 자동 추가 (등록면허세/지방교육세/증지대)")
             
             st.markdown("---")

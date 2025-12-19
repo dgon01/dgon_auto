@@ -1735,9 +1735,21 @@ with tab1:
         st.session_state['input_creditor'] = selected_creditor
         
         if selected_creditor == "🖊️ 직접입력":
-            st.session_state['input_creditor_name'] = st.text_input("채권자 성명/상호", value=st.session_state.get('input_creditor_name', ''), key='direct_creditor_name')
-            st.session_state['input_creditor_corp_num'] = st.text_input("법인번호", value=st.session_state.get('input_creditor_corp_num', ''), key='direct_corp_num')
-            st.session_state['input_creditor_addr'] = st.text_area("채권자 주소", value=st.session_state.get('input_creditor_addr', ''), key='direct_creditor_addr', height=100)
+            def on_direct_name_change():
+                st.session_state['input_creditor_name'] = st.session_state.get('direct_creditor_name', '')
+            def on_direct_corp_change():
+                st.session_state['input_creditor_corp_num'] = st.session_state.get('direct_corp_num', '')
+            def on_direct_addr_change():
+                st.session_state['input_creditor_addr'] = st.session_state.get('direct_creditor_addr', '')
+            
+            st.text_input("채권자 성명/상호", value=st.session_state.get('input_creditor_name', ''), key='direct_creditor_name', on_change=on_direct_name_change)
+            st.text_input("법인번호", value=st.session_state.get('input_creditor_corp_num', ''), key='direct_corp_num', on_change=on_direct_corp_change)
+            st.text_area("채권자 주소", value=st.session_state.get('input_creditor_addr', ''), key='direct_creditor_addr', height=100, on_change=on_direct_addr_change)
+            
+            # 현재 값도 동기화
+            st.session_state['input_creditor_name'] = st.session_state.get('direct_creditor_name', st.session_state.get('input_creditor_name', ''))
+            st.session_state['input_creditor_corp_num'] = st.session_state.get('direct_corp_num', st.session_state.get('input_creditor_corp_num', ''))
+            st.session_state['input_creditor_addr'] = st.session_state.get('direct_creditor_addr', st.session_state.get('input_creditor_addr', ''))
         else:
             creditor_info = CREDITORS.get(selected_creditor, {})
             st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=False)
@@ -2749,7 +2761,7 @@ with tab3:
                     pdf_data = {
                         'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
                         'client': {
-                            '채권최고액': format_number_with_comma(final_data.get('input_amount', st.session_state.get('input_amount', ''))),
+                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
                             '필지수': str(st.session_state.get('input_parcels', 1)),
                             '금융사': pdf_creditor,
                             '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
@@ -2832,7 +2844,7 @@ with tab3:
                             '금융사': excel_creditor,
                             '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
                             '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
-                            '채권최고액': format_number_with_comma(st.session_state.get('input_amount', ''))
+                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1))
                         },
                         'cost_items': {
                             '등록면허세': final_data.get('등록면허세', 0),

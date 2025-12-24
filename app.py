@@ -15,7 +15,7 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 st.set_page_config(
     layout="wide", 
-    page_title="DG-Form | 전자설정 자동화시스템",
+    page_title="DG-Form | 등기온 전자설정 자동화",
     page_icon=os.path.join(APP_ROOT, "my_icon.ico"),
     initial_sidebar_state="collapsed"
 )
@@ -53,7 +53,7 @@ st.markdown(f"""
     .title-form {{ color: #FDD000; }}
     .header-subtitle {{ color: #00428B; font-size: 1.2rem; font-weight: 500; margin: 0; }}
     
-    /* 📱 반응형 CSS - 모바일 전체 대응 */
+    /* 📱 반응형 CSS - 모바일 대응 */
     @media (max-width: 768px) {{
         .header-container {{ 
             padding: 15px 20px !important; 
@@ -67,48 +67,6 @@ st.markdown(f"""
         .header-right p {{ font-size: 0.85rem !important; }}
         h3 {{ font-size: 1.2rem !important; }}
         .total-amount {{ font-size: 1.5rem !important; }}
-        
-        /* 모든 columns를 세로 배치 */
-        [data-testid="stHorizontalBlock"] {{
-            flex-direction: column !important;
-            gap: 10px !important;
-        }}
-        
-        /* 각 컬럼 전체 너비 */
-        [data-testid="stHorizontalBlock"] > div {{
-            width: 100% !important;
-            flex: none !important;
-            min-width: 0 !important;
-        }}
-        
-        /* 입력 필드 전체 너비 */
-        .stNumberInput, .stTextInput, .stSelectbox, .stTextArea {{
-            width: 100% !important;
-        }}
-        
-        /* 버튼 전체 너비 */
-        .stButton > button {{
-            width: 100% !important;
-            font-size: 0.85rem !important;
-            padding: 8px 12px !important;
-        }}
-        
-        /* 탭 버튼 축소 */
-        .stTabs [data-baseweb="tab"] {{
-            padding: 8px 12px !important;
-            font-size: 0.8rem !important;
-        }}
-    }}
-    
-    /* 세로 모니터 대응 (height > width) */
-    @media (max-aspect-ratio: 1/1) {{
-        [data-testid="stHorizontalBlock"] {{
-            flex-direction: column !important;
-        }}
-        [data-testid="stHorizontalBlock"] > div {{
-            width: 100% !important;
-            flex: none !important;
-        }}
     }}
     
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
@@ -149,17 +107,6 @@ st.markdown(f"""
     .total-box {{ background-color: #ff0033; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 15px 0; box-shadow: 0 4px 6px rgba(220, 53, 69, 0.3); }}
     .total-amount {{ font-size: 2rem; font-weight: 800; }}
     [data-testid="stContainer"] {{ background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #e9ecef; }}
-    
-    /* 3탭 컬럼 높이 동일 - 강화 */
-    [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]) {{
-        align-items: stretch !important;
-    }}
-    [data-testid="stColumn"] > [data-testid="stVerticalBlockBorderWrapper"] {{
-        height: 100% !important;
-    }}
-    [data-testid="stColumn"] > [data-testid="stVerticalBlockBorderWrapper"] > div {{
-        height: 100% !important;
-    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -171,8 +118,11 @@ if logo_base64:
             <img src="data:image/x-icon;base64,{logo_base64}" class="header-logo" alt="DG-ON Logo">
             <div>
                 <h1 class="header-title"><span class="title-dg">DG</span><span class="title-form">-Form</span></h1>
-                <p class="header-subtitle">전자설정 자동화시스템 | <span style="color: #FDD000;">등기온</span></p>
+                <p class="header-subtitle">등기온 전자설정 자동화 시스템 | 법무법인 시화</p>
             </div>
+        </div>
+        <div class="header-right">
+            <p style="margin: 0; font-size: 1.1rem; font-weight: 600;">부동산 등기는 등기온</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -181,7 +131,10 @@ else:
     <div class="header-container">
         <div>
             <h1 class="header-title">🏠 <span class="title-dg">DG</span><span class="title-form">-Form</span></h1>
-            <p class="header-subtitle">전자설정 자동화시스템 | <span style="color: #FDD000;">등기온</span></p>
+            <p class="header-subtitle">등기온 전자설정 자동화 시스템 | 법무법인 시화</p>
+        </div>
+        <div class="header-right">
+            <p style="margin: 0; font-size: 1.1rem; font-weight: 600;">부동산 등기는 등기온</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -224,22 +177,6 @@ try:
 except Exception:
     FPDF = None
     FPDF_OK = False
-
-# 등기부 PDF 파싱 (pdfplumber)
-try:
-    import pdfplumber
-    PDFPLUMBER_OK = True
-except Exception:
-    pdfplumber = None
-    PDFPLUMBER_OK = False
-
-# 위택스 API 호출 (requests)
-try:
-    import requests
-    REQUESTS_OK = True
-except Exception:
-    requests = None
-    REQUESTS_OK = False
 
 LIBS_OK = PDF_OK
 
@@ -303,23 +240,11 @@ def remove_commas(v):
 def floor_10(v): return math.floor(v / 10) * 10
 
 def lookup_base_fee(amount):
-    """법무사 보수표 기준 기본료 계산 (2024.9.12 시행)"""
-    if amount <= 50_000_000:
-        return 210_000
-    elif amount <= 100_000_000:
-        return 210_000 + int((amount - 50_000_000) * 10 / 10000)
-    elif amount <= 300_000_000:
-        return 260_000 + int((amount - 100_000_000) * 9 / 10000)
-    elif amount <= 500_000_000:
-        return 440_000 + int((amount - 300_000_000) * 8 / 10000)
-    elif amount <= 1_000_000_000:
-        return 600_000 + int((amount - 500_000_000) * 7 / 10000)
-    elif amount <= 2_000_000_000:
-        return 950_000 + int((amount - 1_000_000_000) * 5 / 10000)
-    elif amount <= 20_000_000_000:
-        return 1_450_000 + int((amount - 2_000_000_000) * 4 / 10000)
-    else:
-        return 8_650_000 + int((amount - 20_000_000_000) * 1 / 10000)
+    LOOKUP_KEYS = [0, 30_000_000, 45_000_000, 60_000_000, 106_500_000, 150_000_000, 225_000_000]
+    LOOKUP_VALS = [150_000, 200_000, 250_000, 300_000, 350_000, 400_000, 450_000]
+    for i in range(len(LOOKUP_KEYS) - 1, -1, -1):
+        if amount > LOOKUP_KEYS[i]: return LOOKUP_VALS[i]
+    return LOOKUP_VALS[0]
 
 def get_rate():
     try:
@@ -934,17 +859,15 @@ def make_malso_transfer_pdf(data):
 
 # 상태 변수 초기화
 keys_to_init = [
-    'base_fee_val', 'add_fee_val', 'etc_fee_val', 'disc_fee_val', 
+    'add_fee_val', 'etc_fee_val', 'disc_fee_val', 
     'cost_manual_제증명', 'cost_manual_교통비', 'cost_manual_원인증서', 
-    'cost_manual_주소변경', 'cost_manual_확인서면', 'cost_manual_선순위 말소',
-    'tax_등록면허세', 'tax_지방교육세', 'tax_증지대', 'tax_채권할인'
+    'cost_manual_주소변경', 'cost_manual_확인서면', 'cost_manual_선순위 말소'
 ]
 for k in keys_to_init:
     if k not in st.session_state: st.session_state[k] = "0"
 
 if 'use_address_change' not in st.session_state: st.session_state['use_address_change'] = False
-if 'address_change_count' not in st.session_state: st.session_state['address_change_count'] = 0
-if 'addr_count_input' not in st.session_state: st.session_state['addr_count_input'] = 1
+if 'address_change_count' not in st.session_state: st.session_state['address_change_count'] = 1
 
 if 'calc_data' not in st.session_state:
     st.session_state['calc_data'] = {}
@@ -976,484 +899,6 @@ for key in manual_keys:
         # 이미 0으로 초기화했지만 금융사 변경 시 값 덮어쓰기 위해 여기서 체크
         pass # 아래 handle_creditor_change 등에서 처리
 
-# =============================================================================
-# 등기부 PDF 파싱 함수
-# =============================================================================
-def parse_registry_pdf(uploaded_file):
-    """집합건물 등기부 PDF에서 부동산표시 추출 - 삭선 감지 포함"""
-    
-    # 행정구역 변환
-    행정구역_변환 = {"전라북도": "전북특별자치도", "강원도": "강원특별자치도"}
-    def convert_region(text):
-        for old, new in 행정구역_변환.items():
-            text = text.replace(old, new)
-        return text
-    
-    def get_red_lines_from_page(page):
-        """페이지에서 빨간 삭선 y좌표 수집"""
-        red_ys = []
-        for line in page.lines:
-            color = line.get('stroking_color')
-            if color and isinstance(color, (list, tuple)) and len(color) >= 3:
-                r, g, b = color[0], color[1], color[2]
-                if r > 0.9 and g < 0.1 and b < 0.1:
-                    width = line['x1'] - line['x0']
-                    if width > 30:
-                        red_ys.append(line['top'])
-        return red_ys
-    
-    def is_번지_strikethrough(번지, page_words, red_ys):
-        """번지의 모든 위치에서 삭선 여부 확인"""
-        if not red_ys or not 번지:
-            return False
-        
-        found_positions = []
-        for word in page_words:
-            if 번지 in word['text']:
-                word_y = word['top']
-                has_strike = any(word_y < ry < word_y + 12 for ry in red_ys)
-                found_positions.append({'y': word_y, 'strike': has_strike})
-        
-        if not found_positions:
-            return False
-        
-        # 삭선 없는 위치가 하나라도 있으면 False
-        return all(pos['strike'] for pos in found_positions)
-    
-    result = {
-        "1동건물표시": "",
-        "아파트명": "",
-        "동명칭": "",
-        "도로명주소": "",
-        "건물번호": "",
-        "고유번호": "",
-        "구조": "",
-        "면적": "",
-        "토지": [],
-        "대지권종류": "",
-        "대지권비율": ""
-    }
-    
-    debug = {
-        "errors": [],
-        "warnings": [],
-        "info": []
-    }
-    
-    if not PDFPLUMBER_OK:
-        debug["errors"].append("pdfplumber 라이브러리가 설치되지 않았습니다.")
-        return result, debug
-    
-    try:
-        with pdfplumber.open(uploaded_file) as pdf:
-            debug["info"].append(f"PDF 페이지 수: {len(pdf.pages)}")
-            
-            # 고유번호 추출
-            first_page_text = pdf.pages[0].extract_text() or ""
-            고유번호_match = re.search(r'고유번호\s*(\d{4}-\d{4}-\d{6})', first_page_text)
-            if 고유번호_match:
-                result["고유번호"] = 고유번호_match.group(1)
-            
-            # 페이지별 빨간선/텍스트 정보 수집
-            page_info = {}
-            for page_idx, page in enumerate(pdf.pages):
-                page_info[page_idx] = {
-                    'red_ys': get_red_lines_from_page(page),
-                    'words': page.extract_words()
-                }
-            
-            # 컬러 PDF 여부
-            has_color = any(len(info['red_ys']) > 0 for info in page_info.values())
-            if has_color:
-                debug["info"].append("컬러 PDF 감지 - 삭선 기반 필터링")
-            else:
-                debug["info"].append("흑백 PDF - 번지 기반 필터링")
-            
-            # 페이지별 테이블 수집
-            all_tables = []
-            for page_idx, page in enumerate(pdf.pages):
-                for table in page.extract_tables():
-                    all_tables.append((page_idx, table))
-            
-            # 섹션별 데이터 행 수집
-            sections = {"1동건물": [], "토지": [], "전유부분": [], "대지권": []}
-            current_section = None
-            대지권_header = []
-            
-            for page_idx, table in all_tables:
-                if not table:
-                    continue
-                
-                for row in table:
-                    row_text = str(row[0]) if row[0] else ""
-                    
-                    # 섹션 헤더 감지
-                    if "1동의 건물의 표시" in row_text:
-                        current_section = "1동건물"
-                        continue
-                    elif "대지권의 목적인 토지의 표시" in row_text:
-                        current_section = "토지"
-                        continue
-                    elif "전유부분의 건물의 표시" in row_text:
-                        current_section = "전유부분"
-                        continue
-                    elif "대지권의 표시" in row_text and "목적인 토지" not in row_text:
-                        current_section = "대지권"
-                        continue
-                    elif "갑 구" in row_text or "을 구" in row_text:
-                        current_section = None
-                        continue
-                    
-                    # 대지권 헤더 저장
-                    if current_section == "대지권" and row_text.strip() == "표시번호":
-                        대지권_header = row
-                        continue
-                    
-                    # 컬럼 헤더 스킵
-                    if row_text.strip() in ["표시번호", "순위번호"]:
-                        continue
-                    
-                    # 현행 데이터: "1", "2" 또는 "1\n(전 1)" 형태
-                    if current_section and row[0]:
-                        row0_clean = str(row[0]).strip()
-                        if re.match(r'^\d+$', row0_clean) or re.match(r'^\d+\n\(전', row0_clean):
-                            
-                            # 토지 섹션: 삭선 감지 적용
-                            if current_section == "토지":
-                                소재지 = (row[1] or "") if len(row) > 1 else ""
-                                
-                                # 주소 패턴 체크
-                                if not re.search(r'(시|군|구|동|리|읍|면)\s', 소재지):
-                                    continue
-                                
-                                # 번지 추출
-                                소재지_clean = 소재지.replace('\n', ' ').strip()
-                                번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_clean)
-                                번지 = 번지_match.group(1) if 번지_match else None
-                                
-                                # 컬러 PDF면 삭선 체크
-                                if has_color and 번지:
-                                    info = page_info[page_idx]
-                                    if is_번지_strikethrough(번지, info['words'], info['red_ys']):
-                                        continue  # 말소 스킵
-                                
-                                sections["토지"].append((번지, row))
-                            else:
-                                sections[current_section].append(row)
-            
-            # ===== 1동건물: 마지막 유효 행 =====
-            if sections["1동건물"]:
-                row = sections["1동건물"][-1]
-                col2 = (row[2] or "") if len(row) > 2 else ""
-                
-                # 워터마크 제거
-                col2 = re.sub(r'열\s*람\s*용', '', col2)
-                col2 = re.sub(r'(?<=[가-힣])(열|람|용)(?=[가-힣])', '', col2)
-                
-                lines = col2.split('\n')
-                
-                # [도로명주소] 위치 찾기
-                road_idx = -1
-                for i, line in enumerate(lines):
-                    if '[도로명주소]' in line:
-                        road_idx = i
-                        break
-                
-                # 도로명주소 추출
-                if road_idx > 0:
-                    road_lines = []
-                    for i in range(road_idx + 1, len(lines)):
-                        line = lines[i].strip()
-                        if line and line not in ['열', '람', '용']:
-                            road_lines.append(line)
-                    result["도로명주소"] = convert_region(' '.join(road_lines))
-                
-                # [도로명주소] 앞부분만 사용
-                content_lines = lines[:road_idx] if road_idx > 0 else lines
-                content_lines = [l.strip() for l in content_lines if l.strip() and l.strip() not in ['열', '람', '용']]
-                
-                if content_lines:
-                    # 번지(숫자)로 끝나는 마지막 줄 = 지번 끝
-                    지번_end_idx = -1
-                    for i, line in enumerate(content_lines):
-                        if re.search(r'\d+(-\d+)?$', line.strip()):
-                            지번_end_idx = i
-                    
-                    if 지번_end_idx >= 0:
-                        result["1동건물표시"] = convert_region(' '.join(content_lines[:지번_end_idx+1]))
-                        
-                        건물명_lines = content_lines[지번_end_idx+1:]
-                        if 건물명_lines:
-                            건물명_text = ' '.join(건물명_lines)
-                            동_match = re.search(r'(제[가-힣\d]+동)$', 건물명_text)
-                            if 동_match:
-                                result["동명칭"] = 동_match.group(1)
-                                result["아파트명"] = 건물명_text[:동_match.start()].strip()
-                            else:
-                                result["아파트명"] = 건물명_text
-                    else:
-                        result["1동건물표시"] = convert_region(' '.join(content_lines))
-            
-            # ===== 토지: 같은 번지면 마지막만 =====
-            토지_by_번지 = {}
-            for 번지, row in sections["토지"]:
-                토지_by_번지[번지] = row
-            
-            # 번지 숫자순 정렬
-            토지_items = sorted(토지_by_번지.items(), key=lambda x: (int(re.search(r'^(\d+)', x[0]).group(1)) if x[0] and re.search(r'^(\d+)', x[0]) else 0))
-            
-            for idx, (번지, row) in enumerate(토지_items, 1):
-                소재지_raw = (row[1] or "").replace('\n', ' ').strip()
-                
-                # 지목과 면적: row[2:]에서 패턴으로 찾기 (pdfplumber 파싱 차이 대응)
-                지목_raw = ""
-                면적_raw = ""
-                for col in row[2:]:
-                    col_str = (col or "").strip()
-                    if col_str:
-                        # 지목: 대, 전, 답 등으로만 구성
-                        if re.match(r'^(대|전|답|임야|잡종지|도로|하천)(\n(대|전|답|임야|잡종지|도로|하천))*$', col_str):
-                            지목_raw = col_str
-                        # 면적: ㎡ 포함
-                        elif '㎡' in col_str:
-                            면적_raw = col_str
-                
-                # 여러 필지가 한 행에 있는 경우 분리 (1. xxx 2. xxx 3. xxx 형태)
-                필지_matches = re.split(r'(?=\d+\.\s*[가-힣])', 소재지_raw)
-                필지_matches = [p.strip() for p in 필지_matches if p.strip()]
-                
-                if len(필지_matches) > 1:
-                    # 지목과 면적도 분리
-                    지목_list = re.findall(r'(대|전|답|임야|잡종지|도로|하천|공장용지|학교용지|주차장|창고용지|목장용지|광천지|염전|유지|양어장|수도용지|공원|체육용지|유원지|종교용지|사적지|묘지|주유소용지)', 지목_raw)
-                    면적_list = re.findall(r'([\d.]+㎡)', 면적_raw)
-                    
-                    for i, 필지 in enumerate(필지_matches):
-                        소재지 = re.sub(r'^\d+\.\s*', '', 필지).strip()
-                        지목 = 지목_list[i] if i < len(지목_list) else (지목_list[0] if 지목_list else "")
-                        면적 = 면적_list[i] if i < len(면적_list) else ""
-                        
-                        result["토지"].append({
-                            "번호": str(len(result["토지"]) + 1),
-                            "소재지": convert_region(소재지),
-                            "지목": 지목,
-                            "면적": 면적
-                        })
-                else:
-                    # 단일 필지
-                    소재지 = re.sub(r'^\d+\.\s*', '', 소재지_raw)
-                    지목_match = re.search(r'(대|전|답|임야|잡종지)', 지목_raw)
-                    지목 = 지목_match.group(1) if 지목_match else 지목_raw
-                    면적_match = re.search(r'([\d.]+㎡)', 면적_raw)
-                    면적 = 면적_match.group(1) if 면적_match else 면적_raw
-                    
-                    result["토지"].append({
-                        "번호": str(len(result["토지"]) + 1),
-                        "소재지": convert_region(소재지),
-                        "지목": 지목,
-                        "면적": 면적
-                    })
-            
-            # ===== 전유부분: 마지막 유효 행 =====
-            if sections["전유부분"]:
-                row = sections["전유부분"][-1]
-                건물번호 = (row[2] or "").replace('\n', ' ').strip() if len(row) > 2 else ""
-                건물내역 = (row[3] or "").replace('\n', ' ').strip() if len(row) > 3 else ""
-                
-                if result["동명칭"] and result["동명칭"] not in 건물번호:
-                    건물번호 = f"{result['동명칭']} {건물번호}"
-                
-                result["건물번호"] = 건물번호
-                
-                구조_match = re.search(r'([가-힣]+조|[가-힣]+구조)', 건물내역)
-                면적_match = re.search(r'([\d.]+㎡)', 건물내역)
-                result["구조"] = 구조_match.group(1) if 구조_match else ""
-                result["면적"] = 면적_match.group(1) if 면적_match else ""
-            
-            # ===== 대지권: 소유권/지상권/전세권이 있는 마지막 유효 행 =====
-            if sections["대지권"]:
-                # 대지권종류가 있는 행 찾기
-                valid_대지권_row = None
-                for row in sections["대지권"]:
-                    종류_raw = (row[1] or "").replace('\n', ' ').strip() if len(row) > 1 else ""
-                    if re.search(r'(소유권|지상권|전세권)', 종류_raw):
-                        valid_대지권_row = row
-                
-                if valid_대지권_row:
-                    row = valid_대지권_row
-                    
-                    종류_raw = (row[1] or "").replace('\n', ' ').strip() if len(row) > 1 else ""
-                    # "1, 2, 3 소유권대지권" → "소유권" 으로 단순화
-                    종류_match = re.search(r'(소유권|지상권|전세권)', 종류_raw)
-                    result["대지권종류"] = 종류_match.group(1) if 종류_match else 종류_raw
-                    
-                    # 대지권비율: "분의" 패턴이 있는 컬럼 찾기
-                    for col in row[2:]:
-                        col_str = (col or "").replace('\n', ' ').strip()
-                        if "분의" in col_str:
-                            result["대지권비율"] = col_str
-                            break
-            
-            # 아파트명 없으면 갑구에서 찾기
-            if not result["아파트명"]:
-                full_text = "\n".join([p.extract_text() or "" for p in pdf.pages])
-                갑구_match = re.search(r'【\s*갑\s*구\s*】(.+?)【\s*을\s*구\s*】', full_text, re.DOTALL)
-                if 갑구_match:
-                    아파트_match = re.search(r'([가-힣A-Za-z0-9]+(?:아파트|빌라|오피스텔|주상복합|타운|파크|힐스|뷰|애비뉴|타워|팰리스|하이츠))', 갑구_match.group(1))
-                    if 아파트_match:
-                        result["아파트명"] = 아파트_match.group(1)
-    
-    except Exception as e:
-        debug["errors"].append(f"PDF 파싱 오류: {str(e)}")
-        return result, debug
-    
-    return result, debug
-
-def format_estate_text(data):
-    """부동산 표시 포맷팅"""
-    # 행정구역 변환
-    행정구역_변환 = {"전라북도": "전북특별자치도", "강원도": "강원특별자치도"}
-    def convert_region(text):
-        for old, new in 행정구역_변환.items():
-            text = text.replace(old, new)
-        return text
-    
-    lines = []
-    
-    # 1동의 건물의 표시
-    lines.append("1. 1동의 건물의 표시")
-    lines.append(f"   {data['1동건물표시']}")
-    
-    # 아파트명/동명칭 (4가지 케이스 대응)
-    건물명칭_parts = []
-    if data["아파트명"]:
-        건물명칭_parts.append(data["아파트명"])
-    if data["동명칭"]:
-        건물명칭_parts.append(data["동명칭"])
-    if 건물명칭_parts:
-        lines.append(f"   {' '.join(건물명칭_parts)}")
-    
-    if data["도로명주소"]:
-        lines.append(f"   [도로명주소] {data['도로명주소']}")
-    
-    lines.append("")  # 빈 줄
-    
-    # 전유부분의 건물의 표시
-    lines.append("전유부분의 건물의 표시")
-    # 건물번호에 이미 동이 포함되어 있음 (예: 제110동 제10층 제1002호)
-    lines.append(f"  1. 건물의 번호 : {data['건물번호']} [고유번호: {data['고유번호']}]")
-    lines.append(f"      구조 및 면적 : {data['구조']} {data['면적']}")
-    
-    lines.append("")  # 빈 줄
-    
-    # 전유부분의 대지권의 표시
-    lines.append("전유부분의 대지권의 표시")
-    lines.append("  토지의 표시")
-    
-    for t in data["토지"]:
-        소재지 = convert_region(t['소재지'])
-        lines.append(f"       {t['번호']}. {소재지}")
-        lines.append(f"              {t['지목']} {t['면적']}")
-    
-    lines.append(f"      대지권의 종류: {data['대지권종류']}")
-    lines.append(f"      대지권의 비율: {data['대지권비율']}")
-    
-    return "\n".join(lines)
-
-
-def show_debug(debug):
-    """디버깅 정보 표시 - 접이식"""
-    total_errors = len(debug["errors"])
-    total_warnings = len(debug["warnings"])
-    
-    if total_errors > 0:
-        st.error(f"❌ 오류 {total_errors}건 발생")
-    elif total_warnings > 0:
-        st.warning(f"⚠️ 경고 {total_warnings}건 (일부 항목 추출 실패)")
-    else:
-        st.success("✅ 모든 항목 추출 성공")
-    
-    with st.expander("🔍 상세 파싱 결과 보기"):
-        if debug["errors"]:
-            st.markdown("**🔴 오류:**")
-            for e in debug["errors"]:
-                st.markdown(f"- {e}")
-        
-        if debug["warnings"]:
-            st.markdown("**🟡 경고:**")
-            for w in debug["warnings"]:
-                st.markdown(f"- {w}")
-        
-        if debug["info"]:
-            st.markdown("**🟢 추출 성공:**")
-            for i in debug["info"]:
-                st.markdown(f"- {i}")
-
-
-# =============================================================================
-# 위택스 API 호출 함수
-# =============================================================================
-WETAX_API_URL_DEFAULT = "http://localhost:8000"
-
-def call_wetax_api(cases, base_url=None):
-    """위택스 API 호출"""
-    if not REQUESTS_OK:
-        return None, "requests 라이브러리가 설치되지 않았습니다."
-    
-    # URL 결정
-    if base_url:
-        api_url = base_url.rstrip('/') + "/wetax/submit"
-    else:
-        api_url = WETAX_API_URL_DEFAULT + "/wetax/submit"
-    
-    try:
-        response = requests.post(api_url, json={"cases": cases}, timeout=120)
-        if response.status_code == 200:
-            return response.json(), None
-        else:
-            return None, f"API 오류: {response.status_code}"
-    except requests.exceptions.ConnectionError:
-        return None, "위택스 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요."
-    except Exception as e:
-        return None, str(e)
-
-
-def parse_corp_num(corp_num_str):
-    """법인번호 분리 (110111-4138560 → 앞6자리, 뒤7자리)"""
-    clean = re.sub(r'[^0-9]', '', str(corp_num_str))
-    if len(clean) >= 13:
-        return clean[:6], clean[6:13]
-    elif len(clean) >= 6:
-        return clean[:6], clean[6:]
-    return clean, ""
-
-
-def parse_rrn(rrn_str):
-    """주민번호 분리 (800101-1234567 → 앞6자리, 뒤7자리)"""
-    clean = re.sub(r'[^0-9]', '', str(rrn_str))
-    if len(clean) >= 13:
-        return clean[:6], clean[6:13]
-    elif len(clean) >= 6:
-        return clean[:6], clean[6:]
-    return clean, ""
-
-
-def extract_road_address(full_address):
-    """전체 주소에서 도로명 추출 (상세주소 제외)"""
-    if not full_address:
-        return "", ""
-    
-    # 쉼표로 분리
-    parts = full_address.split(',')
-    if len(parts) >= 2:
-        return parts[0].strip(), parts[1].strip()
-    
-    # 숫자 뒤 공백으로 분리 시도
-    match = re.match(r'(.+?(?:로|길)\s*\d+(?:-\d+)?)\s*(.*)$', full_address)
-    if match:
-        return match.group(1).strip(), match.group(2).strip()
-    
-    return full_address, ""
-
 def parse_int_input(text_input):
     try:
         if isinstance(text_input, int): return text_input
@@ -1470,18 +915,18 @@ def handle_creditor_change():
         st.session_state['input_creditor_corp_num'] = ""
         st.session_state['input_creditor_addr'] = ""
     else:
-        # 유노스프레스티지일 경우 제증명 20,000원, 나머지 기본값
+        # 유노스프레스티지일 경우만 제증명 20,000원, 나머지는 모두 0원
         if "(주)유노스프레스티지대부" in creditor_key:
-            st.session_state['cost_manual_제증명'] = "20,000"
-            st.session_state['cost_manual_교통비'] = "100,000"
-            st.session_state['cost_manual_원인증서'] = "50,000"
+            st.session_state['cost_manual_제증명'] = format_number_with_comma("20000")
+            st.session_state['cost_manual_교통비'] = "0"
+            st.session_state['cost_manual_원인증서'] = "0"
             st.session_state['cost_manual_확인서면'] = "0"
             st.session_state['cost_manual_선순위 말소'] = "0"
         else:
-            # 기타 금융사: 제증명 50,000, 교통비 100,000, 원인증서 50,000
-            st.session_state['cost_manual_제증명'] = "50,000"
-            st.session_state['cost_manual_교통비'] = "100,000"
-            st.session_state['cost_manual_원인증서'] = "50,000"
+            # 유노스프레스티지가 아닌 경우 모두 0원
+            st.session_state['cost_manual_제증명'] = "0"
+            st.session_state['cost_manual_교통비'] = "0"
+            st.session_state['cost_manual_원인증서'] = "0"
             st.session_state['cost_manual_확인서면'] = "0"
             st.session_state['cost_manual_선순위 말소'] = "0"
         st.session_state['cost_manual_주소변경'] = "0" # 주소변경은 체크박스로만 제어
@@ -1498,14 +943,9 @@ def calculate_all(data):
     # 원본 데이터 보존
     data['input_amount'] = data.get('채권최고액', '')
     
-    # 기본료 (수기입력 우선, 없으면 자동계산)
-    manual_base_fee = parse_int_input(data.get('기본료_val', 0))
-    if manual_base_fee > 0:
-        base_fee = manual_base_fee
-    else:
-        base_fee = lookup_base_fee(amount)
+    # 기본료
+    base_fee = lookup_base_fee(amount)
     data['기본료'] = base_fee
-    data['기본료_자동'] = lookup_base_fee(amount)  # 자동계산 값 별도 저장
     
     add_fee = parse_int_input(data.get('추가보수_val'))
     etc_fee = parse_int_input(data.get('기타보수_val'))
@@ -1523,10 +963,12 @@ def calculate_all(data):
         data['공급가액'] = 0; data['부가세'] = 0; data['보수총액'] = 0
     
     # 공과금 계산
-    addr_count = int(st.session_state.get('address_change_count', 0))  # 계산 로직에서 미리 설정됨
+    # (주소변경 체크 시 비용 계산 로직은 UI 콜백에서 선행 처리됨)
+    use_addr_change = st.session_state.get('use_address_change', False)
+    addr_count = st.session_state.get('address_change_count', 1)
     
     addr_reg = 0; addr_edu = 0; addr_jeungji = 0
-    if addr_count > 0:
+    if use_addr_change and addr_count > 0:
         addr_reg = 6000 * addr_count
         addr_edu = 1200 * addr_count
         addr_jeungji = 3000 * addr_count
@@ -1714,50 +1156,22 @@ with tab1:
     col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
     with col_header[1]:
         if st.button("🔄 초기화", type="secondary", key="reset_tab1", use_container_width=True, help="모든 입력 초기화"):
-            # 날짜
             st.session_state['input_date'] = datetime.now().date()
-            st.session_state['date_picker'] = datetime.now().date()
-            
-            # 채권자 관련
-            st.session_state['input_creditor'] = list(CREDITORS.keys())[0]
-            st.session_state['t1_creditor_select'] = list(CREDITORS.keys())[0]
-            st.session_state['input_creditor_name'] = ''
-            st.session_state['input_creditor_corp_num'] = ''
-            st.session_state['input_creditor_addr'] = ''
-            st.session_state['direct_creditor_name'] = ''
-            st.session_state['direct_corp_num'] = ''
-            st.session_state['direct_creditor_addr'] = ''
-            
-            # 채무자 관련 (위젯 키 포함)
-            st.session_state['t1_debtor_name'] = ''
-            st.session_state['t1_debtor_addr'] = ''
-            st.session_state['t1_debtor_rrn'] = ''
-            st.session_state['input_debtor_rrn'] = ''
-            
-            # 소유자 관련 (위젯 키 포함)
-            st.session_state['t1_owner_name'] = ''
-            st.session_state['t1_owner_addr'] = ''
-            st.session_state['t1_owner_rrn'] = ''
-            st.session_state['input_owner_rrn'] = ''
-            
-            # 계약 유형 (위젯 키 포함)
-            st.session_state['contract_type'] = '개인'
-            st.session_state['contract_type_radio'] = '개인'
-            st.session_state['guarantee'] = '한정근담보'
-            
-            # 금액 (위젯 키 포함)
-            st.session_state['amount_raw_input'] = ''
-            st.session_state['input_amount'] = ''
-            
-            # 물건지 (위젯 키 포함)
-            st.session_state['input_collateral_addr'] = ''
-            st.session_state['collateral_addr_input'] = ''
-            st.session_state['collateral_addr_widget'] = ''
-            default_estate = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
-            st.session_state['estate_text'] = default_estate
-            st.session_state['estate_text_area'] = default_estate
-            
-            st.success("✅ 초기화되었습니다!")
+            st.session_state['t1_debtor_name'] = "" # 키 초기화
+            st.session_state['t1_debtor_addr'] = ""
+            st.session_state['t1_debtor_rrn'] = ""
+            st.session_state['t1_owner_name'] = ""
+            st.session_state['t1_owner_addr'] = ""
+            st.session_state['t1_owner_rrn'] = ""
+            st.session_state['contract_type'] = "개인"
+            st.session_state['guarantee'] = "한정근담보"
+            st.session_state['amount_raw_input'] = ""
+            st.session_state['input_amount'] = ""
+            st.session_state['input_collateral_addr'] = ""
+            st.session_state['collateral_addr_input'] = ""
+            st.session_state['estate_text'] = """[토지]\n서울특별시 강남구 대치동 123번지\n대 300㎡\n\n[건물]\n서울특별시 강남구 대치동 123번지\n철근콘크리트조 슬래브지붕 5층 주택\n1층 100㎡\n2층 100㎡"""
+            st.session_state['input_debtor_rrn'] = ""
+            st.session_state['input_owner_rrn'] = ""
             st.rerun()
     st.markdown("---")
     
@@ -1773,22 +1187,22 @@ with tab1:
         selected_creditor = st.selectbox("채권자 선택", options=creditor_list, index=default_index, key='t1_creditor_select', on_change=handle_creditor_change)
         st.session_state['input_creditor'] = selected_creditor
         
+        # 유노스프레스티지 선택 시 수기입력 기본값 자동 설정 (최초 렌더링 시에도 적용)
+        if "(주)유노스프레스티지대부" in selected_creditor:
+            current_cert_fee = st.session_state.get('cost_manual_제증명', '0')
+            try:
+                cert_fee_val = int(str(current_cert_fee).replace(',', '').replace('원', '').strip() or '0')
+            except:
+                cert_fee_val = 0
+            if cert_fee_val == 0:
+                st.session_state['cost_manual_제증명'] = "20,000"
+                st.session_state['cost_manual_교통비'] = "0"
+                st.session_state['cost_manual_원인증서'] = "0"
+        
         if selected_creditor == "🖊️ 직접입력":
-            def on_direct_name_change():
-                st.session_state['input_creditor_name'] = st.session_state.get('direct_creditor_name', '')
-            def on_direct_corp_change():
-                st.session_state['input_creditor_corp_num'] = st.session_state.get('direct_corp_num', '')
-            def on_direct_addr_change():
-                st.session_state['input_creditor_addr'] = st.session_state.get('direct_creditor_addr', '')
-            
-            st.text_input("채권자 성명/상호", value=st.session_state.get('input_creditor_name', ''), key='direct_creditor_name', on_change=on_direct_name_change)
-            st.text_input("법인번호", value=st.session_state.get('input_creditor_corp_num', ''), key='direct_corp_num', on_change=on_direct_corp_change)
-            st.text_area("채권자 주소", value=st.session_state.get('input_creditor_addr', ''), key='direct_creditor_addr', height=100, on_change=on_direct_addr_change)
-            
-            # 현재 값도 동기화
-            st.session_state['input_creditor_name'] = st.session_state.get('direct_creditor_name', st.session_state.get('input_creditor_name', ''))
-            st.session_state['input_creditor_corp_num'] = st.session_state.get('direct_corp_num', st.session_state.get('input_creditor_corp_num', ''))
-            st.session_state['input_creditor_addr'] = st.session_state.get('direct_creditor_addr', st.session_state.get('input_creditor_addr', ''))
+            st.session_state['input_creditor_name'] = st.text_input("채권자 성명/상호", value=st.session_state.get('input_creditor_name', ''), key='direct_creditor_name')
+            st.session_state['input_creditor_corp_num'] = st.text_input("법인번호", value=st.session_state.get('input_creditor_corp_num', ''), key='direct_corp_num')
+            st.session_state['input_creditor_addr'] = st.text_area("채권자 주소", value=st.session_state.get('input_creditor_addr', ''), key='direct_creditor_addr', height=100)
         else:
             creditor_info = CREDITORS.get(selected_creditor, {})
             st.text_input("법인번호", value=creditor_info.get('corp_num', ''), disabled=False)
@@ -1859,122 +1273,17 @@ with tab1:
         col_addr1, col_addr2 = st.columns([5, 1])
         def copy_debtor_address():
             if st.session_state.get('t1_debtor_addr'):
-                st.session_state['_pending_collateral_addr'] = st.session_state['t1_debtor_addr']
-        def copy_from_estate():
-            # 부동산표시에서 물건지주소 추출 (도로명주소 + 동 + 호)
-            estate_text = st.session_state.get('estate_text', '')
-            if not estate_text.strip():
-                st.session_state['_toast_msg'] = "⚠️ 부동산표시가 비어있습니다"
-                return
-            
-            import re
-            
-            # 동 추출 (첫줄에서)
-            lines = estate_text.strip().split('\n')
-            동 = ""
-            for line in lines[:3]:
-                동_match = re.search(r'제?(\d+)동', line)
-                if 동_match:
-                    동 = f"{동_match.group(1)}동"
-                    break
-            
-            # 호 추출 (전유부분에서)
-            호 = ""
-            호_match = re.search(r'제(\d+)호', estate_text)
-            if 호_match:
-                호 = f"{호_match.group(1)}호"
-            
-            # 1. 도로명주소 우선
-            if '[도로명주소]' in estate_text:
-                match = re.search(r'\[도로명주소\]\s*(.+?)(?:\n|$)', estate_text)
-                if match:
-                    주소 = match.group(1).strip()
-                    물건지주소 = f"{주소} {동} {호}".strip()
-                    물건지주소 = re.sub(r'\s+', ' ', 물건지주소)
-                    st.session_state['_pending_collateral_addr'] = 물건지주소
-                    st.session_state['_toast_msg'] = "✅ 도로명주소 추출 완료"
-                    return
-            
-            # 2. 지번주소에서 추출 (토지의 표시 첫번째)
-            지번_match = re.search(r'토지의 표시\s*\n\s*1\.\s*(.+?)(?:\n|$)', estate_text)
-            if 지번_match:
-                주소 = 지번_match.group(1).strip()
-                물건지주소 = f"{주소} {동} {호}".strip()
-                물건지주소 = re.sub(r'\s+', ' ', 물건지주소)
-                st.session_state['_pending_collateral_addr'] = 물건지주소
-                st.session_state['_toast_msg'] = "✅ 지번주소 추출 완료"
-                return
-            
-            st.session_state['_toast_msg'] = "⚠️ 주소를 찾을 수 없습니다"
-        
+                st.session_state['collateral_addr_input'] = st.session_state['t1_debtor_addr']
+                st.session_state['input_collateral_addr'] = st.session_state['t1_debtor_addr']
         with col_addr1:
-            # pending 값이 있으면 적용 (widget key도 함께 업데이트해야 함!)
-            if '_pending_collateral_addr' in st.session_state:
-                new_addr = st.session_state.pop('_pending_collateral_addr')
-                st.session_state['input_collateral_addr'] = new_addr
-                st.session_state['collateral_addr_widget'] = new_addr  # widget key 업데이트
-            
-            collateral_input = st.text_area(
-                "물건지주소 (수기입력가능)", 
-                value=st.session_state.get('input_collateral_addr', ''),
-                height=100,
-                key='collateral_addr_widget'
-            )
-            st.session_state['input_collateral_addr'] = collateral_input
+            st.text_area("물건지 주소 (수기 입력)", key='collateral_addr_input', height=100)
+            if 'collateral_addr_input' in st.session_state: st.session_state['input_collateral_addr'] = st.session_state['collateral_addr_input']
         with col_addr2:
-            st.button("📋 채무자 주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
-            st.button("🏠 부동산표시에서 추출", key='copy_estate_addr_btn', on_click=copy_from_estate, use_container_width=True)
-        
-        # 토스트 메시지 표시
-        if st.session_state.get('_toast_msg'):
-            st.toast(st.session_state['_toast_msg'])
-            del st.session_state['_toast_msg']
+            st.write(""); st.write("")
+            st.button("📋\n채무자\n주소복사", key='copy_debtor_addr_btn', on_click=copy_debtor_address, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("### 🏠 부동산의 표시")
-    
-    # 등기부 PDF 업로드
-    col_upload, col_help = st.columns([3, 1])
-    with col_upload:
-        uploaded_registry = st.file_uploader("📤 등기부등본 PDF 업로드 (인터넷등기소 열람용)", type=['pdf'], key='registry_upload_tab1')
-    with col_help:
-        st.caption("※ 집합건물(아파트) 등기부만 지원")
-    
-    if uploaded_registry:
-        if st.button("📋 부동산표시 추출", key='extract_estate_btn', use_container_width=True):
-            with st.spinner("등기부 분석 중..."):
-                data, debug = parse_registry_pdf(uploaded_registry)
-                
-                # 디버그 정보를 session_state에 저장
-                st.session_state['estate_debug'] = debug
-                
-                if debug["errors"]:
-                    pass  # 오류가 있으면 추출 결과 사용 안함
-                else:
-                    formatted = format_estate_text(data)
-                    st.session_state['estate_text'] = formatted
-                    st.session_state['estate_text_area'] = formatted
-                    
-                    # 위택스용 물건지 주소 자동 채움 (도로명주소 + 동 + 호)
-                    # 동명칭: 제1동 → 1동
-                    동 = data.get("동명칭", "").replace("제", "") if data.get("동명칭") else ""
-                    # 전유부분에서 호수 추출: 제5층 제507호 → 507호
-                    호_match = re.search(r'제(\d+)호', data.get("전유부분", ""))
-                    호 = f"{호_match.group(1)}호" if 호_match else ""
-                    
-                    if data["도로명주소"]:
-                        물건지주소 = f"{data['도로명주소']} {동} {호}".strip()
-                        # 연속 공백 제거
-                        물건지주소 = re.sub(r'\s+', ' ', 물건지주소)
-                        st.session_state['_pending_collateral_addr'] = 물건지주소
-                    
-                st.rerun()
-    
-    # 디버깅 정보 표시 (session_state에서)
-    if 'estate_debug' in st.session_state:
-        show_debug(st.session_state['estate_debug'])
-    
-    st.caption("※ 등기부등본 내용을 입력하세요")
+    st.markdown("### 🏠 부동산의 표시"); st.caption("※ 등기부등본 내용을 입력하세요")
     col_estate, col_pdf = st.columns([3, 1])
     with col_estate:
         st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=300, key='estate_text_area', label_visibility="collapsed")
@@ -1999,233 +1308,9 @@ with tab1:
                 }
                 try:
                     pdf_buffer = make_pdf(selected_template_path, data)
-                    filename = f"근저당권설정_{data['debtor_name']}.pdf"
-                    st.download_button(
-                        label="⬇️ 다운로드",
-                        data=pdf_buffer,
-                        file_name=filename,
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
+                    st.download_button(label="⬇️ 다운로드", data=pdf_buffer, file_name=f"근저당권설정_{data['debtor_name']}.pdf", mime="application/pdf", use_container_width=True)
+                    st.success("✅ PDF 생성완료!")
                 except Exception as e: st.error(f"오류: {e}")
-    
-    # =========================================================================
-    # 위택스 등록면허세 신고 섹션
-    # =========================================================================
-    st.markdown("---")
-    st.markdown("### 🏛️ 위택스 등록면허세 신고")
-    
-    # 위택스 서버 URL 설정
-    if 'wetax_server_url' not in st.session_state:
-        st.session_state['wetax_server_url'] = ''
-    
-    with st.expander("⚙️ 위택스 서버 설정", expanded=not st.session_state.get('wetax_server_url')):
-        st.caption("wetax_launcher.exe 실행 후 생성된 URL을 붙여넣으세요")
-        wetax_url = st.text_input(
-            "서버 URL",
-            value=st.session_state.get('wetax_server_url', ''),
-            placeholder="https://xxxx.trycloudflare.com",
-            key='wetax_url_input',
-            label_visibility='collapsed'
-        )
-        if wetax_url != st.session_state.get('wetax_server_url', ''):
-            st.session_state['wetax_server_url'] = wetax_url
-        
-        # 연결 테스트 버튼
-        if wetax_url:
-            if st.button("🔗 연결 테스트", key='wetax_test_conn'):
-                try:
-                    test_url = wetax_url.rstrip('/') + "/"
-                    resp = requests.get(test_url, timeout=5)
-                    if resp.status_code == 200:
-                        st.success("✅ 연결 성공!")
-                    else:
-                        st.error(f"❌ 연결 실패 (상태코드: {resp.status_code})")
-                except Exception as e:
-                    st.error(f"❌ 연결 실패: {e}")
-    
-    # 초기화
-    if 'wetax_include_addr_change' not in st.session_state:
-        st.session_state['wetax_include_addr_change'] = False
-    if 'wetax_include_correction' not in st.session_state:
-        st.session_state['wetax_include_correction'] = False
-    if 'wetax_addr_owner' not in st.session_state:
-        st.session_state['wetax_addr_owner'] = False
-    if 'wetax_addr_debtor' not in st.session_state:
-        st.session_state['wetax_addr_debtor'] = False
-    
-    contract_type = st.session_state.get('contract_type', '개인')
-    
-    with st.container(border=True):
-        # 근저당설정 (항상 표시)
-        creditor_name = st.session_state.get('input_creditor_name', '') or st.session_state.get('input_creditor', '')
-        st.checkbox("✅ **근저당설정** (납세자: 채권자)", value=True, disabled=True, key='wetax_setting_check')
-        st.caption(f"   └─ {creditor_name}")
-        
-        st.markdown("---")
-        
-        # 주소변경 체크박스
-        include_addr = st.checkbox("📍 **주소변경 포함**", key='wetax_include_addr_change')
-        
-        if include_addr:
-            if contract_type == "개인":
-                # 개인: 채무자만
-                debtor_name = st.session_state.get('t1_debtor_name', '')
-                st.caption(f"   └─ 납세자: 채무자 ({debtor_name})")
-                correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
-                
-            elif contract_type == "3자담보":
-                # 3자담보: 소유자만
-                owner_name = st.session_state.get('t1_owner_name', '')
-                st.caption(f"   └─ 납세자: 소유자 ({owner_name})")
-                correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
-                
-            else:  # 공동담보
-                # 공동담보: 소유자 + 채무자 선택
-                owner_name = st.session_state.get('t1_owner_name', '')
-                debtor_name = st.session_state.get('t1_debtor_name', '')
-                
-                col_owner, col_debtor = st.columns(2)
-                with col_owner:
-                    addr_owner = st.checkbox(f"소유자 ({owner_name})", key='wetax_addr_owner')
-                    if addr_owner:
-                        st.checkbox("   └─ 경정 포함", key='wetax_owner_correction')
-                with col_debtor:
-                    addr_debtor = st.checkbox(f"채무자 ({debtor_name})", key='wetax_addr_debtor')
-                    if addr_debtor:
-                        st.checkbox("   └─ 경정 포함", key='wetax_debtor_correction')
-        
-        st.markdown("---")
-        
-        # 신고 버튼
-        if st.button("🚀 위택스 신고 실행", type="primary", use_container_width=True, key='wetax_submit_btn'):
-            cases = []
-            
-            # 1. 근저당설정 (채권자)
-            creditor_corp_num = st.session_state.get('input_creditor_corp_num', '')
-            creditor_addr = st.session_state.get('input_creditor_addr', '')
-            property_addr = st.session_state.get('input_collateral_addr', '')
-            tax_base = remove_commas(st.session_state.get('input_amount', '0'))
-            
-            front, back = parse_corp_num(creditor_corp_num)
-            road_addr, detail_addr = extract_road_address(creditor_addr)
-            prop_road, prop_detail = extract_road_address(property_addr)
-            
-            cases.append({
-                "type": "설정",
-                "taxpayer_type": "02",  # 법인
-                "taxpayer_name": creditor_name,
-                "resident_no_front": front,
-                "resident_no_back": back,
-                "phone": "0218335482",
-                "address": road_addr,
-                "address_detail": detail_addr,
-                "property_address": prop_road,
-                "property_detail": prop_detail,
-                "tax_base": int(tax_base) if tax_base else 0
-            })
-            
-            # 2. 주소변경
-            if include_addr:
-                if contract_type == "개인":
-                    # 채무자
-                    debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
-                    debtor_addr = st.session_state.get('t1_debtor_addr', '')
-                    front, back = parse_rrn(debtor_rrn)
-                    road_addr, detail_addr = extract_road_address(debtor_addr)
-                    
-                    if st.session_state.get('wetax_include_correction'):
-                        # 경정
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-                    # 변경
-                    cases.append({
-                        "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                        "address": road_addr, "address_detail": detail_addr,
-                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                    })
-                    
-                elif contract_type == "3자담보":
-                    # 소유자
-                    owner_rrn = st.session_state.get('t1_owner_rrn', '')
-                    owner_addr = st.session_state.get('t1_owner_addr', '')
-                    front, back = parse_rrn(owner_rrn)
-                    road_addr, detail_addr = extract_road_address(owner_addr)
-                    
-                    if st.session_state.get('wetax_include_correction'):
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-                    cases.append({
-                        "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                        "address": road_addr, "address_detail": detail_addr,
-                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                    })
-                    
-                else:  # 공동담보
-                    if st.session_state.get('wetax_addr_owner'):
-                        owner_rrn = st.session_state.get('t1_owner_rrn', '')
-                        owner_addr = st.session_state.get('t1_owner_addr', '')
-                        front, back = parse_rrn(owner_rrn)
-                        road_addr, detail_addr = extract_road_address(owner_addr)
-                        
-                        if st.session_state.get('wetax_owner_correction'):
-                            cases.append({
-                                "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                                "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                                "address": road_addr, "address_detail": detail_addr,
-                                "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                            })
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-                    
-                    if st.session_state.get('wetax_addr_debtor'):
-                        debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
-                        debtor_addr = st.session_state.get('t1_debtor_addr', '')
-                        front, back = parse_rrn(debtor_rrn)
-                        road_addr, detail_addr = extract_road_address(debtor_addr)
-                        
-                        if st.session_state.get('wetax_debtor_correction'):
-                            cases.append({
-                                "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                                "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                                "address": road_addr, "address_detail": detail_addr,
-                                "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                            })
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-            
-            # URL 확인
-            wetax_url = st.session_state.get('wetax_server_url', '')
-            if not wetax_url:
-                st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
-            else:
-                # API 호출
-                st.info(f"📤 총 {len(cases)}건 신고 중...")
-                result, error = call_wetax_api(cases, base_url=wetax_url)
-                
-                if error:
-                    st.error(f"❌ 오류: {error}")
-                else:
-                    st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
-                    st.json(result)
 
 # =============================================================================
 # Tab 2: 자필서명정보 작성
@@ -2241,12 +1326,13 @@ with tab2:
             if len(clean_val) == 13:
                 st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:]}"
 
-    # 헤더와 버튼을 분리
-    st.markdown("### ✍️ 자필서명정보 작성")
-    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
+    # 헤더
+    col_header = st.columns([6, 1, 1])
+    with col_header[0]:
+        st.markdown("### ✍️ 자필서명정보 작성")
     
     # [수정됨] 1탭 가져오기 로직 (위젯 Key 강제 동기화 적용)
-    with col_btn1:
+    with col_header[1]:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab2", help="1탭 정보 불러오기"):
             # 1. 1탭 데이터 확보 (위젯 Key 기준)
             contract_type = st.session_state.get('contract_type', '개인')
@@ -2302,31 +1388,15 @@ with tab2:
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
     
-    with col_btn2:
+    with col_header[2]:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2", help="모든 입력 초기화"):
-            # 등기의무자 1
             st.session_state['tab2_owner1_name'] = ''
-            st.session_state['tab2_owner1_name_input'] = ''
             st.session_state['tab2_owner1_rrn'] = ''
-            st.session_state['tab2_owner1_rrn_input'] = ''
-            
-            # 등기의무자 2
             st.session_state['tab2_owner2_name'] = ''
-            st.session_state['tab2_owner2_name_input'] = ''
             st.session_state['tab2_owner2_rrn'] = ''
-            st.session_state['tab2_owner2_rrn_input'] = ''
-            
-            # 부동산 표시
             st.session_state['tab2_estate'] = ''
-            st.session_state['tab2_estate_input'] = ''
-            
-            # 날짜
             st.session_state['tab2_date'] = datetime.now().date()
-            st.session_state['tab2_date_input'] = datetime.now().date()
-            
-            # 신청서 구분
             st.session_state['tab2_receipt_type'] = '전자신청'
-            
             st.success("✅ 초기화되었습니다!")
             st.rerun()
     
@@ -2479,14 +1549,15 @@ with tab2:
                 # make_signature_pdf 함수 사용
                 pdf_buffer = make_signature_pdf(template_path, signature_data)
                 
-                filename = f"자필서명정보_{tab2_owner1_name or '고객'}_{st.session_state['tab2_receipt_type']}.pdf"
                 st.download_button(
-                    label="⬇️ 다운로드",
+                    label="⬇️ 자필서명정보 다운로드",
                     data=pdf_buffer,
-                    file_name=filename,
+                    file_name=f"자필서명정보_{tab2_owner1_name or '고객'}_{st.session_state['tab2_receipt_type']}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
+                
+                st.success("✅ PDF 생성 완료!")
                 
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
@@ -2496,119 +1567,58 @@ with tab2:
 
 # Tab 3: 비용 계산 및 영수증 (완전 개편)
 with tab3:
-    # 헤더와 버튼을 분리
-    st.markdown("### 🧾 등기비용 계산기")
-    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
-    with col_btn1:
+    # 헤더: 가져오기 + 초기화 버튼
+    col_header3 = st.columns([6, 1, 1])
+    with col_header3[0]:
+        st.markdown("### 🧾 등기비용 계산기")
+    with col_header3[1]:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="1탭 정보 불러오기"):
-            # 1탭 값 직접 가져와서 Tab3 위젯에 설정
-            creditor_val = st.session_state.get('input_creditor', '')
-            debtor_val = st.session_state.get('t1_debtor_name', '')
-            amount_val = st.session_state.get('input_amount', '')
-            estate_val = st.session_state.get('input_collateral_addr', '')
-            if not estate_val:
-                estate_val = extract_address_from_estate(st.session_state.get('estate_text') or "")
-            
-            # Tab3 위젯에 직접 설정 (selectbox는 이 값을 사용함)
-            st.session_state['tab3_creditor_select'] = creditor_val
-            st.session_state['tab3_debtor_input'] = debtor_val
-            st.session_state['calc_amount_input'] = amount_val
-            st.session_state['tab3_estate_input'] = estate_val
-            
-            # 수기입력 기본값 설정 (금융사에 따라)
-            if "(주)유노스프레스티지대부" in creditor_val:
-                st.session_state['cost_manual_제증명'] = "20,000"
-                st.session_state['cost_manual_교통비'] = "100,000"
-                st.session_state['cost_manual_원인증서'] = "50,000"
-            else:
-                st.session_state['cost_manual_제증명'] = "50,000"
-                st.session_state['cost_manual_교통비'] = "100,000"
-                st.session_state['cost_manual_원인증서'] = "50,000"
-            
             st.success("✅ 1탭 정보가 동기화되었습니다!")
             st.rerun()
-    with col_btn2:
+    with col_header3[2]:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab3", help="모든 입력 초기화"):
-            # 동기화 방지 플래그 설정
-            st.session_state['tab3_reset_flag'] = True
-            
-            # 기본 정보
             st.session_state['calc_data'] = {}
             st.session_state['show_fee'] = True
-            st.session_state['show_fee_checkbox'] = True
             st.session_state['input_parcels'] = 1
-            st.session_state['calc_parcels_input'] = 1
             st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
-            st.session_state['calc_rate_input'] = st.session_state['input_rate']
-            
-            # 주소변경
             st.session_state['use_address_change'] = False
-            st.session_state['address_change_count'] = 0
-            st.session_state['addr_count_input'] = 1
-            
-            # 금액
-            st.session_state['calc_amount_input'] = ''
-            st.session_state['input_amount'] = ''
-            
-            # 채무자, 채권자, 물건지 (위젯 키 포함)
-            st.session_state['tab3_creditor_select'] = list(CREDITORS.keys())[0]
-            st.session_state['tab3_direct_name'] = ''  # 직접입력 채권자명
-            st.session_state['tab3_debtor_input'] = ''
-            st.session_state['tab3_estate_input'] = ''
-            st.session_state['input_debtor'] = ''
-            st.session_state['calc_debtor_view'] = ''
-            st.session_state['input_collateral_addr'] = ''
-            st.session_state['calc_estate_view'] = ''
-            st.session_state['calc_creditor_view'] = ''
-            
-            # 공과금 자동계산 항목
-            st.session_state['tax_등록면허세'] = '0'
-            st.session_state['tax_지방교육세'] = '0'
-            st.session_state['tax_증지대'] = '0'
-            st.session_state['tax_채권할인'] = '0'
-            
-            # base 값 초기화 (주소변경 계산용)
-            st.session_state['tax_등록면허세_base'] = 0
-            st.session_state['tax_지방교육세_base'] = 0
-            st.session_state['tax_증지대_base'] = 0
-            st.session_state['tax_채권할인_base'] = 0
-            
-            # 수기입력 항목
-            st.session_state['cost_manual_제증명'] = '0'
-            st.session_state['cost_manual_교통비'] = '0'
-            st.session_state['cost_manual_원인증서'] = '0'
-            st.session_state['cost_manual_주소변경'] = '0'
-            st.session_state['cost_manual_확인서면'] = '0'
-            st.session_state['cost_manual_선순위 말소'] = '0'
-            
-            # 보수 항목
-            st.session_state['base_fee_val'] = '0'
-            st.session_state['add_fee_val'] = '0'
-            st.session_state['etc_fee_val'] = '0'
-            st.session_state['disc_fee_val'] = '0'
-            
-            st.success("✅ 초기화되었습니다!")
+            st.session_state['address_change_count'] = 1
+            handle_creditor_change()
             st.rerun()
     st.markdown("---")
 
     # =========================================================
-    # 3탭 자체 데이터 사용 (초기화 플래그 확인)
+    # [수정됨] 0. 1탭 데이터 강제 동기화 (Source of Truth)
     # =========================================================
+    # 3탭이 렌더링될 때마다 1탭 데이터를 무조건 가져옴
     
-    # 초기화 직후인지 확인
-    if st.session_state.get('tab3_reset_flag', False):
-        st.session_state['tab3_reset_flag'] = False
-        # 초기화 값 유지 (덮어쓰지 않음)
-        debtor_from_tab1 = ''
-        creditor_from_tab1 = list(CREDITORS.keys())[0]
-        amount_from_tab1 = ''
-        estate_from_tab1 = ''
-    else:
-        # 3탭 자체 값 사용 (없으면 빈 값)
-        debtor_from_tab1 = st.session_state.get('tab3_debtor_input', '')
-        creditor_from_tab1 = st.session_state.get('tab3_creditor_select', list(CREDITORS.keys())[0])
-        amount_from_tab1 = st.session_state.get('calc_amount_input', '')
-        estate_from_tab1 = st.session_state.get('tab3_estate_input', '')
+    # 1탭 데이터 가져오기
+    debtor_from_tab1 = st.session_state.get('t1_debtor_name', '')
+    creditor_from_tab1 = st.session_state.get('input_creditor', '')
+    amount_from_tab1 = st.session_state.get('input_amount', '')
+    estate_from_tab1 = st.session_state.get('input_collateral_addr', '')
+    
+    # 물건지 처리
+    if not estate_from_tab1:
+        estate_from_tab1 = extract_address_from_estate(st.session_state.get('estate_text') or "")
+    
+    # 채권최고액 동기화 (무조건)
+    st.session_state['calc_amount_input'] = amount_from_tab1
+    
+    # 채무자 동기화 (무조건 1탭 값으로 덮어쓰기)
+    st.session_state['input_debtor'] = debtor_from_tab1
+    st.session_state['calc_debtor_view'] = debtor_from_tab1
+    st.session_state['tab3_debtor_input'] = debtor_from_tab1
+    
+    # 채권자 동기화 (무조건 1탭 값으로 덮어쓰기)
+    st.session_state['input_creditor'] = creditor_from_tab1
+    st.session_state['calc_creditor_view'] = creditor_from_tab1
+    st.session_state['tab3_creditor_select'] = creditor_from_tab1
+    
+    # 물건지 동기화 (무조건 1탭 값으로 덮어쓰기)
+    st.session_state['input_collateral_addr'] = estate_from_tab1
+    st.session_state['calc_estate_view'] = estate_from_tab1
+    st.session_state['tab3_estate_input'] = estate_from_tab1
     
     # =========================================================
     # 1. 통합 기본 정보 섹션
@@ -2626,7 +1636,8 @@ with tab3:
             val = st.session_state.get('calc_amount_input', '')
             formatted = format_number_with_comma(val)
             st.session_state['calc_amount_input'] = formatted
-        st.text_input("채권최고액", key='calc_amount_input', on_change=on_tab3_amount_change, placeholder="금액 입력")
+            st.session_state['input_amount'] = formatted
+        st.text_input("채권최고액", value=st.session_state.get('calc_amount_input', ''), key='calc_amount_input', on_change=on_tab3_amount_change)
 
     with row1_c3:
         parcels_val = st.session_state.get('input_parcels', 1)
@@ -2635,105 +1646,71 @@ with tab3:
 
     with row1_c4:
         col_rate, col_btn = st.columns([2, 0.5])
-        
-        # 갱신 버튼 처리 (먼저 처리)
-        if col_btn.button("🔄", help="오늘 할인율 가져오기"):
-            new_rate_val = f"{get_rate()*100:.5f}"
-            st.session_state['input_rate'] = new_rate_val
-            st.session_state['calc_rate_input'] = new_rate_val
+        rate_val = st.session_state.get('input_rate', '12.00000')
+        new_rate = col_rate.text_input("할인율(%)", value=rate_val, key='calc_rate_input')
+        if col_btn.button("🔄", help="갱신"):
+            st.session_state['input_rate'] = f"{get_rate()*100:.5f}"
             st.rerun()
-        
-        # 할인율 입력 (key만 사용)
-        if 'calc_rate_input' not in st.session_state:
-            st.session_state['calc_rate_input'] = st.session_state.get('input_rate', '12.00000')
-        new_rate = col_rate.text_input("할인율(%)", key='calc_rate_input')
         st.session_state['input_rate'] = new_rate
 
     row2_c1, row2_c2 = st.columns([1, 1])
     
     # 금융사 선택 (1탭 값 기준)
     with row2_c1:
-        # 기본 목록
-        creditor_list = list(CREDITORS.keys())
-        
-        # 직접입력한 채권자가 있으면 목록에 추가
-        direct_creditor_name = st.session_state.get('input_creditor_name', '')
-        if direct_creditor_name:
-            creditor_list.append(f"📝 {direct_creditor_name}")
-        
-        creditor_list.append("🖊️ 직접입력")
+        creditor_list = list(CREDITORS.keys()) + ["🖊️ 직접입력"]
         
         # 1탭 값을 우선 사용
         current_creditor = creditor_from_tab1 if creditor_from_tab1 else creditor_list[0]
-        
-        # "🖊️ 직접입력"이면서 이름이 있으면 → "📝 이름"으로 변환
-        if current_creditor == "🖊️ 직접입력" and direct_creditor_name:
-            current_creditor = f"📝 {direct_creditor_name}"
-        
         if current_creditor not in creditor_list:
             current_creditor = creditor_list[0]
         default_index = creditor_list.index(current_creditor)
         
         def on_tab3_creditor_change():
             selected = st.session_state.get('tab3_creditor_select')
-            # 3탭 내부에서만 사용 (1탭 연동 제거)
             st.session_state['calc_creditor_view'] = selected
-            # 수기입력 비용 설정
-            if selected and "(주)유노스프레스티지대부" in selected:
-                st.session_state['cost_manual_제증명'] = "20,000"
-            elif selected and selected != "🖊️ 직접입력":
-                # 기타 금융사는 초기화된 값이 아니면 유지
-                pass
+            st.session_state['input_creditor'] = selected
+            st.session_state['t1_creditor_select'] = selected  # 이 줄 추가!
+            # 금융사 변경 시 수기입력 기본값 적용
+            handle_creditor_change()
         
         selected_creditor_tab3 = st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change)
         
-        # 직접입력 선택 시 입력 필드 표시
-        if selected_creditor_tab3 == "🖊️ 직접입력":
-            st.text_input(
-                "채권자 성명/상호", 
-                key='tab3_direct_name',
-                placeholder="채권자명 입력"
-            )
-        
-        # 유노스프레스티지 선택 시 제증명 20,000원 자동 설정
+        # 유노스프레스티지 선택 시 제증명 20,000원 자동 설정 (최초 렌더링 시에도 적용)
         if "(주)유노스프레스티지대부" in selected_creditor_tab3:
             current_cert_fee = st.session_state.get('cost_manual_제증명', '0')
+            # 숫자 0, 문자열 "0", 빈값 등 모두 체크
             try:
                 cert_fee_val = int(str(current_cert_fee).replace(',', '').replace('원', '').strip() or '0')
             except:
                 cert_fee_val = 0
-            # 0이거나 기본값(50,000)이면 20,000으로 변경
-            if cert_fee_val == 0 or cert_fee_val == 50000:
+            if cert_fee_val == 0:
                 st.session_state['cost_manual_제증명'] = "20,000"
+                st.session_state['cost_manual_교통비'] = "0"
+                st.session_state['cost_manual_원인증서'] = "0"
     
     # 채무자 입력
     with row2_c2:
         def on_tab3_debtor_change():
+            st.session_state['input_debtor'] = st.session_state.get('tab3_debtor_input', '')
             st.session_state['calc_debtor_view'] = st.session_state.get('tab3_debtor_input', '')
         
-        st.text_input("채무자", key='tab3_debtor_input', on_change=on_tab3_debtor_change, placeholder="채무자명")
+        st.text_input("채무자", key='tab3_debtor_input', on_change=on_tab3_debtor_change)
     
     # 물건지 입력
     def on_tab3_estate_change():
+        st.session_state['input_collateral_addr'] = st.session_state.get('tab3_estate_input', '')
         st.session_state['calc_estate_view'] = st.session_state.get('tab3_estate_input', '')
     
-    st.text_area("물건지", key='tab3_estate_input', on_change=on_tab3_estate_change, height=80, placeholder="물건지 주소")
+    st.text_area("물건지", key='tab3_estate_input', on_change=on_tab3_estate_change, height=80)
     st.markdown("---")
 
     # =========================================================
     # 2. 계산 로직 수행
     # =========================================================
-    # 주소변경 인원수 처리 (체크되어 있으면 인원수 반영, 아니면 0명)
-    current_addr_use = st.session_state.get('use_address_change', False)
-    current_addr_count = int(st.session_state.get('addr_count_input', 1)) if current_addr_use else 0
-    st.session_state['address_change_count'] = current_addr_count
-    
     # 3탭 위젯 값 사용 (사용자가 수정한 경우 그 값 반영)
     creditor_for_calc = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
     if creditor_for_calc == "🖊️ 직접입력":
         creditor_for_calc = st.session_state.get('input_creditor_name', '직접입력')
-    elif creditor_for_calc.startswith("📝 "):
-        creditor_for_calc = creditor_for_calc[2:].strip()  # "📝 " 제거
     
     calc_input_data = {
         '채권최고액': st.session_state.get('calc_amount_input', amount_from_tab1), 
@@ -2742,7 +1719,6 @@ with tab3:
         '금융사': creditor_for_calc,
         '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
         '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
-        '기본료_val': st.session_state.get('base_fee_val', "0"),
         '추가보수_val': st.session_state.get('add_fee_val', "0"),
         '기타보수_val': st.session_state.get('etc_fee_val', "0"),
         '할인금액': st.session_state.get('disc_fee_val', "0"),
@@ -2762,14 +1738,17 @@ with tab3:
         with c2:
             formatted_val = str(value)
             
-            # disabled(수정불가) 항목은 텍스트로 표시
-            if disabled:
+            # disabled(수정불가) 항목은 계산된 값을 강제로 session_state에 주입
+            if disabled and key:
                 st.session_state[key] = formatted_val
-                st.markdown(f"<div style='text-align:right; padding:8px 12px; background:#2a2a2a; border-radius:4px; color:#00d26a; font-weight:bold;'>{formatted_val} 원</div>", unsafe_allow_html=True)
-            elif on_change:
-                st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed")
+            
+            if on_change:
+                st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed", disabled=disabled)
             else:
-                st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed")
+                if disabled and key:
+                    st.text_input(label, key=key, label_visibility="collapsed", disabled=disabled)
+                else:
+                    st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed", disabled=disabled)
 
     def format_cost_input(key):
         val = st.session_state[key]
@@ -2780,71 +1759,57 @@ with tab3:
     # [1] 보수액 (Income)
     with col_income:
         st.markdown("<div class='section-header income-header'>💰 보수액 (Income)</div>", unsafe_allow_html=True)
-        with st.container(border=True, height=650):
-            # 기본료: 수기 입력 가능 (자동계산 값 표시)
-            auto_base_fee = final_data.get('기본료_자동', 0)
-            c1, c2 = st.columns([1, 1.8])
-            with c1: 
-                st.markdown("<div class='row-label'>기본료</div>", unsafe_allow_html=True)
-                st.caption(f"(자동: {format_number_with_comma(auto_base_fee)})")
-            with c2:
-                # 수기입력 값이 0이면 자동계산 값으로 초기화
-                if st.session_state.get('base_fee_val', "0") == "0" and auto_base_fee > 0:
-                    st.session_state['base_fee_val'] = format_number_with_comma(auto_base_fee)
-                st.text_input("기본료", value=st.session_state.get('base_fee_val', "0"), key="base_fee_val", on_change=format_cost_input, args=("base_fee_val",), label_visibility="collapsed")
-            
+        with st.container(border=True):
+            make_row("기본료", format_number_with_comma(final_data.get('기본료')), "disp_base", disabled=True)
             make_row("추가보수", st.session_state['add_fee_val'], "add_fee_val", format_cost_input)
             make_row("기타보수", st.session_state['etc_fee_val'], "etc_fee_val", format_cost_input)
             make_row("할인금액", st.session_state['disc_fee_val'], "disc_fee_val", format_cost_input)
             st.markdown("---")
-            
-            # 공급가액, 부가세, 보수총액 - 통일된 스타일
-            st.markdown(f"""
-            <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
-                <span style='font-weight:bold;'>공급가액</span>
-                <span style='color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액', 0))} 원</span>
-            </div>
-            <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
-                <span style='font-weight:bold;'>부가세</span>
-                <span style='color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('부가세', 0))} 원</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
+            c_label, c_val = st.columns([1, 1])
+            c_label.markdown("**공급가액**"); c_val.markdown(f"<div style='text-align:right; color:#28a745; font-weight:bold;'>{format_number_with_comma(final_data.get('공급가액'))} 원</div>", unsafe_allow_html=True)
+            c_label.markdown("**부가세**"); c_val.markdown(f"<div style='text-align:right; color:#28a745;'>{format_number_with_comma(final_data.get('부가세'))} 원</div>", unsafe_allow_html=True)
             st.markdown("---")
-            
-            # 보수 총액
-            st.markdown(f"""
-            <div style='display:flex; justify-content:space-between; align-items:center;'>
-                <span style='font-size:1.2rem; font-weight:bold;'>보수 총액</span>
-                <span style='color:#28a745; font-size:1.3rem; font-weight:bold;'>{format_number_with_comma(final_data.get('보수총액', 0))} 원</span>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("---")
-            # 참고 기준 (보수액 섹션 하단으로 이동)
-            st.info("**ℹ️ 참고 기준 (주소변경)**\n* **주소변경비용**: 유노스/드림 20,000원/인, 기타 50,000원/인\n* **공과금 추가** (인원별): 등록면허세 +6,000원, 지방교육세 +1,200원, 증지대 +3,000원")
+            c_label.markdown("#### 보수 총액"); c_val.markdown(f"<div style='text-align:right; color:#28a745; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('보수총액'))} 원</div>", unsafe_allow_html=True)
 
     # [2] 공과금 (Tax)
     with col_tax:
         st.markdown("<div class='section-header tax-header'>🏛️ 공과금 (Tax)</div>", unsafe_allow_html=True)
-        with st.container(border=True, height=650):
-            st.caption("[자동 계산] (calculate_all 결과 반영)")
+        with st.container(border=True):
+            st.caption("[자동 계산]")
             
-            # calculate_all이 이미 계산해준 값(주소변경 포함)을 그대로 표시
-            st.session_state['tax_등록면허세'] = format_number_with_comma(final_data.get("등록면허세", 0))
-            st.session_state['tax_지방교육세'] = format_number_with_comma(final_data.get("지방교육세", 0))
-            st.session_state['tax_증지대'] = format_number_with_comma(final_data.get("증지대", 0))
-            st.session_state['tax_채권할인'] = format_number_with_comma(final_data.get("채권할인금액", 0))
+            # 세부내역을 확실하게 표시
+            tax_col1, tax_col2 = st.columns([1.5, 1])
             
-            def display_tax_row(label, value):
-                c1, c2 = st.columns([1, 1.5])
-                c1.markdown(f"**{label}**")
-                c2.markdown(f"<div style='text-align:right; padding:8px; border:1px solid #444; border-radius:4px; background:rgba(255,255,255,0.05);'>{value} 원</div>", unsafe_allow_html=True)
+            # 등록면허세
+            with tax_col1:
+                st.markdown("<div class='row-label'>등록면허세</div>", unsafe_allow_html=True)
+            with tax_col2:
+                reg_tax = final_data.get("등록면허세", 0)
+                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(reg_tax)} 원</div>", unsafe_allow_html=True)
             
-            display_tax_row("등록면허세", st.session_state['tax_등록면허세'])
-            display_tax_row("지방교육세", st.session_state['tax_지방교육세'])
-            display_tax_row("증지대", st.session_state['tax_증지대'])
-            display_tax_row("채권할인", st.session_state['tax_채권할인'])
+            # 지방교육세
+            tax_col1, tax_col2 = st.columns([1.5, 1])
+            with tax_col1:
+                st.markdown("<div class='row-label'>지방교육세</div>", unsafe_allow_html=True)
+            with tax_col2:
+                edu_tax = final_data.get("지방교육세", 0)
+                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(edu_tax)} 원</div>", unsafe_allow_html=True)
+            
+            # 증지대
+            tax_col1, tax_col2 = st.columns([1.5, 1])
+            with tax_col1:
+                st.markdown("<div class='row-label'>증지대</div>", unsafe_allow_html=True)
+            with tax_col2:
+                stamp = final_data.get("증지대", 0)
+                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(stamp)} 원</div>", unsafe_allow_html=True)
+            
+            # 채권할인
+            tax_col1, tax_col2 = st.columns([1.5, 1])
+            with tax_col1:
+                st.markdown("<div class='row-label'>채권할인</div>", unsafe_allow_html=True)
+            with tax_col2:
+                bond = final_data.get("채권할인금액", 0)
+                st.markdown(f"<div style='text-align:right; padding:8px;'>{format_number_with_comma(bond)} 원</div>", unsafe_allow_html=True)
             
             st.markdown("---")
             st.caption("[수기 입력]")
@@ -2853,78 +1818,75 @@ with tab3:
             make_row("제증명", st.session_state['cost_manual_제증명'], "cost_manual_제증명", format_cost_input)
             make_row("교통비", st.session_state['cost_manual_교통비'], "cost_manual_교통비", format_cost_input)
             make_row("원인증서", st.session_state['cost_manual_원인증서'], "cost_manual_원인증서", format_cost_input)
-            make_row("주소변경", st.session_state['cost_manual_주소변경'], "cost_manual_주소변경", format_cost_input)
+            make_row("주소변경", st.session_state['cost_manual_주소변경'], "cost_manual_주소변경", disabled=True)
             make_row("확인서면", st.session_state['cost_manual_확인서면'], "cost_manual_확인서면", format_cost_input)
             make_row("선순위말소", st.session_state['cost_manual_선순위 말소'], "cost_manual_선순위 말소", format_cost_input)
             
             st.markdown("---")
-            # 공과금 소계 (calculate_all에서 계산된 값 사용)
-            tax_subtotal = final_data.get('공과금 총액', 0)
-            st.markdown(f"""
-            <div style='display:flex; justify-content:space-between; align-items:center;'>
-                <span style='font-size:1.2rem; font-weight:bold;'>공과금 소계</span>
-                <span style='color:#fd7e14; font-size:1.3rem; font-weight:bold;'>{format_number_with_comma(tax_subtotal)} 원</span>
-            </div>
-            """, unsafe_allow_html=True)
+            c_label, c_val = st.columns([1, 1])
+            c_label.markdown("#### 공과금 소계")
+            c_val.markdown(f"<div style='text-align:right; color:#fd7e14; font-size:1.2rem; font-weight:bold;'>{format_number_with_comma(final_data.get('공과금 총액'))} 원</div>", unsafe_allow_html=True)
 
     # [3] 결제 및 청구
     with col_payment:
         st.markdown("<div class='section-header total-header'>🧾 결제 및 청구</div>", unsafe_allow_html=True)
-        with st.container(border=True, height=650):
-            # 총 청구금액 (calculate_all에서 계산된 값)
-            grand_total = final_data.get('총 합계', 0)
+        with st.container(border=True):
             st.markdown("#### 총 청구금액")
-            st.markdown(f"<div class='total-box'><div class='total-amount'>{format_number_with_comma(grand_total)} 원</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='total-box'><div class='total-amount'>{format_number_with_comma(final_data.get('총 합계'))} 원</div></div>", unsafe_allow_html=True)
             st.markdown("---")
             
             def toggle_show_fee(): st.session_state['show_fee'] = st.session_state['show_fee_checkbox']
             st.checkbox("보수액 포함 표시", value=st.session_state['show_fee'], key='show_fee_checkbox', on_change=toggle_show_fee)
             
-            def update_manual_addr_cost():
-                """체크박스/인원수 변경 시 -> 주소변경(수기입력) 비용만 업데이트"""
+            st.markdown("#### ➕ 주소변경 추가")
+            st.caption("체크 시 공과금 + 수기비용 자동 합산")
+            
+            def update_address_cost():
                 if st.session_state.get('use_address_change', False):
-                    count = int(st.session_state.get('addr_count_input', 1))
-                    
-                    # 금융사별 단가 (유노스/드림: 2만, 나머지: 5만)
-                    cur_creditor = st.session_state.get('tab3_creditor_select', '')
-                    unit_price = 20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000
-                    
-                    # 수기 입력칸 값 업데이트
-                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(unit_price * count)
+                    # 3탭 위젯 값 사용
+                    cur_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
+                    if cur_creditor == "🖊️ 직접입력": 
+                        cur_creditor = st.session_state.get('input_creditor_name', '')
+                    count = st.session_state.get('address_change_count', 1)
+                    fee = (20000 if ("유노스" in cur_creditor or "드림" in cur_creditor) else 50000) * count
+                    st.session_state['cost_manual_주소변경'] = format_number_with_comma(fee)
                 else:
-                    # 체크 해제 시 0원
                     st.session_state['cost_manual_주소변경'] = "0"
 
-            cp1, cp2 = st.columns([1.5, 1])
-            with cp1: 
-                st.checkbox("주소변경 포함", key='use_address_change', on_change=update_manual_addr_cost)
-            with cp2:
-                st.number_input("인원", min_value=1, key='addr_count_input', label_visibility="collapsed", on_change=update_manual_addr_cost)
-            st.caption("체크 시 인원별 공과금 추가 (등록면허세 +6,000 / 지방교육세 +1,200 / 증지대 +3,000)")
+            cp1, cp2 = st.columns([1, 1])
+            with cp1: st.checkbox("주소변경 포함", key='use_address_change', on_change=update_address_cost)
+            with cp2: st.number_input("인원수", min_value=1, value=1, key='address_change_count', label_visibility="collapsed", on_change=update_address_cost)
             
             st.markdown("---")
-            
-            # PDF 데이터 준비
-            pdf_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
-            if pdf_creditor == "🖊️ 직접입력":
-                pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
-            elif pdf_creditor and pdf_creditor.startswith("📝 "):
-                pdf_creditor = pdf_creditor[2:].strip()
-            
-            debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
-            if not debtor_name or debtor_name.strip() == '':
-                debtor_name = '고객'
-            
-            # PDF 다운로드 버튼 (클릭 시 바로 다운로드)
-            if FPDF_OK:
+            st.info("**ℹ️ 참고 기준 (주소변경비용)**\n* 유노스/드림앤캐쉬: 20,000원/인\n* 기타 금융사: 50,000원/인\n* (체크 시 수기입력란에 자동반영)")
+
+
+    st.markdown("---")
+    d_col1, d_col2 = st.columns(2)
+    
+    # [1] 비용내역 PDF 다운로드
+    with d_col1:
+        if st.button("📄 비용내역 PDF 다운로드", disabled=not FPDF_OK, use_container_width=True, key="btn_pdf_download"):
+            st.session_state['generate_pdf'] = True
+        
+        if st.session_state.get('generate_pdf', False):
+            if not FPDF_OK:
+                st.error("FPDF 라이브러리가 설치되지 않았습니다.")
+                st.session_state['generate_pdf'] = False
+            else:
                 try:
+                    # PDF 데이터 준비 (3탭 위젯 값 사용)
+                    pdf_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
+                    if pdf_creditor == "🖊️ 직접입력":
+                        pdf_creditor = st.session_state.get('input_creditor_name', '직접입력')
+                    
                     pdf_data = {
                         'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
                         'client': {
-                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
+                            '채권최고액': format_number_with_comma(final_data.get('input_amount', st.session_state.get('input_amount', ''))),
                             '필지수': str(st.session_state.get('input_parcels', 1)),
                             '금융사': pdf_creditor,
-                            '채무자': debtor_name,
+                            '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
                             '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
                         },
                         'fee_items': {
@@ -2933,7 +1895,9 @@ with tab3:
                             '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
                             '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
                         },
-                        'fee_totals': {'보수총액': final_data.get('보수총액', 0)},
+                        'fee_totals': {
+                            '보수총액': final_data.get('보수총액', 0)
+                        },
                         'cost_items': {
                             '등록면허세': final_data.get('등록면허세', 0),
                             '지방교육세': final_data.get('지방교육세', 0),
@@ -2946,47 +1910,64 @@ with tab3:
                             '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
                             '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
                         },
-                        'cost_totals': {'공과금 총액': final_data.get('공과금 총액', 0)},
+                        'cost_totals': {
+                            '공과금 총액': final_data.get('공과금 총액', 0)
+                        },
                         'cost_section_title': '2. 공과금' if st.session_state.get('show_fee', True) else '1. 공과금',
                         'grand_total': final_data.get('총 합계', 0)
                     }
+                    
+                    # PDF 생성
                     pdf_converter = PDFConverter(show_fee=st.session_state.get('show_fee', True))
                     pdf_buffer = pdf_converter.output_pdf(pdf_data)
                     
+                    # 다운로드 버튼 (3탭 위젯 값 사용)
+                    debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
+                    if not debtor_name or debtor_name.strip() == '':
+                        debtor_name = '고객'
+                    
+                    def clear_pdf_flag():
+                        st.session_state['generate_pdf'] = False
+                    
                     st.download_button(
-                        label="📄 비용내역 PDF 다운로드",
+                        label="⬇️ PDF 파일 다운로드",
                         data=pdf_buffer,
                         file_name=f"근저당설정_비용내역_{debtor_name}.pdf",
                         mime="application/pdf",
                         use_container_width=True,
-                        key="btn_pdf_download"
+                        on_click=clear_pdf_flag
                     )
+                    st.success("✅ PDF 생성 완료!")
                 except Exception as e:
-                    st.button("📄 비용내역 PDF 다운로드", disabled=True, use_container_width=True)
-                    st.error(f"PDF 준비 오류: {e}")
+                    st.error(f"PDF 생성 오류: {e}")
+                    st.session_state['generate_pdf'] = False
+    
+    # [2] 영수증 Excel 다운로드
+    with d_col2:
+        if st.button("🏦 영수증 Excel 다운로드", disabled=not EXCEL_OK, use_container_width=True, key="btn_excel_download"):
+            st.session_state['generate_excel'] = True
+        
+        if st.session_state.get('generate_excel', False):
+            if not EXCEL_OK:
+                st.error("openpyxl 라이브러리가 설치되지 않았습니다.")
+                st.session_state['generate_excel'] = False
             else:
-                st.button("📄 비용내역 PDF 다운로드", disabled=True, use_container_width=True)
-            
-            # Excel 다운로드 버튼 (클릭 시 바로 다운로드)
-            if EXCEL_OK:
                 try:
+                    # Excel 데이터 준비 (3탭 위젯 값 사용)
                     receipt_template = st.session_state['template_status'].get('영수증')
+                    
+                    excel_creditor = st.session_state.get('tab3_creditor_select', creditor_from_tab1)
+                    if excel_creditor == "🖊️ 직접입력":
+                        excel_creditor = st.session_state.get('input_creditor_name', '직접입력')
+                    
                     excel_data = {
                         'date_input': format_date_korean(st.session_state.get('input_date', datetime.now().date())),
                         'client': {
-                            '채권최고액': format_number_with_comma(st.session_state.get('calc_amount_input', amount_from_tab1)),
-                            '필지수': str(st.session_state.get('input_parcels', 1)),
-                            '금융사': pdf_creditor,
-                            '채무자': debtor_name,
-                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1)
+                            '금융사': excel_creditor,
+                            '채무자': st.session_state.get('tab3_debtor_input', debtor_from_tab1),
+                            '물건지': st.session_state.get('tab3_estate_input', estate_from_tab1),
+                            '채권최고액': format_number_with_comma(st.session_state.get('input_amount', ''))
                         },
-                        'fee_items': {
-                            '기본료': parse_int_input(final_data.get('기본료', 0)),
-                            '추가보수': parse_int_input(st.session_state.get('add_fee_val', 0)),
-                            '기타보수': parse_int_input(st.session_state.get('etc_fee_val', 0)),
-                            '할인금액': parse_int_input(st.session_state.get('disc_fee_val', 0))
-                        },
-                        'fee_totals': {'보수총액': final_data.get('보수총액', 0)},
                         'cost_items': {
                             '등록면허세': final_data.get('등록면허세', 0),
                             '지방교육세': final_data.get('지방교육세', 0),
@@ -2997,36 +1978,51 @@ with tab3:
                             '원인증서': parse_int_input(st.session_state.get('cost_manual_원인증서', 0)),
                             '주소변경': parse_int_input(st.session_state.get('cost_manual_주소변경', 0)),
                             '확인서면': parse_int_input(st.session_state.get('cost_manual_확인서면', 0)),
-                            '선순위 말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
+                            '선순위말소': parse_int_input(st.session_state.get('cost_manual_선순위 말소', 0))
                         },
-                        'cost_totals': {'공과금 총액': final_data.get('공과금 총액', 0)}
+                        'cost_totals': {
+                            '공과금 총액': final_data.get('공과금 총액', 0)
+                        },
+                        'grand_total': final_data.get('총 합계', 0)
                     }
+                    
+                    # Excel 생성 (템플릿 있으면 사용, 없으면 새로 생성)
                     excel_buffer = create_receipt_excel(excel_data, receipt_template)
                     
                     if excel_buffer:
+                        # 다운로드 버튼 (3탭 위젯 값 사용)
+                        debtor_name = st.session_state.get('tab3_debtor_input', debtor_from_tab1)
+                        if not debtor_name or debtor_name.strip() == '':
+                            debtor_name = '고객'
+                        
+                        def clear_excel_flag():
+                            st.session_state['generate_excel'] = False
+                        
                         st.download_button(
-                            label="🏦 영수증 Excel 다운로드",
+                            label="⬇️ Excel 파일 다운로드",
                             data=excel_buffer,
                             file_name=f"영수증_{debtor_name}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True,
-                            key="btn_excel_download"
+                            on_click=clear_excel_flag
                         )
+                        st.success("✅ Excel 생성 완료!")
                     else:
-                        st.button("🏦 영수증 Excel 다운로드", disabled=True, use_container_width=True)
+                        st.error("Excel 생성에 실패했습니다.")
+                        st.session_state['generate_excel'] = False
                 except Exception as e:
-                    st.button("🏦 영수증 Excel 다운로드", disabled=True, use_container_width=True)
-            else:
-                st.button("🏦 영수증 Excel 다운로드", disabled=True, use_container_width=True)
+                    st.error(f"Excel 생성 오류: {e}")
+                    st.session_state['generate_excel'] = False
 
-
+# =============================================================================
 # Tab 4: 말소 문서 작성
 # =============================================================================
 with tab4:
-    # 헤더와 버튼 분리
-    st.markdown("### 🗑️ 말소 문서 작성")
-    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
-    with col_btn1:
+    # 헤더
+    col_header = st.columns([6, 1, 1])
+    with col_header[0]:
+        st.markdown("### 🗑️ 말소 문서 작성")
+    with col_header[1]:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab4", help="1탭 정보 불러오기"):
             # 1탭 데이터 동기화
             contract_type = st.session_state.get('contract_type', '개인')
@@ -3065,41 +2061,15 @@ with tab4:
             
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
-    with col_btn2:
+    with col_header[2]:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4", help="모든 입력 초기화"):
-            # 말소 유형
-            st.session_state['malso_type'] = '근저당권'
-            
-            # 등기의무자 (채권자)
-            st.session_state['malso_obligor_name'] = ''
-            st.session_state['malso_obligor_id'] = ''
-            st.session_state['malso_obligor_addr'] = ''
-            st.session_state['malso_obligor_rep'] = ''
-            
-            # 등기권리자 1
-            st.session_state['malso_holder1_name'] = ''
-            st.session_state['malso_holder1_rrn'] = ''
-            st.session_state['malso_holder1_addr'] = ''
-            
-            # 등기권리자 2
-            st.session_state['malso_holder2_name'] = ''
-            st.session_state['malso_holder2_rrn'] = ''
-            st.session_state['malso_holder2_addr'] = ''
-            
-            # 부동산 표시
-            st.session_state['malso_estate_detail'] = ''
-            
-            # 말소 내역
-            st.session_state['malso_cancel_text'] = ''
-            
-            # 이전등기소
-            st.session_state['malso_from_branch'] = ''
-            st.session_state['malso_to_branch'] = ''
-            
-            # 원인일자
+            for key in ['malso_type', 'malso_obligor_name', 'malso_obligor_id', 'malso_obligor_addr', 
+                       'malso_obligor_rep', 'malso_holder1_name', 'malso_holder1_rrn', 'malso_holder1_addr',
+                       'malso_holder2_name', 'malso_holder2_rrn', 'malso_holder2_addr',
+                       'malso_estate_detail', 'malso_cancel_text', 'malso_from_branch', 'malso_to_branch']:
+                st.session_state[key] = ''
+            st.session_state['malso_type'] = "근저당권"
             st.session_state['malso_cause_date'] = datetime.now().date()
-            st.session_state['malso_cause_date_input'] = datetime.now().date()
-            
             st.success("✅ 초기화되었습니다!")
             st.rerun()
     
@@ -3221,7 +2191,7 @@ with tab4:
     
     st.markdown("---")
     
-    # 5. PDF 생성 - 체크박스 선택 시 바로 다운로드 버튼 표시
+    # 5. PDF 생성 - 체크박스 선택 후 한번에 출력
     st.markdown("### 📥 문서 생성")
     
     # 체크박스로 문서 선택
@@ -3235,15 +2205,23 @@ with tab4:
     with col_chk[3]:
         chk_transfer = st.checkbox("📄 이관증명서", value=False, key="chk_malso_transfer")
     
-    # 말소타입 약어 및 holder_name 미리 설정
-    malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
-    holder_name = st.session_state.get('malso_holder1_name', '고객') or '고객'
+    # 생성 버튼
+    if st.button("🚀 선택한 문서 생성", type="primary", use_container_width=True, key="generate_malso_docs"):
+        if not any([chk_sig, chk_power, chk_term, chk_transfer]):
+            st.warning("⚠️ 생성할 문서를 선택해주세요.")
+        else:
+            st.session_state['generate_malso_sig'] = chk_sig
+            st.session_state['generate_malso_power'] = chk_power
+            st.session_state['generate_malso_term'] = chk_term
+            st.session_state['generate_malso_transfer'] = chk_transfer
     
-    # 체크된 항목에 대해 바로 다운로드 버튼 표시
-    if chk_sig and PDF_OK:
+    # PDF 생성 처리
+    if st.session_state.get('generate_malso_sig', False):
         try:
+            # 자필서명정보 생성 - 서면 템플릿 사용
             sig_template = resource_path("자필서명정보_서면_템플릿.pdf")
-            if os.path.exists(sig_template):
+            if os.path.exists(sig_template) and PDF_OK:
+                # 권리자 목록 생성
                 holders = []
                 if st.session_state.get('malso_holder1_name'):
                     holders.append({
@@ -3257,27 +2235,35 @@ with tab4:
                         'rrn': st.session_state.get('malso_holder2_rrn', ''),
                         'addr': st.session_state.get('malso_holder2_addr', '')
                     })
+                
                 sig_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
                     'estate_list': st.session_state.get('malso_estate_detail', '').strip().split('\n'),
                     'holders': holders
                 }
+                
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
+                
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
                 st.download_button(
                     label="⬇️ 자필서명정보 다운로드",
                     data=pdf_buffer,
                     file_name=f"{malso_prefix}_{holder_name}_자필서명정보.pdf",
                     mime="application/pdf",
-                    use_container_width=True,
-                    key="dl_malso_sig"
+                    use_container_width=True
                 )
+                st.success("✅ 자필서명정보 생성 완료!")
+            else:
+                st.error("자필서명정보 템플릿(자필서명정보_서면_템플릿.pdf)이 없거나 PDF 라이브러리가 설치되지 않았습니다.")
         except Exception as e:
-            st.error(f"자필서명정보 생성 오류: {e}")
+            st.error(f"생성 오류: {e}")
+        st.session_state['generate_malso_sig'] = False
     
-    if chk_power and PDF_OK:
+    if st.session_state.get('generate_malso_power', False):
         try:
-            power_template_path = resource_path("말소_위임장.pdf")
-            if os.path.exists(power_template_path):
+            if PDF_OK:
                 power_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
                     'malso_type': malso_type,
@@ -3293,126 +2279,102 @@ with tab4:
                     'estate_text': st.session_state.get('malso_estate_detail', ''),
                     'cancel_text': st.session_state.get('malso_cancel_text', '')
                 }
-                pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
-                st.download_button(
-                    label="⬇️ 위임장 다운로드",
-                    data=pdf_buffer,
-                    file_name=f"{malso_prefix}_{holder_name}_위임장.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    key="dl_malso_power"
-                )
-        except Exception as e:
-            st.error(f"위임장 생성 오류: {e}")
-    
-    if chk_term and PDF_OK:
-        try:
-            term_data = {
-                'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
-                'malso_type': malso_type,
-                'obligor_label': obligor_label,
-                'obligor_name': st.session_state.get('malso_obligor_name', ''),
-                'obligor_id': st.session_state.get('malso_obligor_id', ''),
-                'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
-                'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
-                'holder1_name': st.session_state.get('malso_holder1_name', ''),
-                'holder2_name': st.session_state.get('malso_holder2_name', ''),
-                'estate_text': st.session_state.get('malso_estate_detail', ''),
-                'cancel_text': st.session_state.get('malso_cancel_text', '')
-            }
-            pdf_buffer = make_malso_termination_pdf(term_data)
-            st.download_button(
-                label="⬇️ 해지증서 다운로드",
-                data=pdf_buffer,
-                file_name=f"{malso_prefix}_{holder_name}_해지증서.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                key="dl_malso_term"
-            )
-        except Exception as e:
-            st.error(f"해지증서 생성 오류: {e}")
-    
-    if chk_transfer and PDF_OK:
-        try:
-            transfer_data = {
-                'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
-                'malso_type': malso_type,
-                'obligor_label': obligor_label,
-                'obligor_name': st.session_state.get('malso_obligor_name', ''),
-                'obligor_id': st.session_state.get('malso_obligor_id', ''),
-                'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
-                'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
-                'estate_text': st.session_state.get('malso_estate_detail', ''),
-                'cancel_text': st.session_state.get('malso_cancel_text', ''),
-                'from_branch': st.session_state.get('malso_from_branch', ''),
-                'to_branch': st.session_state.get('malso_to_branch', '')
-            }
-            pdf_buffer = make_malso_transfer_pdf(transfer_data)
-            st.download_button(
-                label="⬇️ 이관증명서 다운로드",
-                data=pdf_buffer,
-                file_name=f"{malso_prefix}_{holder_name}_이관증명서.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                key="dl_malso_transfer"
-            )
-        except Exception as e:
-            st.error(f"이관증명서 생성 오류: {e}")
-    
-    # =========================================================================
-    # 위택스 말소 신고 섹션
-    # =========================================================================
-    st.markdown("---")
-    st.markdown("### 🏛️ 위택스 말소 신고")
-    
-    with st.container(border=True):
-        # 납세자 정보 표시
-        holder_name = st.session_state.get('malso_holder1_name', '')
-        holder_rrn = st.session_state.get('malso_holder1_rrn', '')
-        malso_type = st.session_state.get('malso_type', '근저당권')
-        
-        st.markdown(f"**신고 유형:** {malso_type}말소")
-        st.markdown(f"**납세자 (소유자):** {holder_name}")
-        
-        if st.button("🚀 위택스 말소 신고 실행", type="primary", use_container_width=True, key='wetax_malso_submit_btn'):
-            if not holder_name or not holder_rrn:
-                st.error("❌ 등기권리자(소유자) 정보를 입력해주세요.")
-            else:
-                # 데이터 준비
-                holder_addr = st.session_state.get('malso_holder1_addr', '')
-                estate_detail = st.session_state.get('malso_estate_detail', '')
                 
-                front, back = parse_rrn(holder_rrn)
-                road_addr, detail_addr = extract_road_address(holder_addr)
-                prop_road, prop_detail = extract_road_address(estate_detail.split('\n')[0] if estate_detail else '')
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
                 
-                cases = [{
-                    "type": "말소",
-                    "taxpayer_type": "01",  # 개인
-                    "taxpayer_name": holder_name,
-                    "resident_no_front": front,
-                    "resident_no_back": back,
-                    "phone": "0218335482",
-                    "address": road_addr,
-                    "address_detail": detail_addr,
-                    "property_address": prop_road,
-                    "property_detail": prop_detail,
-                    "tax_base": None
-                }]
-                
-                # URL 확인
-                wetax_url = st.session_state.get('wetax_server_url', '')
-                if not wetax_url:
-                    st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
+                # 위임장 템플릿 사용
+                power_template_path = resource_path("말소_위임장.pdf")
+                if os.path.exists(power_template_path):
+                    pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
+                    st.download_button(
+                        label="⬇️ 위임장 다운로드",
+                        data=pdf_buffer,
+                        file_name=f"{malso_prefix}_{holder_name}_위임장.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ 위임장 생성 완료!")
                 else:
-                    st.info("📤 말소 신고 중...")
-                    result, error = call_wetax_api(cases, base_url=wetax_url)
-                    
-                    if error:
-                        st.error(f"❌ 오류: {error}")
-                    else:
-                        st.success("✅ 위택스 말소 신고 완료!")
-                        st.json(result)
+                    st.error("위임장 템플릿 파일이 없습니다. (말소_위임장.pdf)")
+            else:
+                st.error("PDF 라이브러리가 설치되지 않았습니다.")
+        except Exception as e:
+            st.error(f"생성 오류: {e}")
+        st.session_state['generate_malso_power'] = False
+    
+    if st.session_state.get('generate_malso_term', False):
+        try:
+            if PDF_OK:
+                term_data = {
+                    'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
+                    'malso_type': malso_type,
+                    'obligor_label': obligor_label,
+                    'obligor_name': st.session_state.get('malso_obligor_name', ''),
+                    'obligor_id': st.session_state.get('malso_obligor_id', ''),
+                    'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
+                    'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
+                    'holder1_name': st.session_state.get('malso_holder1_name', ''),
+                    'holder2_name': st.session_state.get('malso_holder2_name', ''),
+                    'estate_text': st.session_state.get('malso_estate_detail', ''),
+                    'cancel_text': st.session_state.get('malso_cancel_text', '')
+                }
+                
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
+                
+                pdf_buffer = make_malso_termination_pdf(term_data)
+                st.download_button(
+                    label="⬇️ 해지증서 다운로드",
+                    data=pdf_buffer,
+                    file_name=f"{malso_prefix}_{holder_name}_해지증서.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+                st.success("✅ 해지증서 생성 완료!")
+            else:
+                st.error("PDF 라이브러리가 설치되지 않았습니다.")
+        except Exception as e:
+            st.error(f"생성 오류: {e}")
+        st.session_state['generate_malso_term'] = False
+    
+    if st.session_state.get('generate_malso_transfer', False):
+        try:
+            if PDF_OK:
+                transfer_data = {
+                    'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
+                    'malso_type': malso_type,
+                    'obligor_label': obligor_label,
+                    'obligor_name': st.session_state.get('malso_obligor_name', ''),
+                    'obligor_id': st.session_state.get('malso_obligor_id', ''),
+                    'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
+                    'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
+                    'estate_text': st.session_state.get('malso_estate_detail', ''),
+                    'cancel_text': st.session_state.get('malso_cancel_text', ''),
+                    'from_branch': st.session_state.get('malso_from_branch', ''),
+                    'to_branch': st.session_state.get('malso_to_branch', '')
+                }
+                
+                # 말소타입 약어
+                malso_prefix = {"근저당권": "근말", "질권": "질말", "전세권": "전말"}.get(malso_type, "말소")
+                holder_name = st.session_state.get('malso_holder1_name', '고객')
+                
+                pdf_buffer = make_malso_transfer_pdf(transfer_data)
+                st.download_button(
+                    label="⬇️ 이관증명서 다운로드",
+                    data=pdf_buffer,
+                    file_name=f"{malso_prefix}_{holder_name}_이관증명서.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+                st.success("✅ 이관증명서 생성 완료!")
+            else:
+                st.error("PDF 라이브러리가 설치되지 않았습니다.")
+        except Exception as e:
+            st.error(f"생성 오류: {e}")
+        st.session_state['generate_malso_transfer'] = False
     
     # 안내 메시지
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")
@@ -3422,4 +2384,5 @@ with tab4:
 # =============================================================================
 st.markdown("---")
 st.markdown("""<div style='text-align: center; color: #6c757d; padding: 20px; background-color: white; border-radius: 10px; border: 2px solid #e1e8ed;'>
-    <p style='margin: 0; font-size: 1rem;'><strong><span style="color: #00428B;">DG-Form</span></strong> <span style="color: #6c757d;">전자설정 자동화시스템</span> | <strong><span style="color: #FDD000;">등기온</span></strong></p></div>""", unsafe_allow_html=True)
+    <p style='margin: 0; font-size: 1rem; color: #00428B;'><strong>DG-Form 등기온 전자설정 자동화 시스템 | 법무법인 시화</strong></p>
+    <p style='margin: 5px 0 0 0; font-size: 0.85rem; color: #6c757d;'>부동산 등기는 등기온</p></div>""", unsafe_allow_html=True)

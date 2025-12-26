@@ -3626,6 +3626,13 @@ with tab1:
         if f'tab5_owner{i}_addr_input' not in st.session_state:
             st.session_state[f'tab5_owner{i}_addr_input'] = ''
     
+    # 물건지 주소 복사 pending 처리 (위젯 렌더링 전에 실행)
+    for i in range(1, 4):
+        pending_key = f'_pending_tab5_owner{i}_addr'
+        if st.session_state.get(pending_key):
+            st.session_state[f'tab5_owner{i}_addr_input'] = st.session_state[pending_key]
+            del st.session_state[pending_key]
+    
     # 상단 버튼
     col_btn1, col_spacer = st.columns([1, 5])
     with col_btn1:
@@ -3756,13 +3763,6 @@ with tab1:
                 st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:13]}"
     
     owner_cols = st.columns(3)
-    
-    # 물건지 주소 복사 pending 처리
-    for i in range(1, 4):
-        pending_key = f'_pending_tab5_owner{i}_addr'
-        if st.session_state.get(pending_key):
-            st.session_state[f'tab5_owner{i}_addr_input'] = st.session_state[pending_key]
-            del st.session_state[pending_key]
     
     for i in range(1, 4):
         with owner_cols[i-1]:

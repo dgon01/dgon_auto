@@ -650,6 +650,11 @@ def make_signature_pdf(template_path, data):
     if data.get("estate_text"):
         for i, line in enumerate(str(data["estate_text"]).split("\n")[:17]):
             c.drawString(estate_x, estate_y - (i * line_h), line)
+    # 등기원인 - 박스 좌표 (139.5, 557.5, 340.5, 581.0)
+    if data.get("purpose"):
+        c.setFont(font_name, 11)
+        c.drawString(145, 569, str(data["purpose"]))
+        c.setFont(font_name, 10)
     if data.get("debtor_name"): c.drawString(250, 322, str(data["debtor_name"]))
     if data.get("debtor_rrn"): c.drawString(250, 298, str(data["debtor_rrn"]))
     if data.get("owner_name"): c.drawString(400, 322, str(data["owner_name"]))
@@ -750,7 +755,13 @@ def make_bank_signature_pdf(template_path, data):
             if line.strip():
                 c.drawString(estate_x, estate_y - (i * line_h), line)
     
+    # 등기원인 - 박스 좌표 (139.5, 557.5, 340.5, 581.0)
+    if data.get("purpose"):
+        c.setFont(font_name, 11)
+        c.drawString(145, 569, str(data["purpose"]))
+    
     # 채무자 정보
+    c.setFont(font_name, 10)
     if data.get("debtor_name"):
         c.drawString(250, 322, str(data["debtor_name"]))
     if data.get("debtor_rrn"):
@@ -814,6 +825,12 @@ def make_malso_signature_pdf(template_path, data):
     for i, line in enumerate(estate_list[:17]):
         if line.strip():
             c.drawString(estate_x, estate_y - (i * line_h), line)
+    
+    # 등기원인 - 박스 좌표 (139.5, 557.5, 340.5, 581.0)
+    if data.get("purpose"):
+        c.setFont(font_name, 11)
+        c.drawString(145, 569, str(data["purpose"]))
+        c.setFont(font_name, 10)
     
     # 권리자 정보 (최대 2명)
     holders = data.get('holders', [])
@@ -2561,7 +2578,8 @@ with tab4:
                     "debtor_rrn": tab2_owner1_rrn or "[주민번호1]",
                     "owner_name": tab2_owner2_name or "",
                     "owner_rrn": tab2_owner2_rrn or "",
-                    "estate_text": tab2_estate or "[부동산 표시]"
+                    "estate_text": tab2_estate or "[부동산 표시]",
+                    "purpose": "근저당권설정"
                 }
                 
                 # make_signature_pdf 함수 사용
@@ -3494,7 +3512,8 @@ with tab3:
                 sig_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
                     'estate_list': st.session_state.get('malso_estate_detail', '').strip().split('\n'),
-                    'holders': holders
+                    'holders': holders,
+                    'purpose': f"{malso_type}말소"
                 }
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
                 st.download_button(
@@ -3969,7 +3988,7 @@ with tab6:
     if 'wetax_manual_list' not in st.session_state:
         st.session_state['wetax_manual_list'] = []
     
-    btn_cols = st.columns(4)
+    btn_cols = st.columns(5)
     
     with btn_cols[0]:
         if st.button("🏦 1탭 가져오기\n(시중은행 설정)", key="wetax_load_tab1", use_container_width=True, type="primary"):
@@ -4068,6 +4087,29 @@ with tab6:
             st.session_state['wetax_data_source'] = 'manual'
             st.session_state['wetax_report_type'] = '수기'
             st.session_state['wetax_manual_list'] = []
+            st.rerun()
+    
+    with btn_cols[4]:
+        if st.button("🔄 초기화", key="wetax_reset", use_container_width=True, type="secondary"):
+            # 위택스 관련 세션 상태 초기화
+            st.session_state['wetax_data_source'] = ''
+            st.session_state['wetax_report_type'] = '설정'
+            st.session_state['wetax_manual_list'] = []
+            st.session_state['wetax_malso_list'] = []
+            st.session_state['wetax_creditor_name'] = ''
+            st.session_state['wetax_creditor_corp_num'] = ''
+            st.session_state['wetax_creditor_addr'] = ''
+            st.session_state['wetax_debtor_name'] = ''
+            st.session_state['wetax_debtor_rrn'] = ''
+            st.session_state['wetax_debtor_addr'] = ''
+            st.session_state['wetax_owner_name'] = ''
+            st.session_state['wetax_owner_rrn'] = ''
+            st.session_state['wetax_owner_addr'] = ''
+            st.session_state['wetax_property_addr'] = ''
+            st.session_state['wetax_amount'] = ''
+            st.session_state['wetax_contract_type'] = '개인'
+            st.session_state['wetax_tab1_owners'] = []
+            st.success("✅ 초기화되었습니다!")
             st.rerun()
     
     st.markdown("---")

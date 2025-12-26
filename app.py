@@ -269,47 +269,11 @@ CREDITORS = {
 # =============================================================================
 # name: 법인명, addr: 주소, corp_num: 법인등록번호, rep: 대표자직위+성명, branch: 기본 취급지점
 OBLIGORS = {
-    # === 대부업체 ===
-    "(주)티플레인대부": {
-        "addr": "서울특별시 마포구 삼개로16, 2신관1층103호(도화동,근신빌딩)",
-        "corp_num": "110111-7350161",
-        "rep": "대표이사 윤웅원",
-        "branch": ""
-    },
-    "(주)유노스프레스티지대부": {
-        "addr": "서울특별시 강남구 압구정로28길24, 5층 501호(신사동,디앤씨빌딩)",
-        "corp_num": "110111-4138560",
-        "rep": "사내이사 한은수",
-        "branch": ""
-    },
-    "(주)파트너스대부": {
-        "addr": "부산광역시 부산진구 서면문화로 43, 2층(부전동)",
-        "corp_num": "180111-1452175",
-        "rep": "사내이사 허성",
-        "branch": ""
-    },
-    "(주)드림앤캐쉬대부": {
-        "addr": "서울특별시 강남구 압구정로28길24, 6층 601호(신사동,디앤씨빌딩)",
-        "corp_num": "110111-4176552",
-        "rep": "대표이사 김재섭",
-        "branch": ""
-    },
-    "(주)마젤란트러스트대부": {
-        "addr": "서울특별시 서초구 강남대로34길 7, 7층(양재동,이안빌딩)",
-        "corp_num": "110111-6649979",
-        "rep": "대표이사 김병수",
-        "branch": ""
-    },
-    "(주)하이클래스대부": {
-        "addr": "서울특별시 강남구 도곡로 188, 3층 4호(도곡동,도곡스퀘어)",
-        "corp_num": "110111-0933512",
-        "rep": "사내이사 성윤호",
-        "branch": ""
-    },
-    "(주)엘하비스트대부": {
-        "addr": "서울특별시 중구 무교로 15, 16층(무교동,남강건설회관빌딩)",
-        "corp_num": "110111-3648627",
-        "rep": "대표이사 김상수",
+    # === 직접입력 ===
+    "직접입력": {
+        "addr": "",
+        "corp_num": "",
+        "rep": "",
         "branch": ""
     },
     # === 1금융권 ===
@@ -355,11 +319,47 @@ OBLIGORS = {
         "rep": "대표이사 이문화",
         "branch": ""
     },
-    # === 직접입력 ===
-    "직접입력": {
-        "addr": "",
-        "corp_num": "",
-        "rep": "",
+    # === 대부업체 ===
+    "(주)티플레인대부": {
+        "addr": "서울특별시 마포구 삼개로16, 2신관1층103호(도화동,근신빌딩)",
+        "corp_num": "110111-7350161",
+        "rep": "대표이사 윤웅원",
+        "branch": ""
+    },
+    "(주)유노스프레스티지대부": {
+        "addr": "서울특별시 강남구 압구정로28길24, 5층 501호(신사동,디앤씨빌딩)",
+        "corp_num": "110111-4138560",
+        "rep": "사내이사 한은수",
+        "branch": ""
+    },
+    "(주)파트너스대부": {
+        "addr": "부산광역시 부산진구 서면문화로 43, 2층(부전동)",
+        "corp_num": "180111-1452175",
+        "rep": "사내이사 허성",
+        "branch": ""
+    },
+    "(주)드림앤캐쉬대부": {
+        "addr": "서울특별시 강남구 압구정로28길24, 6층 601호(신사동,디앤씨빌딩)",
+        "corp_num": "110111-4176552",
+        "rep": "대표이사 김재섭",
+        "branch": ""
+    },
+    "(주)마젤란트러스트대부": {
+        "addr": "서울특별시 서초구 강남대로34길 7, 7층(양재동,이안빌딩)",
+        "corp_num": "110111-6649979",
+        "rep": "대표이사 김병수",
+        "branch": ""
+    },
+    "(주)하이클래스대부": {
+        "addr": "서울특별시 강남구 도곡로 188, 3층 4호(도곡동,도곡스퀘어)",
+        "corp_num": "110111-0933512",
+        "rep": "사내이사 성윤호",
+        "branch": ""
+    },
+    "(주)엘하비스트대부": {
+        "addr": "서울특별시 중구 무교로 15, 16층(무교동,남강건설회관빌딩)",
+        "corp_num": "110111-3648627",
+        "rep": "대표이사 김상수",
         "branch": ""
     }
 }
@@ -3352,19 +3352,40 @@ with tab4:
             if creditor and creditor != "🖊️ 직접입력":
                 creditor_info = CREDITORS.get(creditor, {})
                 # 금융사명에서 회사명과 대표자 분리
+                obligor_name = ''
+                obligor_rep = ''
                 if '대표이사' in creditor:
                     parts = creditor.split('대표이사')
-                    st.session_state['malso_obligor_name'] = parts[0].strip()
-                    st.session_state['malso_obligor_rep'] = parts[1].strip() if len(parts) > 1 else ''
+                    obligor_name = parts[0].strip()
+                    obligor_rep = '대표이사 ' + parts[1].strip() if len(parts) > 1 else ''
                 elif '사내이사' in creditor:
                     parts = creditor.split('사내이사')
-                    st.session_state['malso_obligor_name'] = parts[0].strip()
-                    st.session_state['malso_obligor_rep'] = parts[1].strip() if len(parts) > 1 else ''
+                    obligor_name = parts[0].strip()
+                    obligor_rep = '사내이사 ' + parts[1].strip() if len(parts) > 1 else ''
                 else:
-                    st.session_state['malso_obligor_name'] = creditor
-                    st.session_state['malso_obligor_rep'] = ''
-                st.session_state['malso_obligor_id'] = creditor_info.get('corp_num', '')
-                st.session_state['malso_obligor_addr'] = creditor_info.get('addr', '')
+                    obligor_name = creditor
+                    obligor_rep = ''
+                
+                obligor_id = creditor_info.get('corp_num', '')
+                obligor_addr = creditor_info.get('addr', '')
+                
+                # session_state 업데이트
+                st.session_state['malso_obligor_name'] = obligor_name
+                st.session_state['malso_obligor_rep'] = obligor_rep
+                st.session_state['malso_obligor_id'] = obligor_id
+                st.session_state['malso_obligor_addr'] = obligor_addr
+                st.session_state['malso_obligor_branch'] = ''
+                
+                # input 키들도 업데이트
+                st.session_state['malso_obligor_name_input'] = obligor_name
+                st.session_state['malso_obligor_rep_input'] = obligor_rep
+                st.session_state['malso_obligor_id_input'] = obligor_id
+                st.session_state['malso_obligor_addr_input'] = obligor_addr
+                st.session_state['malso_obligor_branch_input'] = ''
+                
+                # 선택 드롭다운을 "직접입력"으로 (1탭에서 가져온 값이므로)
+                st.session_state['malso_obligor_select'] = "직접입력"
+                st.session_state['_prev_obligor_select'] = "직접입력"
             
             # 부동산 표시
             st.session_state['malso_estate_detail'] = st.session_state.get('estate_text', '')
@@ -3382,7 +3403,13 @@ with tab4:
             st.session_state['malso_obligor_addr'] = ''
             st.session_state['malso_obligor_rep'] = ''
             st.session_state['malso_obligor_branch'] = ''
-            st.session_state['malso_obligor_select'] = list(OBLIGORS.keys())[0]
+            st.session_state['malso_obligor_select'] = "직접입력"
+            st.session_state['_prev_obligor_select'] = "직접입력"
+            st.session_state['malso_obligor_name_input'] = ''
+            st.session_state['malso_obligor_id_input'] = ''
+            st.session_state['malso_obligor_addr_input'] = ''
+            st.session_state['malso_obligor_rep_input'] = ''
+            st.session_state['malso_obligor_branch_input'] = ''
             
             # 등기권리자 1
             st.session_state['malso_holder1_name'] = ''
@@ -3462,6 +3489,10 @@ with tab4:
         with st.container(border=True):
             # 등기의무자 선택
             obligor_options = list(OBLIGORS.keys())
+            
+            # 이전 선택값 저장
+            prev_selected = st.session_state.get('_prev_obligor_select', None)
+            
             selected_obligor = st.selectbox(
                 "등기의무자 선택",
                 options=obligor_options,
@@ -3469,39 +3500,43 @@ with tab4:
                 index=0
             )
             
-            # 선택된 등기의무자 정보 자동 입력
-            if selected_obligor and selected_obligor != "직접입력":
-                obligor_info = OBLIGORS.get(selected_obligor, {})
-                default_name = selected_obligor
-                default_addr = obligor_info.get("addr", "")
-                default_corp_num = obligor_info.get("corp_num", "")
-                default_rep = obligor_info.get("rep", "")
-                default_branch = obligor_info.get("branch", "")
-            else:
-                default_name = st.session_state.get('malso_obligor_name', '')
-                default_addr = st.session_state.get('malso_obligor_addr', '')
-                default_corp_num = st.session_state.get('malso_obligor_id', '')
-                default_rep = st.session_state.get('malso_obligor_rep', '')
-                default_branch = st.session_state.get('malso_obligor_branch', '')
+            # 선택이 변경되었으면 session_state 업데이트
+            if prev_selected != selected_obligor:
+                st.session_state['_prev_obligor_select'] = selected_obligor
+                if selected_obligor and selected_obligor != "직접입력":
+                    obligor_info = OBLIGORS.get(selected_obligor, {})
+                    st.session_state['malso_obligor_name_input'] = selected_obligor
+                    st.session_state['malso_obligor_id_input'] = obligor_info.get("corp_num", "")
+                    st.session_state['malso_obligor_addr_input'] = obligor_info.get("addr", "")
+                    st.session_state['malso_obligor_rep_input'] = obligor_info.get("rep", "")
+                    st.session_state['malso_obligor_branch_input'] = obligor_info.get("branch", "")
+                else:
+                    # 직접입력 선택 시 빈값
+                    st.session_state['malso_obligor_name_input'] = ""
+                    st.session_state['malso_obligor_id_input'] = ""
+                    st.session_state['malso_obligor_addr_input'] = ""
+                    st.session_state['malso_obligor_rep_input'] = ""
+                    st.session_state['malso_obligor_branch_input'] = ""
+                st.rerun()
             
             # 입력 필드 (수정 가능)
-            obligor_name = st.text_input("성명(법인명)", value=default_name, key="malso_obligor_name_input", placeholder="주식회사티플레인대부")
+            obligor_name = st.text_input("성명(법인명)", key="malso_obligor_name_input", placeholder="주식회사티플레인대부")
             st.session_state['malso_obligor_name'] = obligor_name
             
-            obligor_id = st.text_input("법인등록번호", value=default_corp_num, key="malso_obligor_id_input", placeholder="110111-7350161")
+            obligor_id = st.text_input("법인등록번호", key="malso_obligor_id_input", placeholder="110111-7350161")
             st.session_state['malso_obligor_id'] = obligor_id
             
-            obligor_addr = st.text_area("주소", value=default_addr, key="malso_obligor_addr_input", height=80,
+            obligor_addr = st.text_area("주소", key="malso_obligor_addr_input", height=80,
                         placeholder="서울특별시 마포구 삼개로 16, 2신관 1층 103호")
             st.session_state['malso_obligor_addr'] = obligor_addr
             
             # 취급지점 & 대표자 (같은 줄)
             rep_cols = st.columns([1, 1])
             with rep_cols[0]:
-                obligor_branch = st.text_input("취급지점", value=default_branch, key="malso_obligor_branch_input", placeholder="업무혁신부")
+                obligor_branch = st.text_input("취급지점", key="malso_obligor_branch_input", placeholder="")
                 st.session_state['malso_obligor_branch'] = obligor_branch
             with rep_cols[1]:
-                obligor_rep = st.text_input("대표자 직위/성명", value=default_rep, key="malso_obligor_rep_input", placeholder="대표이사 윤웅원")
+                obligor_rep = st.text_input("대표자 직위/성명", key="malso_obligor_rep_input", placeholder="대표이사 윤웅원")
                 st.session_state['malso_obligor_rep'] = obligor_rep
     
     with col_input2:
@@ -3820,15 +3855,17 @@ with tab5:
     
     if uploaded_registry is not None:
         try:
-            import pdfplumber
+            # 기존 parse_registry_pdf 함수 사용
+            data, debug = parse_registry_pdf(uploaded_registry)
             
-            with pdfplumber.open(uploaded_registry) as pdf:
-                # 부동산표시 추출 (기존 extract_estate_info 함수 활용)
-                estate_result = extract_estate_info(pdf)
-                if estate_result:
-                    formatted = format_estate_display(estate_result)
-                    st.session_state['tab5_estate'] = formatted
-                    st.success("✅ 부동산표시 추출 완료!")
+            if debug["errors"]:
+                for err in debug["errors"]:
+                    st.error(f"❌ {err}")
+            else:
+                formatted = format_estate_text(data)
+                st.session_state['tab5_estate'] = formatted
+                st.success("✅ 부동산표시 추출 완료!")
+                st.rerun()
         except Exception as e:
             st.error(f"❌ PDF 파싱 오류: {e}")
     

@@ -1977,12 +1977,12 @@ def _create_simple_receipt(sheet, data):
 # UI 구현
 # =============================================================================
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증", "🗑️ 말소 문서", "🏦 1금융권 서류"])
+tab5, tab1, tab4, tab2, tab3, tab6 = st.tabs(["🏦 시중은행", "📄 대부업(전자설정)", "🗑️ 말소문서", "✍️ 자필서명정보", "🧾 비용계산 및 영수증(대부업)", "🏛️ 위택스신고"])
 
 # Tab 1: 근저당권 설정 (입력)
 with tab1:
     col_header = st.columns([6, 1])
-    col_header[0].markdown("### 📝 근저당권설정 계약서 작성")
+    col_header[0].markdown("### 📝 대부업(전자설정) 작성")
     with col_header[1]:
         if st.button("🔄 초기화", type="secondary", key="reset_tab1", use_container_width=True, help="모든 입력 초기화"):
             # 날짜
@@ -2315,224 +2315,6 @@ with tab1:
                     )
                 except Exception as e: st.error(f"오류: {e}")
     
-    # =========================================================================
-    # 위택스 등록면허세 신고 섹션
-    # =========================================================================
-    st.markdown("---")
-    st.markdown("### 🏛️ 위택스 등록면허세 신고")
-    
-    # 위택스 서버 URL 설정
-    if 'wetax_server_url' not in st.session_state:
-        st.session_state['wetax_server_url'] = ''
-    
-    with st.expander("⚙️ 위택스 서버 설정", expanded=not st.session_state.get('wetax_server_url')):
-        st.caption("wetax_launcher.exe 실행 후 생성된 URL을 붙여넣으세요")
-        wetax_url = st.text_input(
-            "서버 URL",
-            value=st.session_state.get('wetax_server_url', ''),
-            placeholder="https://xxxx.trycloudflare.com",
-            key='wetax_url_input',
-            label_visibility='collapsed'
-        )
-        if wetax_url != st.session_state.get('wetax_server_url', ''):
-            st.session_state['wetax_server_url'] = wetax_url
-        
-        # 연결 테스트 버튼
-        if wetax_url:
-            if st.button("🔗 연결 테스트", key='wetax_test_conn'):
-                try:
-                    test_url = wetax_url.rstrip('/') + "/"
-                    resp = requests.get(test_url, timeout=15)
-                    if resp.status_code == 200:
-                        st.success("✅ 연결 성공!")
-                    else:
-                        st.error(f"❌ 연결 실패 (상태코드: {resp.status_code})")
-                except Exception as e:
-                    st.error(f"❌ 연결 실패: {e}")
-    
-    # 초기화
-    if 'wetax_include_addr_change' not in st.session_state:
-        st.session_state['wetax_include_addr_change'] = False
-    if 'wetax_include_correction' not in st.session_state:
-        st.session_state['wetax_include_correction'] = False
-    if 'wetax_addr_owner' not in st.session_state:
-        st.session_state['wetax_addr_owner'] = False
-    if 'wetax_addr_debtor' not in st.session_state:
-        st.session_state['wetax_addr_debtor'] = False
-    
-    contract_type = st.session_state.get('contract_type', '개인')
-    
-    with st.container(border=True):
-        # 근저당설정 (항상 표시)
-        creditor_name = st.session_state.get('input_creditor_name', '') or st.session_state.get('input_creditor', '')
-        st.checkbox("✅ **근저당설정** (납세자: 채권자)", value=True, disabled=True, key='wetax_setting_check')
-        st.caption(f"   └─ {creditor_name}")
-        
-        st.markdown("---")
-        
-        # 주소변경 체크박스
-        include_addr = st.checkbox("📍 **주소변경 포함**", key='wetax_include_addr_change')
-        
-        if include_addr:
-            if contract_type == "개인":
-                # 개인: 채무자만
-                debtor_name = st.session_state.get('t1_debtor_name', '')
-                st.caption(f"   └─ 납세자: 채무자 ({debtor_name})")
-                correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
-                
-            elif contract_type == "3자담보":
-                # 3자담보: 소유자만
-                owner_name = st.session_state.get('t1_owner_name', '')
-                st.caption(f"   └─ 납세자: 소유자 ({owner_name})")
-                correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
-                
-            else:  # 공동담보
-                # 공동담보: 소유자 + 채무자 선택
-                owner_name = st.session_state.get('t1_owner_name', '')
-                debtor_name = st.session_state.get('t1_debtor_name', '')
-                
-                col_owner, col_debtor = st.columns(2)
-                with col_owner:
-                    addr_owner = st.checkbox(f"소유자 ({owner_name})", key='wetax_addr_owner')
-                    if addr_owner:
-                        st.checkbox("   └─ 경정 포함", key='wetax_owner_correction')
-                with col_debtor:
-                    addr_debtor = st.checkbox(f"채무자 ({debtor_name})", key='wetax_addr_debtor')
-                    if addr_debtor:
-                        st.checkbox("   └─ 경정 포함", key='wetax_debtor_correction')
-        
-        st.markdown("---")
-        
-        # 신고 버튼
-        if st.button("🚀 위택스 신고 실행", type="primary", use_container_width=True, key='wetax_submit_btn'):
-            cases = []
-            
-            # 1. 근저당설정 (채권자)
-            creditor_corp_num = st.session_state.get('input_creditor_corp_num', '')
-            creditor_addr = st.session_state.get('input_creditor_addr', '')
-            property_addr = st.session_state.get('input_collateral_addr', '')
-            tax_base = remove_commas(st.session_state.get('input_amount', '0'))
-            
-            front, back = parse_corp_num(creditor_corp_num)
-            road_addr, detail_addr = extract_road_address(creditor_addr)
-            prop_road, prop_detail = extract_road_address(property_addr)
-            
-            cases.append({
-                "type": "설정",
-                "taxpayer_type": "02",  # 법인
-                "taxpayer_name": creditor_name,
-                "resident_no_front": front,
-                "resident_no_back": back,
-                "phone": "0218335482",
-                "address": road_addr,
-                "address_detail": detail_addr,
-                "property_address": prop_road,
-                "property_detail": prop_detail,
-                "tax_base": int(tax_base) if tax_base else 0
-            })
-            
-            # 2. 주소변경
-            if include_addr:
-                if contract_type == "개인":
-                    # 채무자
-                    debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
-                    debtor_addr = st.session_state.get('t1_debtor_addr', '')
-                    front, back = parse_rrn(debtor_rrn)
-                    road_addr, detail_addr = extract_road_address(debtor_addr)
-                    
-                    if st.session_state.get('wetax_include_correction'):
-                        # 경정
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-                    # 변경
-                    cases.append({
-                        "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                        "address": road_addr, "address_detail": detail_addr,
-                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                    })
-                    
-                elif contract_type == "3자담보":
-                    # 소유자
-                    owner_rrn = st.session_state.get('t1_owner_rrn', '')
-                    owner_addr = st.session_state.get('t1_owner_addr', '')
-                    front, back = parse_rrn(owner_rrn)
-                    road_addr, detail_addr = extract_road_address(owner_addr)
-                    
-                    if st.session_state.get('wetax_include_correction'):
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-                    cases.append({
-                        "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                        "address": road_addr, "address_detail": detail_addr,
-                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                    })
-                    
-                else:  # 공동담보
-                    if st.session_state.get('wetax_addr_owner'):
-                        owner_rrn = st.session_state.get('t1_owner_rrn', '')
-                        owner_addr = st.session_state.get('t1_owner_addr', '')
-                        front, back = parse_rrn(owner_rrn)
-                        road_addr, detail_addr = extract_road_address(owner_addr)
-                        
-                        if st.session_state.get('wetax_owner_correction'):
-                            cases.append({
-                                "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                                "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                                "address": road_addr, "address_detail": detail_addr,
-                                "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                            })
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-                    
-                    if st.session_state.get('wetax_addr_debtor'):
-                        debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
-                        debtor_addr = st.session_state.get('t1_debtor_addr', '')
-                        front, back = parse_rrn(debtor_rrn)
-                        road_addr, detail_addr = extract_road_address(debtor_addr)
-                        
-                        if st.session_state.get('wetax_debtor_correction'):
-                            cases.append({
-                                "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                                "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                                "address": road_addr, "address_detail": detail_addr,
-                                "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                            })
-                        cases.append({
-                            "type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
-                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
-                            "address": road_addr, "address_detail": detail_addr,
-                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None
-                        })
-            
-            # URL 확인
-            wetax_url = st.session_state.get('wetax_server_url', '')
-            if not wetax_url:
-                st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
-            else:
-                # API 호출
-                st.info(f"📤 총 {len(cases)}건 신고 중...")
-                result, error = call_wetax_api(cases, base_url=wetax_url)
-                
-                if error:
-                    st.error(f"❌ 오류: {error}")
-                else:
-                    st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
-                    st.json(result)
-
 # =============================================================================
 # Tab 2: 자필서명정보 작성
 # =============================================================================
@@ -2800,10 +2582,10 @@ with tab2:
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 계약 유형에 따라 정보를 자동으로 불러올 수 있습니다.")
 
 
-# Tab 3: 비용 계산 및 영수증 (완전 개편)
+# Tab 3: 비용계산 및 영수증(대부업)
 with tab3:
     # 헤더와 버튼을 분리
-    st.markdown("### 🧾 등기비용 계산기")
+    st.markdown("### 🧾 등기비용 계산기(대부업)")
     col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
     with col_btn1:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="1탭 정보 불러오기"):
@@ -3329,9 +3111,13 @@ with tab3:
 # Tab 4: 말소 문서 작성
 # =============================================================================
 with tab4:
+    # 말소 임시저장 목록 초기화
+    if 'malso_saved_list' not in st.session_state:
+        st.session_state['malso_saved_list'] = []
+    
     # 헤더와 버튼 분리
     st.markdown("### 🗑️ 말소 문서 작성")
-    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
+    col_btn1, col_btn2, col_btn3, col_spacer = st.columns([1, 1, 1, 3])
     with col_btn1:
         if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab4", help="1탭 정보 불러오기"):
             # 1탭 데이터 동기화
@@ -3392,6 +3178,41 @@ with tab4:
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
     with col_btn2:
+        if st.button("💾 임시저장", type="secondary", use_container_width=True, key="save_malso_temp", help="현재 말소건 임시저장"):
+            # 현재 입력된 말소 데이터 수집
+            malso_type = st.session_state.get('malso_type', '근저당권')
+            holder_name = st.session_state.get('malso_holder1_name', '')
+            holder_rrn = st.session_state.get('malso_holder1_rrn', '')
+            holder_addr = st.session_state.get('malso_holder1_addr', '')
+            estate_detail = st.session_state.get('malso_estate_detail', '')
+            
+            if not holder_name:
+                st.error("❌ 등기권리자(소유자) 성명을 입력하세요!")
+            else:
+                # 중복 체크 (같은 유형 + 같은 이름이면 업데이트)
+                existing_idx = None
+                for idx, item in enumerate(st.session_state['malso_saved_list']):
+                    if item['type'] == malso_type and item['holder_name'] == holder_name:
+                        existing_idx = idx
+                        break
+                
+                malso_data = {
+                    'type': malso_type,
+                    'holder_name': holder_name,
+                    'holder_rrn': holder_rrn,
+                    'holder_addr': holder_addr,
+                    'property_addr': estate_detail.split('\n')[0] if estate_detail else ''
+                }
+                
+                if existing_idx is not None:
+                    st.session_state['malso_saved_list'][existing_idx] = malso_data
+                    st.success(f"✅ {malso_type}말소 - {holder_name} 업데이트 완료!")
+                else:
+                    st.session_state['malso_saved_list'].append(malso_data)
+                    st.success(f"✅ {malso_type}말소 - {holder_name} 저장 완료!")
+                st.rerun()
+    
+    with col_btn3:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4", help="모든 입력 초기화"):
             # 말소 유형
             st.session_state['malso_type'] = '근저당권'
@@ -3433,8 +3254,28 @@ with tab4:
             st.session_state['malso_cause_date'] = datetime.now().date()
             st.session_state['malso_cause_date_input'] = datetime.now().date()
             
+            # 임시저장 목록도 초기화
+            st.session_state['malso_saved_list'] = []
+            
             st.success("✅ 초기화되었습니다!")
             st.rerun()
+    
+    # 임시저장된 말소건 목록 표시
+    if st.session_state.get('malso_saved_list'):
+        st.markdown("---")
+        st.markdown("#### 📦 저장된 말소 건")
+        
+        with st.container(border=True):
+            for idx, item in enumerate(st.session_state['malso_saved_list']):
+                col_item, col_del = st.columns([5, 1])
+                with col_item:
+                    st.markdown(f"✅ **{item['type']}말소** - {item['holder_name']}")
+                with col_del:
+                    if st.button("🗑️", key=f"del_malso_{idx}", help="삭제"):
+                        st.session_state['malso_saved_list'].pop(idx)
+                        st.rerun()
+            
+            st.caption(f"총 {len(st.session_state['malso_saved_list'])}건 저장됨 → 위택스신고 탭에서 불러오기 가능")
     
     st.markdown("---")
     
@@ -3737,79 +3578,33 @@ with tab4:
         except Exception as e:
             st.error(f"이관증명서 생성 오류: {e}")
     
-    # =========================================================================
-    # 위택스 말소 신고 섹션
-    # =========================================================================
-    st.markdown("---")
-    st.markdown("### 🏛️ 위택스 말소 신고")
-    
-    with st.container(border=True):
-        # 납세자 정보 표시
-        holder_name = st.session_state.get('malso_holder1_name', '')
-        holder_rrn = st.session_state.get('malso_holder1_rrn', '')
-        malso_type = st.session_state.get('malso_type', '근저당권')
-        
-        st.markdown(f"**신고 유형:** {malso_type}말소")
-        st.markdown(f"**납세자 (소유자):** {holder_name}")
-        
-        if st.button("🚀 위택스 말소 신고 실행", type="primary", use_container_width=True, key='wetax_malso_submit_btn'):
-            if not holder_name or not holder_rrn:
-                st.error("❌ 등기권리자(소유자) 정보를 입력해주세요.")
-            else:
-                # 데이터 준비
-                holder_addr = st.session_state.get('malso_holder1_addr', '')
-                estate_detail = st.session_state.get('malso_estate_detail', '')
-                
-                front, back = parse_rrn(holder_rrn)
-                road_addr, detail_addr = extract_road_address(holder_addr)
-                prop_road, prop_detail = extract_road_address(estate_detail.split('\n')[0] if estate_detail else '')
-                
-                cases = [{
-                    "type": "말소",
-                    "taxpayer_type": "01",  # 개인
-                    "taxpayer_name": holder_name,
-                    "resident_no_front": front,
-                    "resident_no_back": back,
-                    "phone": "0218335482",
-                    "address": road_addr,
-                    "address_detail": detail_addr,
-                    "property_address": prop_road,
-                    "property_detail": prop_detail,
-                    "tax_base": None
-                }]
-                
-                # URL 확인
-                wetax_url = st.session_state.get('wetax_server_url', '')
-                if not wetax_url:
-                    st.error("❌ 위택스 서버 URL을 먼저 설정하세요!")
-                else:
-                    st.info("📤 말소 신고 중...")
-                    result, error = call_wetax_api(cases, base_url=wetax_url)
-                    
-                    if error:
-                        st.error(f"❌ 오류: {error}")
-                    else:
-                        st.success("✅ 위택스 말소 신고 완료!")
-                        st.json(result)
-    
     # 안내 메시지
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")
 
 # =============================================================================
-# Tab 5: 1금융권 서류
+# Tab 5: 시중은행 서류
 # =============================================================================
 with tab5:
-    st.markdown("### 🏦 1금융권 서류 (설정계약서/위임장/자필서명정보)")
+    st.markdown("### 🏦 시중은행 서류 (설정계약서/위임장/자필서명정보)")
     
     # 세션 상태 초기화
     if 'tab5_bank' not in st.session_state:
         st.session_state['tab5_bank'] = "하나은행"
     if 'tab5_estate' not in st.session_state:
         st.session_state['tab5_estate'] = ""
-    if 'tab5_contract_type' not in st.session_state:
-        st.session_state['tab5_contract_type'] = "3자담보"
     if 'tab5_date' not in st.session_state:
         st.session_state['tab5_date'] = datetime.now().date()
+    if 'tab5_amount' not in st.session_state:
+        st.session_state['tab5_amount'] = ""
+    
+    # 등기의무자 3명 초기화 (이름, 주민번호, 주소)
+    for i in range(1, 4):
+        if f'tab5_owner{i}_name_input' not in st.session_state:
+            st.session_state[f'tab5_owner{i}_name_input'] = ''
+        if f'tab5_owner{i}_rrn_input' not in st.session_state:
+            st.session_state[f'tab5_owner{i}_rrn_input'] = ''
+        if f'tab5_owner{i}_addr_input' not in st.session_state:
+            st.session_state[f'tab5_owner{i}_addr_input'] = ''
     
     # 상단 버튼들
     col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
@@ -3819,31 +3614,35 @@ with tab5:
             contract_type = st.session_state.get('contract_type', '3자담보')
             debtor_name = st.session_state.get('t1_debtor_name', '')
             debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
+            debtor_addr = st.session_state.get('t1_debtor_addr', '')
             owner_name = st.session_state.get('t1_owner_name', '')
             owner_rrn = st.session_state.get('t1_owner_rrn', '')
+            owner_addr = st.session_state.get('t1_owner_addr', '')
             estate_info = st.session_state.get('estate_text_area', '')
             date_val = st.session_state.get('input_date', datetime.now().date())
-            
-            # 계약 유형별 할당
-            o1_name, o1_rrn = "", ""
-            o2_name, o2_rrn = "", ""
-            
-            if contract_type == "개인":
-                o1_name, o1_rrn = debtor_name, debtor_rrn
-            elif contract_type == "3자담보":
-                o1_name, o1_rrn = owner_name, owner_rrn
-            elif contract_type == "공동담보":
-                o1_name, o1_rrn = debtor_name, debtor_rrn
-                o2_name, o2_rrn = owner_name, owner_rrn
+            amount_val = st.session_state.get('input_amount', '')
             
             # session_state 업데이트
-            st.session_state['tab5_contract_type'] = contract_type
             st.session_state['tab5_estate_input'] = estate_info
             st.session_state['tab5_date'] = date_val
-            st.session_state['tab5_owner1_name_input'] = o1_name
-            st.session_state['tab5_owner1_rrn_input'] = o1_rrn
-            st.session_state['tab5_owner2_name_input'] = o2_name
-            st.session_state['tab5_owner2_rrn_input'] = o2_rrn
+            st.session_state['tab5_amount'] = amount_val
+            
+            # 계약 유형에 따라 등기의무자 배치
+            if contract_type == "개인":
+                st.session_state['tab5_owner1_name_input'] = debtor_name
+                st.session_state['tab5_owner1_rrn_input'] = debtor_rrn
+                st.session_state['tab5_owner1_addr_input'] = debtor_addr
+            elif contract_type == "3자담보":
+                st.session_state['tab5_owner1_name_input'] = owner_name
+                st.session_state['tab5_owner1_rrn_input'] = owner_rrn
+                st.session_state['tab5_owner1_addr_input'] = owner_addr
+            elif contract_type == "공동담보":
+                st.session_state['tab5_owner1_name_input'] = debtor_name
+                st.session_state['tab5_owner1_rrn_input'] = debtor_rrn
+                st.session_state['tab5_owner1_addr_input'] = debtor_addr
+                st.session_state['tab5_owner2_name_input'] = owner_name
+                st.session_state['tab5_owner2_rrn_input'] = owner_rrn
+                st.session_state['tab5_owner2_addr_input'] = owner_addr
             
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
@@ -3851,55 +3650,57 @@ with tab5:
     with col_btn2:
         if st.button("🔄 초기화", key="reset_tab5", use_container_width=True):
             st.session_state['tab5_bank'] = "하나은행"
-            st.session_state['tab5_contract_type'] = "3자담보"
             st.session_state['tab5_estate_input'] = ""
             st.session_state['tab5_date'] = datetime.now().date()
-            st.session_state['tab5_owner1_name_input'] = ""
-            st.session_state['tab5_owner1_rrn_input'] = ""
-            st.session_state['tab5_owner2_name_input'] = ""
-            st.session_state['tab5_owner2_rrn_input'] = ""
+            st.session_state['tab5_amount'] = ""
+            for i in range(1, 4):
+                st.session_state[f'tab5_owner{i}_name_input'] = ""
+                st.session_state[f'tab5_owner{i}_rrn_input'] = ""
+                st.session_state[f'tab5_owner{i}_addr_input'] = ""
             st.rerun()
     
     st.markdown("---")
     
-    # 은행 선택 (딜레이 해결: rerun 제거, radio 사용)
+    # 거래은행 선택
     st.markdown("#### 🏛️ 거래은행 선택")
-    selected_bank = st.radio(
-        "거래은행",
-        options=["하나은행", "신한은행", "우리은행"],
-        index=["하나은행", "신한은행", "우리은행"].index(st.session_state.get('tab5_bank', '하나은행')),
-        horizontal=True,
-        key="tab5_bank_radio",
-        label_visibility="collapsed"
-    )
-    st.session_state['tab5_bank'] = selected_bank
+    bank_cols = st.columns(3)
+    bank_list = ["하나은행", "신한은행", "우리은행"]
+    current_bank = st.session_state.get('tab5_bank', '하나은행')
     
-    st.markdown("---")
-    
-    # 계약 유형 선택
-    st.markdown("#### 📋 계약 유형")
-    contract_cols = st.columns(3)
-    contract_types = ["개인", "3자담보", "공동담보"]
-    current_contract = st.session_state.get('tab5_contract_type', '3자담보')
-    
-    for i, ctype in enumerate(contract_types):
-        with contract_cols[i]:
-            btn_type = "primary" if current_contract == ctype else "secondary"
-            if st.button(ctype, key=f"tab5_ctype_{ctype}", type=btn_type, use_container_width=True):
-                st.session_state['tab5_contract_type'] = ctype
+    for i, bank in enumerate(bank_list):
+        with bank_cols[i]:
+            btn_type = "primary" if current_bank == bank else "secondary"
+            if st.button(bank, key=f"tab5_bank_{bank}", type=btn_type, use_container_width=True):
+                st.session_state['tab5_bank'] = bank
                 st.rerun()
     
+    selected_bank = st.session_state.get('tab5_bank', '하나은행')
+    
     st.markdown("---")
     
-    # 작성일자
-    st.markdown("#### 📅 작성일자")
-    tab5_date = st.date_input(
-        "작성일자",
-        value=st.session_state.get('tab5_date', datetime.now().date()),
-        key="tab5_date_input",
-        label_visibility="collapsed"
-    )
-    st.session_state['tab5_date'] = tab5_date
+    # 작성일자 & 채권최고액
+    col_date, col_amount = st.columns(2)
+    
+    with col_date:
+        st.markdown("#### 📅 작성일자")
+        tab5_date = st.date_input(
+            "작성일자",
+            value=st.session_state.get('tab5_date', datetime.now().date()),
+            key="tab5_date_input",
+            label_visibility="collapsed"
+        )
+        st.session_state['tab5_date'] = tab5_date
+    
+    with col_amount:
+        st.markdown("#### 💰 채권최고액")
+        tab5_amount = st.text_input(
+            "채권최고액",
+            value=st.session_state.get('tab5_amount', ''),
+            key="tab5_amount_input",
+            placeholder="130,000,000",
+            label_visibility="collapsed"
+        )
+        st.session_state['tab5_amount'] = tab5_amount
     
     st.markdown("---")
     
@@ -3941,42 +3742,41 @@ with tab5:
     
     estate_text = st.text_area(
         "부동산 표시 (자동 추출 또는 직접 입력)",
-        height=250,
+        height=200,
         key='tab5_estate_input'
     )
     st.session_state['tab5_estate'] = estate_text
     
     st.markdown("---")
     
-    # 등기의무자 정보 입력 (계약유형에 따라 동적)
-    st.markdown("#### 👤 등기의무자 정보")
-    current_contract = st.session_state.get('tab5_contract_type', '3자담보')
+    # 등기의무자 정보 입력 (3명까지)
+    st.markdown("#### 👤 등기의무자 정보 (최대 3명)")
     
-    # 초기화
-    for key in ['tab5_owner1_name_input', 'tab5_owner1_rrn_input', 'tab5_owner2_name_input', 'tab5_owner2_rrn_input']:
-        if key not in st.session_state:
-            st.session_state[key] = ''
+    # 주민번호 자동 하이픈 삽입 함수
+    def auto_format_rrn_tab5(key):
+        """6자리 입력 시 자동으로 '-' 삽입"""
+        if key in st.session_state:
+            val = st.session_state[key]
+            clean_val = re.sub(r'[^0-9]', '', str(val))
+            if len(clean_val) >= 6 and '-' not in val:
+                st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:13]}"
+            elif len(clean_val) > 13:
+                st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:13]}"
     
-    if current_contract == "공동담보":
-        # 공동담보: 2명 입력
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**등기의무자 1 (채무자)**")
-            o1_name = st.text_input("성명", key='tab5_owner1_name_input', placeholder="홍길동")
-            o1_rrn = st.text_input("주민등록번호", key='tab5_owner1_rrn_input', placeholder="000000-0000000")
-        with col2:
-            st.markdown("**등기의무자 2 (소유자)**")
-            o2_name = st.text_input("성명", key='tab5_owner2_name_input', placeholder="김철수")
-            o2_rrn = st.text_input("주민등록번호", key='tab5_owner2_rrn_input', placeholder="000000-0000000")
-    else:
-        # 개인/3자담보: 1명 입력
-        label = "채무자" if current_contract == "개인" else "소유자"
-        st.markdown(f"**등기의무자 ({label})**")
-        col1, col2 = st.columns(2)
-        with col1:
-            o1_name = st.text_input("성명", key='tab5_owner1_name_input', placeholder="홍길동")
-        with col2:
-            o1_rrn = st.text_input("주민등록번호", key='tab5_owner1_rrn_input', placeholder="000000-0000000")
+    owner_cols = st.columns(3)
+    
+    for i in range(1, 4):
+        with owner_cols[i-1]:
+            st.markdown(f"**등기의무자 {i}**")
+            st.text_input("성명", key=f'tab5_owner{i}_name_input', placeholder="홍길동")
+            st.text_input(
+                "주민등록번호", 
+                key=f'tab5_owner{i}_rrn_input', 
+                placeholder="000000-0000000",
+                on_change=auto_format_rrn_tab5,
+                args=(f'tab5_owner{i}_rrn_input',)
+            )
+            st.text_input("주소", key=f'tab5_owner{i}_addr_input', placeholder="서울시 강남구 테헤란로 123")
     
     st.markdown("---")
     
@@ -4023,7 +3823,7 @@ with tab5:
             else:
                 st.warning("⚠️ 부동산 표시를 입력하세요.")
     
-    # 자필서명정보 PDF 생성
+    # 자필서명정보 PDF 생성 (입력된 등기의무자 수만큼)
     with btn_cols[2]:
         if st.button("✍️ 자필서명정보", key="gen_sig_tab5", use_container_width=True, type="primary"):
             if current_estate:
@@ -4032,44 +3832,774 @@ with tab5:
                     if not os.path.exists(template_path):
                         st.error("❌ 자필서명정보 템플릿 파일이 없습니다.")
                     else:
-                        # 계약유형에 따른 데이터 구성
-                        o1_name = st.session_state.get('tab5_owner1_name_input', '')
-                        o1_rrn = st.session_state.get('tab5_owner1_rrn_input', '')
-                        o2_name = st.session_state.get('tab5_owner2_name_input', '')
-                        o2_rrn = st.session_state.get('tab5_owner2_rrn_input', '')
-                        
                         # 날짜 포맷
                         date_val = st.session_state.get('tab5_date', datetime.now().date())
                         date_str = date_val.strftime("%Y년 %m월 %d일")
                         
-                        sig_data = {
-                            "estate_text": current_estate,
-                            "purpose": "근저당권설정",
-                            "debtor_name": o1_name,
-                            "debtor_rrn": o1_rrn,
-                            "owner_name": o2_name if current_contract == "공동담보" else "",
-                            "owner_rrn": o2_rrn if current_contract == "공동담보" else "",
-                            "date": date_str
-                        }
-                        pdf_buffer = make_bank_signature_pdf(template_path, sig_data)
+                        # 입력된 등기의무자 수집
+                        owners = []
+                        for i in range(1, 4):
+                            name = st.session_state.get(f'tab5_owner{i}_name_input', '').strip()
+                            rrn = st.session_state.get(f'tab5_owner{i}_rrn_input', '').strip()
+                            if name:  # 이름이 입력된 경우만
+                                owners.append({'name': name, 'rrn': rrn})
                         
-                        # 파일명 생성
-                        filename = f"{selected_bank}_자필서명정보_{o1_name or '고객'}.pdf"
-                        
-                        st.download_button(
-                            label="⬇️ 자필서명정보 다운로드",
-                            data=pdf_buffer.getvalue(),
-                            file_name=filename,
-                            mime="application/pdf",
-                            key="dl_sig_tab5"
-                        )
+                        if not owners:
+                            st.warning("⚠️ 등기의무자를 1명 이상 입력하세요.")
+                        else:
+                            st.session_state['_tab5_sig_pdfs'] = []
+                            
+                            # 각 등기의무자별로 PDF 생성
+                            for idx, owner in enumerate(owners):
+                                sig_data = {
+                                    "estate_text": current_estate,
+                                    "purpose": "근저당권설정",
+                                    "debtor_name": owner['name'],
+                                    "debtor_rrn": owner['rrn'],
+                                    "owner_name": "",
+                                    "owner_rrn": "",
+                                    "date": date_str
+                                }
+                                pdf_buffer = make_bank_signature_pdf(template_path, sig_data)
+                                st.session_state['_tab5_sig_pdfs'].append({
+                                    'name': owner['name'],
+                                    'data': pdf_buffer.getvalue()
+                                })
+                            
+                            st.session_state['_tab5_sig_ready'] = True
+                            st.rerun()
+                            
                 except Exception as e:
                     st.error(f"❌ PDF 생성 오류: {e}")
             else:
                 st.warning("⚠️ 부동산 표시를 입력하세요.")
     
+    # 자필서명정보 다운로드 버튼들 표시
+    if st.session_state.get('_tab5_sig_ready') and st.session_state.get('_tab5_sig_pdfs'):
+        st.markdown("---")
+        st.success(f"✅ 자필서명정보 {len(st.session_state['_tab5_sig_pdfs'])}건 생성 완료!")
+        
+        dl_cols = st.columns(len(st.session_state['_tab5_sig_pdfs']))
+        for idx, pdf_info in enumerate(st.session_state['_tab5_sig_pdfs']):
+            with dl_cols[idx]:
+                st.download_button(
+                    label=f"⬇️ {pdf_info['name']}",
+                    data=pdf_info['data'],
+                    file_name=f"{selected_bank}_자필서명정보_{pdf_info['name']}.pdf",
+                    mime="application/pdf",
+                    key=f"dl_sig_tab5_{idx}",
+                    use_container_width=True
+                )
+        
+        st.session_state['_tab5_sig_ready'] = False
+    
+    # 입력된 등기의무자 수 카운트
+    owner_count = sum(1 for i in range(1, 4) if st.session_state.get(f'tab5_owner{i}_name_input', '').strip())
+    
+    st.info(f"💡 **선택된 은행:** {selected_bank} | **작성일자:** {st.session_state.get('tab5_date', datetime.now().date())} | **등기의무자:** {owner_count}명")
+
+# =============================================================================
+# Tab 6: 위택스 등록면허세 신고
+# =============================================================================
+with tab6:
+    st.markdown("### 🏛️ 위택스신고 (등록면허세)")
+    
+    # =========================================================================
+    # 터널 연결 설정
+    # =========================================================================
+    st.markdown("#### ⚙️ 터널 연결 설정")
+    
+    if 'wetax_server_url' not in st.session_state:
+        st.session_state['wetax_server_url'] = ''
+    
+    with st.container(border=True):
+        st.caption("wetax_launcher.exe 실행 후 생성된 URL을 붙여넣으세요")
+        
+        col_url, col_test = st.columns([4, 1])
+        with col_url:
+            wetax_url = st.text_input(
+                "서버 URL",
+                value=st.session_state.get('wetax_server_url', ''),
+                placeholder="https://xxxx.trycloudflare.com",
+                key='tab6_wetax_url_input',
+                label_visibility='collapsed'
+            )
+            if wetax_url != st.session_state.get('wetax_server_url', ''):
+                st.session_state['wetax_server_url'] = wetax_url
+        
+        with col_test:
+            if st.button("🔗 연결 테스트", key='tab6_wetax_test_conn', use_container_width=True):
+                if wetax_url:
+                    try:
+                        test_url = wetax_url.rstrip('/') + "/"
+                        resp = requests.get(test_url, timeout=15)
+                        if resp.status_code == 200:
+                            st.success("✅ 연결 성공!")
+                        else:
+                            st.error(f"❌ 연결 실패 (상태코드: {resp.status_code})")
+                    except Exception as e:
+                        st.error(f"❌ 연결 실패: {e}")
+                else:
+                    st.warning("⚠️ URL을 입력하세요")
+        
+        # 연결 상태 표시
+        if st.session_state.get('wetax_server_url'):
+            st.success(f"🟢 연결됨: {st.session_state['wetax_server_url']}")
+        else:
+            st.warning("🔴 연결되지 않음")
+    
     st.markdown("---")
-    st.info(f"💡 **선택된 은행:** {selected_bank} | **계약유형:** {current_contract} | **작성일자:** {st.session_state.get('tab5_date', datetime.now().date())}")
+    
+    # =========================================================================
+    # 데이터 불러오기
+    # =========================================================================
+    st.markdown("#### 📥 데이터 불러오기")
+    
+    # 위택스 신고용 세션 초기화
+    if 'wetax_report_type' not in st.session_state:
+        st.session_state['wetax_report_type'] = '설정'
+    if 'wetax_data_source' not in st.session_state:
+        st.session_state['wetax_data_source'] = ''
+    if 'wetax_manual_list' not in st.session_state:
+        st.session_state['wetax_manual_list'] = []
+    
+    btn_cols = st.columns(4)
+    
+    with btn_cols[0]:
+        if st.button("🏦 1탭 가져오기\n(시중은행 설정)", key="wetax_load_tab5", use_container_width=True, type="primary"):
+            # 1탭(시중은행)에서 데이터 가져오기
+            st.session_state['wetax_data_source'] = 'tab5'
+            st.session_state['wetax_report_type'] = '설정'
+            
+            # 은행 정보
+            selected_bank = st.session_state.get('tab5_bank', '하나은행')
+            BANK_INFO = {
+                "하나은행": {"name": "주식회사 하나은행", "corp_num": "110111-0672538", "addr": "서울특별시 중구 을지로 35(을지로1가)"},
+                "신한은행": {"name": "주식회사 신한은행", "corp_num": "110111-0012809", "addr": "서울특별시 중구 세종대로9길 20(태평로2가)"},
+                "우리은행": {"name": "주식회사 우리은행", "corp_num": "110111-0023393", "addr": "서울특별시 중구 소공로51(회현동1가)"}
+            }
+            bank_info = BANK_INFO.get(selected_bank, {})
+            
+            st.session_state['wetax_creditor_name'] = bank_info.get('name', selected_bank)
+            st.session_state['wetax_creditor_corp_num'] = bank_info.get('corp_num', '')
+            st.session_state['wetax_creditor_addr'] = bank_info.get('addr', '')
+            
+            # 등기의무자 정보 (최대 3명)
+            owners = []
+            for i in range(1, 4):
+                name = st.session_state.get(f'tab5_owner{i}_name_input', '').strip()
+                rrn = st.session_state.get(f'tab5_owner{i}_rrn_input', '').strip()
+                addr = st.session_state.get(f'tab5_owner{i}_addr_input', '').strip()
+                if name:
+                    owners.append({'name': name, 'rrn': rrn, 'addr': addr})
+            st.session_state['wetax_tab5_owners'] = owners
+            
+            # 물건지, 채권최고액
+            estate_text = st.session_state.get('tab5_estate', '')
+            st.session_state['wetax_property_addr'] = estate_text.split('\n')[0] if estate_text else ''
+            st.session_state['wetax_amount'] = st.session_state.get('tab5_amount', '')
+            
+            st.success("✅ 1탭(시중은행) 데이터 불러오기 완료!")
+            st.rerun()
+    
+    with btn_cols[1]:
+        if st.button("📄 2탭 가져오기\n(대부업 설정)", key="wetax_load_tab1", use_container_width=True, type="primary"):
+            # 2탭(대부업)에서 데이터 가져오기
+            st.session_state['wetax_data_source'] = 'tab1'
+            st.session_state['wetax_report_type'] = '설정'
+            
+            # 채권자(근저당권자) 정보
+            st.session_state['wetax_creditor_name'] = st.session_state.get('input_creditor_name', '') or st.session_state.get('input_creditor', '')
+            st.session_state['wetax_creditor_corp_num'] = st.session_state.get('input_creditor_corp_num', '')
+            st.session_state['wetax_creditor_addr'] = st.session_state.get('input_creditor_addr', '')
+            
+            # 채무자/소유자 정보
+            st.session_state['wetax_debtor_name'] = st.session_state.get('t1_debtor_name', '')
+            st.session_state['wetax_debtor_rrn'] = st.session_state.get('t1_debtor_rrn', '')
+            st.session_state['wetax_debtor_addr'] = st.session_state.get('t1_debtor_addr', '')
+            st.session_state['wetax_owner_name'] = st.session_state.get('t1_owner_name', '')
+            st.session_state['wetax_owner_rrn'] = st.session_state.get('t1_owner_rrn', '')
+            st.session_state['wetax_owner_addr'] = st.session_state.get('t1_owner_addr', '')
+            
+            # 물건지, 채권최고액, 계약유형
+            st.session_state['wetax_property_addr'] = st.session_state.get('input_collateral_addr', '')
+            st.session_state['wetax_amount'] = st.session_state.get('input_amount', '')
+            st.session_state['wetax_contract_type'] = st.session_state.get('contract_type', '개인')
+            
+            st.success("✅ 2탭(대부업) 데이터 불러오기 완료!")
+            st.rerun()
+    
+    with btn_cols[2]:
+        if st.button("🗑️ 3탭 가져오기\n(말소)", key="wetax_load_tab4", use_container_width=True, type="primary"):
+            # 3탭(말소)에서 임시저장 목록 가져오기
+            st.session_state['wetax_data_source'] = 'tab4'
+            st.session_state['wetax_report_type'] = '말소'
+            
+            # 임시저장 목록 가져오기
+            saved_list = st.session_state.get('malso_saved_list', [])
+            
+            if saved_list:
+                st.session_state['wetax_malso_list'] = saved_list.copy()
+                st.success(f"✅ 3탭(말소) {len(saved_list)}건 불러오기 완료!")
+            else:
+                # 임시저장이 없으면 현재 입력된 1건만 가져오기
+                holder_name = st.session_state.get('malso_holder1_name', '')
+                if holder_name:
+                    st.session_state['wetax_malso_list'] = [{
+                        'type': st.session_state.get('malso_type', '근저당권'),
+                        'holder_name': holder_name,
+                        'holder_rrn': st.session_state.get('malso_holder1_rrn', ''),
+                        'holder_addr': st.session_state.get('malso_holder1_addr', ''),
+                        'property_addr': st.session_state.get('malso_estate_detail', '').split('\n')[0] if st.session_state.get('malso_estate_detail') else ''
+                    }]
+                    st.success("✅ 3탭(말소) 1건 불러오기 완료!")
+                else:
+                    st.session_state['wetax_malso_list'] = []
+                    st.warning("⚠️ 3탭에 저장된 말소 건이 없습니다.")
+            st.rerun()
+    
+    with btn_cols[3]:
+        if st.button("✍️ 수기입력\n(직접 입력)", key="wetax_load_manual", use_container_width=True, type="secondary"):
+            st.session_state['wetax_data_source'] = 'manual'
+            st.session_state['wetax_report_type'] = '수기'
+            st.session_state['wetax_manual_list'] = []
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # =========================================================================
+    # 신고 내용 확인 및 실행
+    # =========================================================================
+    data_source = st.session_state.get('wetax_data_source', '')
+    report_type = st.session_state.get('wetax_report_type', '설정')
+    
+    if data_source:
+        st.markdown(f"#### 📋 신고 내용 확인 (데이터 출처: **{data_source.upper()}**)")
+        
+        with st.container(border=True):
+            # 미리보기 데이터 수집
+            preview_rows = []
+            
+            if data_source == 'tab1':
+                # 1탭: 설정/주소변경
+                contract_type = st.session_state.get('wetax_contract_type', '개인')
+                creditor_name = st.session_state.get('wetax_creditor_name', '')
+                creditor_corp_num = st.session_state.get('wetax_creditor_corp_num', '')
+                creditor_addr = st.session_state.get('wetax_creditor_addr', '')
+                property_addr = st.session_state.get('wetax_property_addr', '')
+                amount = st.session_state.get('wetax_amount', '')
+                
+                # 근저당설정 (필수)
+                preview_rows.append({
+                    '선택': True,
+                    '신고유형': '근저당설정',
+                    '납세자': creditor_name,
+                    '주민/법인번호': creditor_corp_num,
+                    '주소': creditor_addr[:30] + '...' if len(creditor_addr) > 30 else creditor_addr,
+                    '물건지': property_addr[:25] + '...' if len(property_addr) > 25 else property_addr,
+                    '채권최고액': amount
+                })
+                
+                # 미리보기 테이블 표시
+                st.markdown("**📊 신고 미리보기**")
+                st.dataframe(
+                    preview_rows,
+                    column_config={
+                        "선택": st.column_config.CheckboxColumn("선택", default=True),
+                        "신고유형": "신고유형",
+                        "납세자": "납세자",
+                        "주민/법인번호": "주민/법인번호",
+                        "주소": "주소",
+                        "물건지": "물건지",
+                        "채권최고액": "채권최고액"
+                    },
+                    hide_index=True,
+                    use_container_width=True
+                )
+                
+                st.markdown("---")
+                
+                # 주소변경 옵션
+                include_addr = st.checkbox("📍 **주소변경 포함**", key='wetax_include_addr_change')
+                
+                if include_addr:
+                    addr_preview = []
+                    if contract_type == "개인":
+                        debtor_name = st.session_state.get('wetax_debtor_name', '')
+                        debtor_rrn = st.session_state.get('wetax_debtor_rrn', '')
+                        debtor_addr = st.session_state.get('wetax_debtor_addr', '')
+                        addr_preview.append({
+                            '납세자': debtor_name, '주민번호': debtor_rrn, 
+                            '주소': debtor_addr[:30] + '...' if len(debtor_addr) > 30 else debtor_addr,
+                            '신고유형': '주소변경'
+                        })
+                        correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
+                        if correction:
+                            addr_preview.insert(0, {
+                                '납세자': debtor_name, '주민번호': debtor_rrn,
+                                '주소': debtor_addr[:30] + '...' if len(debtor_addr) > 30 else debtor_addr,
+                                '신고유형': '경정'
+                            })
+                    elif contract_type == "3자담보":
+                        owner_name = st.session_state.get('wetax_owner_name', '')
+                        owner_rrn = st.session_state.get('wetax_owner_rrn', '')
+                        owner_addr = st.session_state.get('wetax_owner_addr', '')
+                        addr_preview.append({
+                            '납세자': owner_name, '주민번호': owner_rrn,
+                            '주소': owner_addr[:30] + '...' if len(owner_addr) > 30 else owner_addr,
+                            '신고유형': '주소변경'
+                        })
+                        correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
+                        if correction:
+                            addr_preview.insert(0, {
+                                '납세자': owner_name, '주민번호': owner_rrn,
+                                '주소': owner_addr[:30] + '...' if len(owner_addr) > 30 else owner_addr,
+                                '신고유형': '경정'
+                            })
+                    else:  # 공동담보
+                        owner_name = st.session_state.get('wetax_owner_name', '')
+                        owner_rrn = st.session_state.get('wetax_owner_rrn', '')
+                        owner_addr = st.session_state.get('wetax_owner_addr', '')
+                        debtor_name = st.session_state.get('wetax_debtor_name', '')
+                        debtor_rrn = st.session_state.get('wetax_debtor_rrn', '')
+                        debtor_addr = st.session_state.get('wetax_debtor_addr', '')
+                        
+                        col_o, col_d = st.columns(2)
+                        with col_o:
+                            addr_owner = st.checkbox(f"소유자 ({owner_name})", key='wetax_addr_owner')
+                            if addr_owner:
+                                addr_preview.append({'납세자': owner_name, '주민번호': owner_rrn, '주소': owner_addr[:25]+'...' if len(owner_addr)>25 else owner_addr, '신고유형': '주소변경'})
+                                if st.checkbox("   └─ 경정 포함", key='wetax_owner_correction'):
+                                    addr_preview.insert(len(addr_preview)-1, {'납세자': owner_name, '주민번호': owner_rrn, '주소': owner_addr[:25]+'...' if len(owner_addr)>25 else owner_addr, '신고유형': '경정'})
+                        with col_d:
+                            addr_debtor = st.checkbox(f"채무자 ({debtor_name})", key='wetax_addr_debtor')
+                            if addr_debtor:
+                                addr_preview.append({'납세자': debtor_name, '주민번호': debtor_rrn, '주소': debtor_addr[:25]+'...' if len(debtor_addr)>25 else debtor_addr, '신고유형': '주소변경'})
+                                if st.checkbox("   └─ 경정 포함", key='wetax_debtor_correction'):
+                                    addr_preview.insert(len(addr_preview)-1, {'납세자': debtor_name, '주민번호': debtor_rrn, '주소': debtor_addr[:25]+'...' if len(debtor_addr)>25 else debtor_addr, '신고유형': '경정'})
+                    
+                    if addr_preview:
+                        st.dataframe(addr_preview, hide_index=True, use_container_width=True)
+            
+            elif data_source == 'tab4':
+                # 4탭: 말소 (여러 건 지원)
+                malso_list = st.session_state.get('wetax_malso_list', [])
+                
+                if malso_list:
+                    st.markdown(f"**📊 말소 신고 미리보기 ({len(malso_list)}건)**")
+                    
+                    # 테이블 형태로 표시
+                    malso_preview = []
+                    for idx, item in enumerate(malso_list):
+                        malso_preview.append({
+                            '신고유형': f"{item['type']}말소",
+                            '납세자': item['holder_name'],
+                            '주민번호': item['holder_rrn'],
+                            '주소': item['holder_addr'][:30] + '...' if len(item.get('holder_addr', '')) > 30 else item.get('holder_addr', ''),
+                            '물건지': item['property_addr'][:25] + '...' if len(item.get('property_addr', '')) > 25 else item.get('property_addr', '')
+                        })
+                    
+                    st.dataframe(malso_preview, hide_index=True, use_container_width=True)
+                    
+                    st.markdown("---")
+                    st.markdown("**신고 대상 선택**")
+                    
+                    # 각 말소건에 대해 체크박스 생성
+                    chk_cols = st.columns(min(len(malso_list), 3))
+                    for idx, item in enumerate(malso_list):
+                        with chk_cols[idx % 3]:
+                            st.checkbox(
+                                f"{item['type']}말소 - {item['holder_name']}", 
+                                value=True, 
+                                key=f'wetax_malso_chk_{idx}'
+                            )
+                else:
+                    st.warning("⚠️ 말소 건이 없습니다. 4탭에서 임시저장 후 다시 불러오세요.")
+            
+            elif data_source == 'tab5':
+                # 5탭: 1금융권 설정/주소변경
+                creditor_name = st.session_state.get('wetax_creditor_name', '')
+                creditor_corp_num = st.session_state.get('wetax_creditor_corp_num', '')
+                creditor_addr = st.session_state.get('wetax_creditor_addr', '')
+                property_addr = st.session_state.get('wetax_property_addr', '')
+                amount = st.session_state.get('wetax_amount', '')
+                owners = st.session_state.get('wetax_tab5_owners', [])
+                
+                # 근저당설정 미리보기
+                st.markdown("**📊 신고 미리보기**")
+                setting_preview = [{
+                    '신고유형': '근저당설정',
+                    '납세자': creditor_name,
+                    '주민/법인번호': creditor_corp_num,
+                    '주소': creditor_addr[:30] + '...' if len(creditor_addr) > 30 else creditor_addr,
+                    '물건지': property_addr[:25] + '...' if len(property_addr) > 25 else property_addr,
+                    '채권최고액': amount
+                }]
+                st.dataframe(setting_preview, hide_index=True, use_container_width=True)
+                
+                st.markdown("---")
+                
+                # 주소변경 옵션
+                include_addr = st.checkbox("📍 **주소변경 포함** (등기의무자 대상)", key='wetax_include_addr_tab5')
+                
+                if include_addr and owners:
+                    addr_preview = []
+                    for idx, owner in enumerate(owners):
+                        addr_preview.append({
+                            '신고유형': '주소변경',
+                            '납세자': owner['name'],
+                            '주민번호': owner['rrn'],
+                            '주소': owner['addr'][:30] + '...' if len(owner.get('addr', '')) > 30 else owner.get('addr', '')
+                        })
+                    
+                    st.dataframe(addr_preview, hide_index=True, use_container_width=True)
+                    
+                    correction = st.checkbox("      └─ 경정 포함 (각 2건씩 신고)", key='wetax_correction_tab5')
+                    
+                    if correction:
+                        st.caption(f"   → 경정 {len(owners)}건 + 주소변경 {len(owners)}건 = 총 {len(owners)*2}건 추가")
+            
+            elif data_source == 'manual':
+                # 수기입력 모드
+                st.markdown("**✍️ 수기입력 모드**")
+                
+                # 주민번호 자동 포맷팅 함수
+                def auto_format_manual_rrn(key):
+                    if key in st.session_state:
+                        val = st.session_state[key]
+                        clean_val = re.sub(r'[^0-9]', '', str(val))
+                        if len(clean_val) >= 6 and '-' not in val:
+                            st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:13]}"
+                
+                # 신고 건 추가 폼
+                with st.expander("➕ 신고 건 추가", expanded=True):
+                    # 신고 유형 선택
+                    report_type_options = ["설정", "전세권설정", "주소변경", "경정", "말소", "기타"]
+                    col_type, col_taxpayer = st.columns(2)
+                    
+                    with col_type:
+                        manual_report_type = st.selectbox("신고유형", report_type_options, key='manual_report_type')
+                    
+                    with col_taxpayer:
+                        taxpayer_type = st.radio("납세자 유형", ["개인", "법인"], horizontal=True, key='manual_taxpayer_type')
+                    
+                    # 납세자 정보
+                    st.markdown("**납세자 정보**")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        manual_name = st.text_input("납세자명", key='manual_taxpayer_name', placeholder="홍길동 / ㈜OO저축은행")
+                    with col2:
+                        if taxpayer_type == "개인":
+                            manual_rrn = st.text_input("주민등록번호", key='manual_taxpayer_rrn', placeholder="800101-1234567",
+                                                       on_change=auto_format_manual_rrn, args=('manual_taxpayer_rrn',))
+                        else:
+                            manual_rrn = st.text_input("법인등록번호", key='manual_taxpayer_rrn', placeholder="110111-1234567",
+                                                       on_change=auto_format_manual_rrn, args=('manual_taxpayer_rrn',))
+                    
+                    manual_addr = st.text_input("납세자 주소", key='manual_taxpayer_addr', placeholder="서울특별시 강남구 테헤란로 123")
+                    
+                    # 물건지 및 채권최고액/과세표준
+                    st.markdown("**물건지 정보**")
+                    manual_property = st.text_input("물건지 주소", key='manual_property_addr', placeholder="서울특별시 서초구 서초대로 456")
+                    
+                    # 설정, 전세권설정은 과세표준(채권최고액) 입력 필요
+                    if manual_report_type in ["설정", "전세권설정"]:
+                        amount_label = "전세금" if manual_report_type == "전세권설정" else "채권최고액"
+                        manual_amount = st.text_input(amount_label, key='manual_amount', placeholder="130,000,000")
+                    else:
+                        manual_amount = ""
+                    
+                    # 추가 버튼
+                    if st.button("➕ 신고 건 추가", key='manual_add_btn', use_container_width=True):
+                        if not manual_name:
+                            st.error("❌ 납세자명을 입력하세요!")
+                        else:
+                            new_item = {
+                                'report_type': manual_report_type,
+                                'taxpayer_type': '01' if taxpayer_type == '개인' else '02',
+                                'taxpayer_type_name': taxpayer_type,
+                                'name': manual_name,
+                                'rrn': st.session_state.get('manual_taxpayer_rrn', ''),
+                                'addr': manual_addr,
+                                'property_addr': manual_property,
+                                'amount': manual_amount if manual_report_type in ["설정", "전세권설정"] else ''
+                            }
+                            st.session_state['wetax_manual_list'].append(new_item)
+                            
+                            # 입력 필드 초기화
+                            st.session_state['manual_taxpayer_name'] = ''
+                            st.session_state['manual_taxpayer_rrn'] = ''
+                            st.session_state['manual_taxpayer_addr'] = ''
+                            st.session_state['manual_property_addr'] = ''
+                            st.session_state['manual_amount'] = ''
+                            
+                            st.success(f"✅ {manual_report_type} - {manual_name} 추가 완료!")
+                            st.rerun()
+                
+                # 추가된 신고 건 목록
+                manual_list = st.session_state.get('wetax_manual_list', [])
+                
+                if manual_list:
+                    st.markdown("---")
+                    st.markdown(f"**📊 신고 목록 ({len(manual_list)}건)**")
+                    
+                    # 테이블 형태로 표시
+                    manual_preview = []
+                    for idx, item in enumerate(manual_list):
+                        manual_preview.append({
+                            '신고유형': item['report_type'],
+                            '납세자유형': item['taxpayer_type_name'],
+                            '납세자': item['name'],
+                            '주민/법인번호': item['rrn'],
+                            '주소': item['addr'][:25] + '...' if len(item.get('addr', '')) > 25 else item.get('addr', ''),
+                            '물건지': item['property_addr'][:20] + '...' if len(item.get('property_addr', '')) > 20 else item.get('property_addr', ''),
+                            '과세표준': item.get('amount', '')
+                        })
+                    
+                    st.dataframe(manual_preview, hide_index=True, use_container_width=True)
+                    
+                    # 삭제 버튼들
+                    st.markdown("**삭제**")
+                    del_cols = st.columns(min(len(manual_list), 5))
+                    for idx, item in enumerate(manual_list):
+                        with del_cols[idx % 5]:
+                            if st.button(f"🗑️ {item['name']}", key=f'manual_del_{idx}'):
+                                st.session_state['wetax_manual_list'].pop(idx)
+                                st.rerun()
+                else:
+                    st.info("💡 위 폼에서 신고 건을 추가하세요.")
+            
+            st.markdown("---")
+            
+            # 신고 실행 버튼
+            if st.button("🚀 위택스 신고 실행", type="primary", use_container_width=True, key='wetax_final_submit'):
+                wetax_url = st.session_state.get('wetax_server_url', '')
+                
+                if not wetax_url:
+                    st.error("❌ 터널 연결을 먼저 설정하세요!")
+                else:
+                    cases = []
+                    
+                    if data_source == 'tab1':
+                        # 1탭: 설정/주소변경
+                        creditor_name = st.session_state.get('wetax_creditor_name', '')
+                        creditor_corp_num = st.session_state.get('wetax_creditor_corp_num', '')
+                        creditor_addr = st.session_state.get('wetax_creditor_addr', '')
+                        property_addr = st.session_state.get('wetax_property_addr', '')
+                        tax_base = remove_commas(st.session_state.get('wetax_amount', '0'))
+                        contract_type = st.session_state.get('wetax_contract_type', '개인')
+                        
+                        front, back = parse_corp_num(creditor_corp_num)
+                        road_addr, detail_addr = extract_road_address(creditor_addr)
+                        prop_road, prop_detail = extract_road_address(property_addr)
+                        
+                        # 근저당설정
+                        cases.append({
+                            "type": "설정", "taxpayer_type": "02", "taxpayer_name": creditor_name,
+                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                            "address": road_addr, "address_detail": detail_addr,
+                            "property_address": prop_road, "property_detail": prop_detail,
+                            "tax_base": int(tax_base) if tax_base else 0
+                        })
+                        
+                        # 주소변경
+                        if st.session_state.get('wetax_include_addr_change'):
+                            if contract_type == "개인":
+                                debtor_name = st.session_state.get('wetax_debtor_name', '')
+                                debtor_rrn = st.session_state.get('wetax_debtor_rrn', '')
+                                debtor_addr = st.session_state.get('wetax_debtor_addr', '')
+                                front, back = parse_rrn(debtor_rrn)
+                                road_addr, detail_addr = extract_road_address(debtor_addr)
+                                
+                                if st.session_state.get('wetax_include_correction'):
+                                    cases.append({"type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                        "address": road_addr, "address_detail": detail_addr,
+                                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                                cases.append({"type": "주소변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                                    "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                    "address": road_addr, "address_detail": detail_addr,
+                                    "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                            
+                            elif contract_type == "3자담보":
+                                owner_name = st.session_state.get('wetax_owner_name', '')
+                                owner_rrn = st.session_state.get('wetax_owner_rrn', '')
+                                owner_addr = st.session_state.get('wetax_owner_addr', '')
+                                front, back = parse_rrn(owner_rrn)
+                                road_addr, detail_addr = extract_road_address(owner_addr)
+                                
+                                if st.session_state.get('wetax_include_correction'):
+                                    cases.append({"type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                        "address": road_addr, "address_detail": detail_addr,
+                                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                                cases.append({"type": "주소변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                                    "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                    "address": road_addr, "address_detail": detail_addr,
+                                    "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                            
+                            else:  # 공동담보
+                                if st.session_state.get('wetax_addr_owner'):
+                                    owner_name = st.session_state.get('wetax_owner_name', '')
+                                    owner_rrn = st.session_state.get('wetax_owner_rrn', '')
+                                    owner_addr = st.session_state.get('wetax_owner_addr', '')
+                                    front, back = parse_rrn(owner_rrn)
+                                    road_addr, detail_addr = extract_road_address(owner_addr)
+                                    
+                                    if st.session_state.get('wetax_owner_correction'):
+                                        cases.append({"type": "변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                            "address": road_addr, "address_detail": detail_addr,
+                                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                                    cases.append({"type": "주소변경", "taxpayer_type": "01", "taxpayer_name": owner_name,
+                                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                        "address": road_addr, "address_detail": detail_addr,
+                                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                                
+                                if st.session_state.get('wetax_addr_debtor'):
+                                    debtor_name = st.session_state.get('wetax_debtor_name', '')
+                                    debtor_rrn = st.session_state.get('wetax_debtor_rrn', '')
+                                    debtor_addr = st.session_state.get('wetax_debtor_addr', '')
+                                    front, back = parse_rrn(debtor_rrn)
+                                    road_addr, detail_addr = extract_road_address(debtor_addr)
+                                    
+                                    if st.session_state.get('wetax_debtor_correction'):
+                                        cases.append({"type": "변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                            "address": road_addr, "address_detail": detail_addr,
+                                            "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                                    cases.append({"type": "주소변경", "taxpayer_type": "01", "taxpayer_name": debtor_name,
+                                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                        "address": road_addr, "address_detail": detail_addr,
+                                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                    
+                    elif data_source == 'tab4':
+                        # 4탭: 말소 (여러 건 처리)
+                        malso_list = st.session_state.get('wetax_malso_list', [])
+                        
+                        for idx, item in enumerate(malso_list):
+                            # 체크된 항목만 신고
+                            if st.session_state.get(f'wetax_malso_chk_{idx}', True):
+                                front, back = parse_rrn(item.get('holder_rrn', ''))
+                                road_addr, detail_addr = extract_road_address(item.get('holder_addr', ''))
+                                prop_road, prop_detail = extract_road_address(item.get('property_addr', ''))
+                                
+                                cases.append({
+                                    "type": "말소", 
+                                    "taxpayer_type": "01", 
+                                    "taxpayer_name": item.get('holder_name', ''),
+                                    "resident_no_front": front, 
+                                    "resident_no_back": back, 
+                                    "phone": "0218335482",
+                                    "address": road_addr, 
+                                    "address_detail": detail_addr,
+                                    "property_address": prop_road, 
+                                    "property_detail": prop_detail, 
+                                    "tax_base": None
+                                })
+                    
+                    elif data_source == 'tab5':
+                        # 5탭: 1금융권 설정/주소변경
+                        creditor_name = st.session_state.get('wetax_creditor_name', '')
+                        creditor_corp_num = st.session_state.get('wetax_creditor_corp_num', '')
+                        creditor_addr = st.session_state.get('wetax_creditor_addr', '')
+                        property_addr = st.session_state.get('wetax_property_addr', '')
+                        tax_base = remove_commas(st.session_state.get('wetax_amount', '0'))
+                        owners = st.session_state.get('wetax_tab5_owners', [])
+                        
+                        front, back = parse_corp_num(creditor_corp_num)
+                        road_addr, detail_addr = extract_road_address(creditor_addr)
+                        prop_road, prop_detail = extract_road_address(property_addr)
+                        
+                        # 근저당설정
+                        cases.append({
+                            "type": "설정", "taxpayer_type": "02", "taxpayer_name": creditor_name,
+                            "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                            "address": road_addr, "address_detail": detail_addr,
+                            "property_address": prop_road, "property_detail": prop_detail,
+                            "tax_base": int(tax_base) if tax_base else 0
+                        })
+                        
+                        # 주소변경
+                        if st.session_state.get('wetax_include_addr_tab5') and owners:
+                            for owner in owners:
+                                front, back = parse_rrn(owner.get('rrn', ''))
+                                road_addr, detail_addr = extract_road_address(owner.get('addr', ''))
+                                
+                                if st.session_state.get('wetax_correction_tab5'):
+                                    cases.append({"type": "변경", "taxpayer_type": "01", "taxpayer_name": owner['name'],
+                                        "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                        "address": road_addr, "address_detail": detail_addr,
+                                        "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                                cases.append({"type": "주소변경", "taxpayer_type": "01", "taxpayer_name": owner['name'],
+                                    "resident_no_front": front, "resident_no_back": back, "phone": "0218335482",
+                                    "address": road_addr, "address_detail": detail_addr,
+                                    "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
+                    
+                    elif data_source == 'manual':
+                        # 수기입력: 추가된 모든 건 처리
+                        manual_list = st.session_state.get('wetax_manual_list', [])
+                        
+                        for item in manual_list:
+                            # 주민/법인번호 파싱
+                            if item['taxpayer_type'] == '01':  # 개인
+                                front, back = parse_rrn(item.get('rrn', ''))
+                            else:  # 법인
+                                front, back = parse_corp_num(item.get('rrn', ''))
+                            
+                            road_addr, detail_addr = extract_road_address(item.get('addr', ''))
+                            prop_road, prop_detail = extract_road_address(item.get('property_addr', ''))
+                            
+                            # 신고 유형에 따른 처리
+                            report_type = item.get('report_type', '설정')
+                            tax_base = None
+                            
+                            if report_type == '설정':
+                                tax_base = int(remove_commas(item.get('amount', '0'))) if item.get('amount') else 0
+                                api_type = "설정"
+                            elif report_type == '전세권설정':
+                                tax_base = int(remove_commas(item.get('amount', '0'))) if item.get('amount') else 0
+                                api_type = "전세권설정"
+                            elif report_type == '기타':
+                                # 기타는 정액등록세 (과세표준 불필요)
+                                api_type = "기타"
+                            elif report_type == '주소변경':
+                                api_type = "주소변경"
+                            elif report_type == '경정':
+                                api_type = "변경"
+                            elif report_type == '말소':
+                                api_type = "말소"
+                            else:
+                                api_type = report_type
+                            
+                            cases.append({
+                                "type": api_type,
+                                "taxpayer_type": item['taxpayer_type'],
+                                "taxpayer_name": item['name'],
+                                "resident_no_front": front,
+                                "resident_no_back": back,
+                                "phone": "0218335482",
+                                "address": road_addr,
+                                "address_detail": detail_addr,
+                                "property_address": prop_road,
+                                "property_detail": prop_detail,
+                                "tax_base": tax_base
+                            })
+                    
+                    # API 호출
+                    if cases:
+                        st.info(f"📤 총 {len(cases)}건 신고 중...")
+                        result, error = call_wetax_api(cases, base_url=wetax_url)
+                        
+                        if error:
+                            st.error(f"❌ 오류: {error}")
+                        else:
+                            st.success(f"✅ 위택스 신고 완료! ({len(cases)}건)")
+                            st.json(result)
+                    else:
+                        st.warning("⚠️ 신고할 내용이 없습니다.")
+    else:
+        st.info("💡 위 버튼을 눌러 각 탭에서 데이터를 불러오세요.")
 
 # =============================================================================
 # 하단 푸터

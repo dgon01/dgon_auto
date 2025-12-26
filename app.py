@@ -943,6 +943,25 @@ def make_confirmation_pdf(template_path, data):
     output_buffer.seek(0)
     return output_buffer
 
+def extract_building_only(estate_text):
+    """
+    전세권말소용: 부동산 표시에서 건물 부분만 추출
+    '전유부분의 대지권의 표시' 또는 '대지권의 표시' 이전까지만 반환
+    """
+    if not estate_text:
+        return estate_text
+    
+    lines = estate_text.split('\n')
+    result_lines = []
+    
+    for line in lines:
+        # 대지권 관련 키워드가 나오면 중단
+        if '대지권의 표시' in line or '대지권의 목적' in line:
+            break
+        result_lines.append(line)
+    
+    return '\n'.join(result_lines)
+
 def make_malso_signature_pdf(template_path, data):
     """말소용 자필서명정보 PDF 생성 (탭2와 유사)"""
     packet = BytesIO()
@@ -3879,7 +3898,7 @@ with tab4:
                     })
                 sig_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
-                    'estate_list': st.session_state.get('malso_estate_detail', '').strip().split('\n'),
+                    'estate_list': (extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', '')).strip().split('\n'),
                     'holders': holders,
                     'reg_purpose': f"{st.session_state.get('malso_type', '근저당권')}말소"
                 }
@@ -3911,7 +3930,7 @@ with tab4:
                     'holder1_addr': st.session_state.get('malso_holder1_addr', ''),
                     'holder2_name': st.session_state.get('malso_holder2_name', ''),
                     'holder2_addr': st.session_state.get('malso_holder2_addr', ''),
-                    'estate_text': st.session_state.get('malso_estate_detail', ''),
+                    'estate_text': extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', ''),
                     'cancel_text': st.session_state.get('malso_cancel_text', '')
                 }
                 pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
@@ -3938,7 +3957,7 @@ with tab4:
                 'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
                 'holder1_name': st.session_state.get('malso_holder1_name', ''),
                 'holder2_name': st.session_state.get('malso_holder2_name', ''),
-                'estate_text': st.session_state.get('malso_estate_detail', ''),
+                'estate_text': extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', ''),
                 'cancel_text': st.session_state.get('malso_cancel_text', '')
             }
             pdf_buffer = make_malso_termination_pdf(term_data)
@@ -3963,7 +3982,7 @@ with tab4:
                 'obligor_id': st.session_state.get('malso_obligor_id', ''),
                 'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
                 'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
-                'estate_text': st.session_state.get('malso_estate_detail', ''),
+                'estate_text': extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', ''),
                 'cancel_text': st.session_state.get('malso_cancel_text', ''),
                 'from_branch': st.session_state.get('malso_from_branch', ''),
                 'to_branch': st.session_state.get('malso_to_branch', '')

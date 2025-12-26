@@ -114,6 +114,17 @@ st.markdown(f"""
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
     .stTabs [data-baseweb="tab"] {{ background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: 600; color: #495057; border: 1px solid #dee2e6; }}
     .stTabs [aria-selected="true"] {{ background-color: #00428B; color: white; border-color: #00428B; }}
+    
+    /* 탭 헤더 고정 (틀고정) */
+    .stTabs [data-baseweb="tab-list"] {{
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        background-color: #ffffff;
+        margin: 0 -1rem;
+        padding: 10px 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }}
 
     .stTextInput > div > div > input, .stNumberInput > div > div > input, .stSelectbox > div > div > select {{
         border-radius: 6px; border: 1px solid #ced4da; padding: 8px 12px; font-size: 0.95rem;

@@ -2422,9 +2422,9 @@ with tab1:
     with col_estate:
         st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=300, key='estate_text_area', label_visibility="collapsed")
     with col_pdf:
-        st.markdown("#### 📑 파일 생성")
+        st.markdown("#### 📑 근저당권설정 첨부서류")
         selected_template_path = st.session_state['template_status'].get(st.session_state['contract_type'])
-        if selected_template_path: st.success(f"✅ 템플릿 준비완료"); is_disabled = False
+        if selected_template_path: st.success(f"✅ 기본(계약서,자필,위임장)서류 템플릿 준비완료"); is_disabled = False
         else: st.warning(f"⚠️ 템플릿 없음"); is_disabled = True
         
         if st.button("🚀 계약서\nPDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK, use_container_width=True):
@@ -2557,7 +2557,16 @@ with tab1:
         # 확인서면 생성 버튼 (계약서 버튼과 동일 레벨)
         st.markdown("---")
         
-        # 확인서면 등기유형 선택
+        # 1. 템플릿 상태 확인
+        confirm_template_path = st.session_state['template_status'].get('확인서면')
+        confirm_disabled = not confirm_template_path or not LIBS_OK
+        
+        if confirm_template_path:
+            st.success("✅ 확인서면 템플릿 준비완료")
+        else:
+            st.warning("⚠️ 확인서면_개인.pdf 템플릿 없음")
+        
+        # 2. 등기유형 선택
         if 'confirm_reg_type' not in st.session_state:
             st.session_state['confirm_reg_type'] = '근저당권설정'
         
@@ -2569,14 +2578,7 @@ with tab1:
         )
         st.session_state['confirm_reg_type'] = confirm_reg_type
         
-        confirm_template_path = st.session_state['template_status'].get('확인서면')
-        confirm_disabled = not confirm_template_path or not LIBS_OK
-        
-        if confirm_template_path:
-            st.success("✅ 확인서면 템플릿 준비완료")
-        else:
-            st.warning("⚠️ 확인서면_개인.pdf 템플릿 없음")
-        
+        # 3. 생성 버튼
         if st.button("📄 확인서면\nPDF 생성", key="generate_confirm_pdf", disabled=confirm_disabled, use_container_width=True):
             if not LIBS_OK:
                 st.error("PDF 라이브러리 미설치")

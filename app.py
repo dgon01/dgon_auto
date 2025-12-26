@@ -3806,35 +3806,100 @@ with tab5:
         st.session_state['tab5_bank'] = "하나은행"
     if 'tab5_estate' not in st.session_state:
         st.session_state['tab5_estate'] = ""
-    if 'tab5_debtor_name' not in st.session_state:
-        st.session_state['tab5_debtor_name'] = ""
-    if 'tab5_debtor_rrn' not in st.session_state:
-        st.session_state['tab5_debtor_rrn'] = ""
-    if 'tab5_owner_name' not in st.session_state:
-        st.session_state['tab5_owner_name'] = ""
-    if 'tab5_owner_rrn' not in st.session_state:
-        st.session_state['tab5_owner_rrn'] = ""
+    if 'tab5_contract_type' not in st.session_state:
+        st.session_state['tab5_contract_type'] = "3자담보"
+    if 'tab5_date' not in st.session_state:
+        st.session_state['tab5_date'] = datetime.now().date()
     
-    col_top = st.columns([4, 1])
-    with col_top[1]:
-        if st.button("🔄 초기화", key="reset_tab5", use_container_width=True):
-            st.session_state['tab5_estate'] = ""
-            st.session_state['tab5_debtor_name'] = ""
-            st.session_state['tab5_debtor_rrn'] = ""
-            st.session_state['tab5_owner_name'] = ""
-            st.session_state['tab5_owner_rrn'] = ""
+    # 상단 버튼들
+    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
+    with col_btn1:
+        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab5"):
+            # 1탭 데이터 가져오기
+            contract_type = st.session_state.get('contract_type', '3자담보')
+            debtor_name = st.session_state.get('t1_debtor_name', '')
+            debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
+            owner_name = st.session_state.get('t1_owner_name', '')
+            owner_rrn = st.session_state.get('t1_owner_rrn', '')
+            estate_info = st.session_state.get('estate_text_area', '')
+            date_val = st.session_state.get('input_date', datetime.now().date())
+            
+            # 계약 유형별 할당
+            o1_name, o1_rrn = "", ""
+            o2_name, o2_rrn = "", ""
+            
+            if contract_type == "개인":
+                o1_name, o1_rrn = debtor_name, debtor_rrn
+            elif contract_type == "3자담보":
+                o1_name, o1_rrn = owner_name, owner_rrn
+            elif contract_type == "공동담보":
+                o1_name, o1_rrn = debtor_name, debtor_rrn
+                o2_name, o2_rrn = owner_name, owner_rrn
+            
+            # session_state 업데이트
+            st.session_state['tab5_contract_type'] = contract_type
+            st.session_state['tab5_estate_input'] = estate_info
+            st.session_state['tab5_date'] = date_val
+            st.session_state['tab5_owner1_name_input'] = o1_name
+            st.session_state['tab5_owner1_rrn_input'] = o1_rrn
+            st.session_state['tab5_owner2_name_input'] = o2_name
+            st.session_state['tab5_owner2_rrn_input'] = o2_rrn
+            
+            st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
     
-    # 은행 선택
+    with col_btn2:
+        if st.button("🔄 초기화", key="reset_tab5", use_container_width=True):
+            st.session_state['tab5_bank'] = "하나은행"
+            st.session_state['tab5_contract_type'] = "3자담보"
+            st.session_state['tab5_estate_input'] = ""
+            st.session_state['tab5_date'] = datetime.now().date()
+            st.session_state['tab5_owner1_name_input'] = ""
+            st.session_state['tab5_owner1_rrn_input'] = ""
+            st.session_state['tab5_owner2_name_input'] = ""
+            st.session_state['tab5_owner2_rrn_input'] = ""
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # 은행 선택 (딜레이 해결: rerun 제거, radio 사용)
     st.markdown("#### 🏛️ 거래은행 선택")
-    bank_cols = st.columns(3)
-    bank_list = ["하나은행", "신한은행", "우리은행"]
-    for i, bank in enumerate(bank_list):
-        with bank_cols[i]:
-            btn_type = "primary" if st.session_state['tab5_bank'] == bank else "secondary"
-            if st.button(bank, key=f"bank_{bank}", type=btn_type, use_container_width=True):
-                st.session_state['tab5_bank'] = bank
+    selected_bank = st.radio(
+        "거래은행",
+        options=["하나은행", "신한은행", "우리은행"],
+        index=["하나은행", "신한은행", "우리은행"].index(st.session_state.get('tab5_bank', '하나은행')),
+        horizontal=True,
+        key="tab5_bank_radio",
+        label_visibility="collapsed"
+    )
+    st.session_state['tab5_bank'] = selected_bank
+    
+    st.markdown("---")
+    
+    # 계약 유형 선택
+    st.markdown("#### 📋 계약 유형")
+    contract_cols = st.columns(3)
+    contract_types = ["개인", "3자담보", "공동담보"]
+    current_contract = st.session_state.get('tab5_contract_type', '3자담보')
+    
+    for i, ctype in enumerate(contract_types):
+        with contract_cols[i]:
+            btn_type = "primary" if current_contract == ctype else "secondary"
+            if st.button(ctype, key=f"tab5_ctype_{ctype}", type=btn_type, use_container_width=True):
+                st.session_state['tab5_contract_type'] = ctype
                 st.rerun()
+    
+    st.markdown("---")
+    
+    # 작성일자
+    st.markdown("#### 📅 작성일자")
+    tab5_date = st.date_input(
+        "작성일자",
+        value=st.session_state.get('tab5_date', datetime.now().date()),
+        key="tab5_date_input",
+        label_visibility="collapsed"
+    )
+    st.session_state['tab5_date'] = tab5_date
     
     st.markdown("---")
     
@@ -3852,7 +3917,6 @@ with tab5:
         if st.button("📋 부동산표시 추출", key='extract_estate_btn_tab5', use_container_width=True):
             with st.spinner("등기부 분석 중..."):
                 try:
-                    # 기존 parse_registry_pdf 함수 사용
                     data, debug = parse_registry_pdf(uploaded_registry)
                     
                     if debug["errors"]:
@@ -3866,7 +3930,7 @@ with tab5:
                 except Exception as e:
                     st.error(f"❌ PDF 파싱 오류: {e}")
     
-    # 추출 완료 메시지 (rerun 후 표시)
+    # 추출 완료 메시지
     if st.session_state.get('_tab5_extract_done'):
         st.success("✅ 부동산표시 추출 완료!")
         st.session_state['_tab5_extract_done'] = False
@@ -3884,44 +3948,35 @@ with tab5:
     
     st.markdown("---")
     
-    # 채무자/소유자 정보 입력
-    st.markdown("#### 👤 채무자/소유자 정보")
+    # 등기의무자 정보 입력 (계약유형에 따라 동적)
+    st.markdown("#### 👤 등기의무자 정보")
+    current_contract = st.session_state.get('tab5_contract_type', '3자담보')
     
-    col1, col2 = st.columns(2)
+    # 초기화
+    for key in ['tab5_owner1_name_input', 'tab5_owner1_rrn_input', 'tab5_owner2_name_input', 'tab5_owner2_rrn_input']:
+        if key not in st.session_state:
+            st.session_state[key] = ''
     
-    with col1:
-        st.markdown("**채무자**")
-        debtor_name = st.text_input(
-            "성명", 
-            value=st.session_state.get('tab5_debtor_name', ''),
-            key='tab5_debtor_name_input'
-        )
-        st.session_state['tab5_debtor_name'] = debtor_name
-        
-        debtor_rrn = st.text_input(
-            "주민등록번호", 
-            value=st.session_state.get('tab5_debtor_rrn', ''),
-            key='tab5_debtor_rrn_input',
-            placeholder="000000-0000000"
-        )
-        st.session_state['tab5_debtor_rrn'] = debtor_rrn
-    
-    with col2:
-        st.markdown("**소유자**")
-        owner_name = st.text_input(
-            "성명", 
-            value=st.session_state.get('tab5_owner_name', ''),
-            key='tab5_owner_name_input'
-        )
-        st.session_state['tab5_owner_name'] = owner_name
-        
-        owner_rrn = st.text_input(
-            "주민등록번호", 
-            value=st.session_state.get('tab5_owner_rrn', ''),
-            key='tab5_owner_rrn_input',
-            placeholder="000000-0000000"
-        )
-        st.session_state['tab5_owner_rrn'] = owner_rrn
+    if current_contract == "공동담보":
+        # 공동담보: 2명 입력
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**등기의무자 1 (채무자)**")
+            o1_name = st.text_input("성명", key='tab5_owner1_name_input', placeholder="홍길동")
+            o1_rrn = st.text_input("주민등록번호", key='tab5_owner1_rrn_input', placeholder="000000-0000000")
+        with col2:
+            st.markdown("**등기의무자 2 (소유자)**")
+            o2_name = st.text_input("성명", key='tab5_owner2_name_input', placeholder="김철수")
+            o2_rrn = st.text_input("주민등록번호", key='tab5_owner2_rrn_input', placeholder="000000-0000000")
+    else:
+        # 개인/3자담보: 1명 입력
+        label = "채무자" if current_contract == "개인" else "소유자"
+        st.markdown(f"**등기의무자 ({label})**")
+        col1, col2 = st.columns(2)
+        with col1:
+            o1_name = st.text_input("성명", key='tab5_owner1_name_input', placeholder="홍길동")
+        with col2:
+            o1_rrn = st.text_input("주민등록번호", key='tab5_owner1_rrn_input', placeholder="000000-0000000")
     
     st.markdown("---")
     
@@ -3930,7 +3985,6 @@ with tab5:
     
     btn_cols = st.columns(3)
     
-    selected_bank = st.session_state['tab5_bank']
     current_estate = st.session_state.get('tab5_estate', '')
     
     # 설정계약서 PDF 생성
@@ -3978,19 +4032,34 @@ with tab5:
                     if not os.path.exists(template_path):
                         st.error("❌ 자필서명정보 템플릿 파일이 없습니다.")
                     else:
+                        # 계약유형에 따른 데이터 구성
+                        o1_name = st.session_state.get('tab5_owner1_name_input', '')
+                        o1_rrn = st.session_state.get('tab5_owner1_rrn_input', '')
+                        o2_name = st.session_state.get('tab5_owner2_name_input', '')
+                        o2_rrn = st.session_state.get('tab5_owner2_rrn_input', '')
+                        
+                        # 날짜 포맷
+                        date_val = st.session_state.get('tab5_date', datetime.now().date())
+                        date_str = date_val.strftime("%Y년 %m월 %d일")
+                        
                         sig_data = {
                             "estate_text": current_estate,
-                            "debtor_name": st.session_state.get('tab5_debtor_name', ''),
-                            "debtor_rrn": st.session_state.get('tab5_debtor_rrn', ''),
-                            "owner_name": st.session_state.get('tab5_owner_name', ''),
-                            "owner_rrn": st.session_state.get('tab5_owner_rrn', ''),
-                            "date": datetime.now().strftime("%Y년 %m월 %d일")
+                            "purpose": "근저당권설정",
+                            "debtor_name": o1_name,
+                            "debtor_rrn": o1_rrn,
+                            "owner_name": o2_name if current_contract == "공동담보" else "",
+                            "owner_rrn": o2_rrn if current_contract == "공동담보" else "",
+                            "date": date_str
                         }
                         pdf_buffer = make_bank_signature_pdf(template_path, sig_data)
+                        
+                        # 파일명 생성
+                        filename = f"{selected_bank}_자필서명정보_{o1_name or '고객'}.pdf"
+                        
                         st.download_button(
                             label="⬇️ 자필서명정보 다운로드",
                             data=pdf_buffer.getvalue(),
-                            file_name=f"{selected_bank}_자필서명정보.pdf",
+                            file_name=filename,
                             mime="application/pdf",
                             key="dl_sig_tab5"
                         )
@@ -4000,7 +4069,7 @@ with tab5:
                 st.warning("⚠️ 부동산 표시를 입력하세요.")
     
     st.markdown("---")
-    st.info(f"💡 현재 선택된 은행: **{selected_bank}** | 설정계약서/위임장은 빈 PDF에 부동산표시만 출력됩니다.")
+    st.info(f"💡 **선택된 은행:** {selected_bank} | **계약유형:** {current_contract} | **작성일자:** {st.session_state.get('tab5_date', datetime.now().date())}")
 
 # =============================================================================
 # 하단 푸터

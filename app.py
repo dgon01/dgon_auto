@@ -251,7 +251,9 @@ TEMPLATE_FILENAMES = {
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
     "자필": "자필서명정보 템플릿.pdf",
-    "영수증": "receipt_template.xlsx"
+    "영수증": "receipt_template.xlsx",
+    "확인서면": "확인서면.pdf",
+    "설정_위임장": "위임장.pdf"
 }
 
 CREDITORS = {
@@ -546,9 +548,414 @@ def make_signature_pdf(template_path, data):
     writer.write(output_buffer); output_buffer.seek(0)
     return output_buffer
 
-# =============================================================================
-# 말소 문서 PDF 생성 함수들
-# =============================================================================
+def make_setting_signature_pdf(template_path, data):
+    """
+    설정용 자필서명정보 PDF 생성
+    - 개인: 채무자 1페이지
+    - 3자담보: 소유자 1페이지
+    - 공동담보: 채무자 + 소유자 2페이지
+    
+    좌표:
+    - 부동산 표시: estate_x=150, estate_y=height-170
+    - 등기의무자 성명: 250, 322
+    - 등기의무자 주민번호: 250, 298
+    - 등기목적 (근저당권설정): (36.0, 558.5) → RL Y = 842 - 570 ≈ 272, 좌측정렬
+    - 작성일자: 중앙, 150
+    """
+    width, height = A4
+    
+    try:
+        pdfmetrics.registerFont(TTFont('Korean', FONT_PATH))
+        font_name = 'Korean'
+    except:
+        font_name = 'Helvetica'
+    
+    contract_type = data.get('contract_type', '개인')
+    reg_purpose = data.get('reg_purpose', '근저당권설정')  # 1탭: 근저당권설정, 4탭: XX말소
+    
+    # 페이지별 데이터 준비
+    pages_data = []
+    
+    if contract_type == '개인':
+        pages_data.append({
+            'name': data.get('debtor_name', ''),
+            'rrn': data.get('debtor_rrn', '')
+        })
+    elif contract_type == '3자담보':
+        pages_data.append({
+            'name': data.get('owner_name', ''),
+            'rrn': data.get('owner_rrn', '')
+        })
+    else:  # 공동담보
+        pages_data.append({
+            'name': data.get('debtor_name', ''),
+            'rrn': data.get('debtor_rrn', '')
+        })
+        pages_data.append({
+            'name': data.get('owner_name', ''),
+            'rrn': data.get('owner_rrn', '')
+        })
+    
+    # 오버레이 PDF 생성
+    packet = BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    
+    for page_data in pages_data:
+        c.setFont(font_name, 10)
+        
+        # 부동산 표시
+        estate_x = 150
+        estate_y = height - 170
+        line_h = 14
+        estate_text = data.get('estate_text', '')
+        if estate_text:
+            for i, line in enumerate(str(estate_text).split("\n")[:17]):
+                c.drawString(estate_x, estate_y - (i * line_h), line)
+        
+        # 등기의무자 성명
+        if page_data['name']:
+            c.drawString(250, 322, str(page_data['name']))
+        
+        # 등기의무자 주민번호
+        if page_data['rrn']:
+            c.drawString(250, 298, str(page_data['rrn']))
+        
+        # 등기목적 (좌표: 36, 558.5 → RL Y ≈ 272) 좌측정렬
+        c.setFont(font_name, 11)
+        c.drawString(38, 272, reg_purpose)
+        
+        # 작성일자 (중앙)
+        if data.get("date"):
+            c.setFont(font_name, 11)
+            text = str(data["date"])
+            tw = c.stringWidth(text, font_name, 11)
+            c.drawString((width - tw) / 2, 150, text)
+        
+        c.showPage()
+    
+    c.save()
+    packet.seek(0)
+    
+    # 템플릿과 병합
+    overlay_pdf = PdfReader(packet)
+    writer = PdfWriter()
+    output_buffer = BytesIO()
+    
+    for i in range(len(pages_data)):
+        template_pdf = PdfReader(template_path)
+        template_page = template_pdf.pages[0]
+        template_page.merge_page(overlay_pdf.pages[i])
+        writer.add_page(template_page)
+    
+    writer.write(output_buffer)
+    output_buffer.seek(0)
+    return output_buffer
+
+def make_setting_power_pdf(template_path, data):
+    """
+    설정용 위임장 PDF 생성
+    - 개인: 채무자(의무자) 1페이지
+    - 3자담보: 소유자(의무자) 1페이지
+    - 공동담보: 1페이지에 채무자 + 소유자 모두 표시
+    
+    좌표 (PyMuPDF 기준 → ReportLab 변환):
+    - 부동산의 표시: (102.0, 90.0, 533.33, 348.67)
+    - 등기연월일(작성일자): (172.0, 352.67, 367.33, 370.0) 좌측정렬
+    - "설정계약": (390, 352.67, 530, 370.0) 우측정렬
+    - 등기의 목적: (172.0, 372.67, 368.0, 390.0) 좌측정렬
+    - 채권최고액: (172.0, 394.0, 440.0, 458.67) 상하중앙, 좌측정렬
+    - 등기의무자: (60.0, 689.33, 420.0, 781.33)
+    - 등기권리자: (60.0, 588.0, 420.0, 685.0)
+    """
+    width, height = A4  # 595.28, 841.89
+    
+    try:
+        pdfmetrics.registerFont(TTFont('Korean', FONT_PATH))
+        font_name = 'Korean'
+    except:
+        font_name = 'Helvetica'
+    
+    contract_type = data.get('contract_type', '개인')
+    
+    # 권리자(채권자) 정보
+    creditor_name = data.get('creditor_name', '')
+    creditor_addr = data.get('creditor_addr', '')
+    creditor_corp_num = data.get('creditor_corp_num', '')
+    
+    # 오버레이 PDF 생성
+    packet = BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    
+    # 부동산의 표시 (102, 90) → RL: x=102, y=842-90=752
+    c.setFont(font_name, 9)
+    estate_x = 104
+    estate_y = 750
+    line_h = 12
+    estate_lines = data.get('estate_text', '').split('\n')
+    for i, line in enumerate(estate_lines[:21]):  # 최대 21줄
+        if line.strip():
+            c.drawString(estate_x, estate_y - (i * line_h), line)
+    
+    # 등기연월일 (172, 352.67) → RL: y = 842 - 361 ≈ 481, 좌측정렬
+    cause_date = data.get('date', '')
+    c.setFont(font_name, 10)
+    c.drawString(174, 480, cause_date)
+    
+    # "설정계약" (390, 352.67, 530, 370) → 우측정렬
+    # 박스 우측 x=530, 텍스트를 우측정렬
+    c.drawRightString(528, 480, "설정계약")
+    
+    # 등기의 목적 "근저당권설정" (172, 372.67) → RL: y = 842 - 381 ≈ 461
+    c.drawString(174, 460, "근저당권설정")
+    
+    # 채권최고액 (172, 394 ~ 458.67) 상하중앙 → 중앙 y ≈ 426 → RL: 842-426=416
+    claim_amount = data.get('claim_amount', '')
+    if claim_amount:
+        c.setFont(font_name, 9)
+        c.drawString(174, 412, f"금{claim_amount}")
+    
+    # 등기의무자 (60, 689.33 ~ 781.33) → RL: 상단 y=153, 하단 y=61
+    c.setFont(font_name, 10)
+    obligor_x = 62
+    obligor_y = 150  # 박스 상단부터 시작
+    
+    if contract_type == '개인':
+        # 개인: 채무자만
+        debtor_name = data.get('debtor_name', '')
+        debtor_addr = data.get('debtor_addr', '')
+        
+        c.drawString(obligor_x, obligor_y, debtor_name)
+        c.setFont(font_name, 9)
+        if debtor_addr:
+            # 주소가 길면 2줄로
+            if len(debtor_addr) > 45:
+                split_idx = debtor_addr.rfind(' ', 0, 45)
+                if split_idx == -1:
+                    split_idx = 45
+                c.drawString(obligor_x, obligor_y - 14, debtor_addr[:split_idx])
+                c.drawString(obligor_x, obligor_y - 26, debtor_addr[split_idx:].strip())
+            else:
+                c.drawString(obligor_x, obligor_y - 14, debtor_addr)
+                
+    elif contract_type == '3자담보':
+        # 3자담보: 소유자만
+        owner_name = data.get('owner_name', '')
+        owner_addr = data.get('owner_addr', '')
+        
+        c.drawString(obligor_x, obligor_y, owner_name)
+        c.setFont(font_name, 9)
+        if owner_addr:
+            if len(owner_addr) > 45:
+                split_idx = owner_addr.rfind(' ', 0, 45)
+                if split_idx == -1:
+                    split_idx = 45
+                c.drawString(obligor_x, obligor_y - 14, owner_addr[:split_idx])
+                c.drawString(obligor_x, obligor_y - 26, owner_addr[split_idx:].strip())
+            else:
+                c.drawString(obligor_x, obligor_y - 14, owner_addr)
+                
+    else:  # 공동담보: 1장에 채무자 + 소유자 모두
+        debtor_name = data.get('debtor_name', '')
+        debtor_addr = data.get('debtor_addr', '')
+        owner_name = data.get('owner_name', '')
+        owner_addr = data.get('owner_addr', '')
+        
+        # 첫 번째: 채무자
+        c.drawString(obligor_x, obligor_y, debtor_name)
+        c.setFont(font_name, 9)
+        if debtor_addr:
+            # 주소 1줄만 (공간 절약)
+            addr_display = debtor_addr[:50] + "..." if len(debtor_addr) > 50 else debtor_addr
+            c.drawString(obligor_x, obligor_y - 13, addr_display)
+        
+        # 두 번째: 소유자 (아래에 표시)
+        owner_y = obligor_y - 35
+        c.setFont(font_name, 10)
+        c.drawString(obligor_x, owner_y, owner_name)
+        c.setFont(font_name, 9)
+        if owner_addr:
+            addr_display = owner_addr[:50] + "..." if len(owner_addr) > 50 else owner_addr
+            c.drawString(obligor_x, owner_y - 13, addr_display)
+    
+    # 등기권리자 (60, 588 ~ 685) → RL: 상단 y=254, 하단 y=157
+    c.setFont(font_name, 10)
+    creditor_x = 62
+    creditor_y = 250  # 박스 상단부터 시작
+    
+    if creditor_corp_num:
+        creditor_display = f"{creditor_name}({creditor_corp_num})"
+    else:
+        creditor_display = creditor_name
+    
+    c.drawString(creditor_x, creditor_y, creditor_display)
+    c.setFont(font_name, 9)
+    if creditor_addr:
+        if len(creditor_addr) > 45:
+            split_idx = creditor_addr.rfind(' ', 0, 45)
+            if split_idx == -1:
+                split_idx = 45
+            c.drawString(creditor_x, creditor_y - 14, creditor_addr[:split_idx])
+            c.drawString(creditor_x, creditor_y - 26, creditor_addr[split_idx:].strip())
+        else:
+            c.drawString(creditor_x, creditor_y - 14, creditor_addr)
+    
+    c.showPage()
+    c.save()
+    packet.seek(0)
+    
+    # 템플릿과 병합
+    overlay_pdf = PdfReader(packet)
+    template_pdf = PdfReader(template_path)
+    writer = PdfWriter()
+    output_buffer = BytesIO()
+    
+    template_page = template_pdf.pages[0]
+    template_page.merge_page(overlay_pdf.pages[0])
+    writer.add_page(template_page)
+    
+    writer.write(output_buffer)
+    output_buffer.seek(0)
+    return output_buffer
+
+def make_confirmation_pdf(template_path, data):
+    """
+    확인서면 PDF 생성
+    - 개인: 채무자 정보 1페이지
+    - 3자담보: 설정자(소유자) 정보 1페이지
+    - 공동담보: 채무자 1페이지 + 설정자 1페이지 = 2페이지
+    
+    좌표 (PyMuPDF 기준, 좌상단 원점):
+    - 부동산의 표시: (34.0, 67.0, 560.0, 317.0)
+    - 채무자(소유자) 성명: (177.0, 323.0, 477.0, 341.0)
+    - 채무자(소유자) 주소: (176.0, 344.0, 477.0, 384.0)
+    - 채무자(소유자) 주민번호: (177.0, 388.0, 476.0, 406.0)
+    - 등기유형(근저당권설정/소유권이전): (486.0, 354.0, 557.0, 397.0)
+    - 작성일자: (31.0, 718.0, 564.0, 744.0)
+    """
+    width, height = A4  # 595.28, 841.89
+    
+    try:
+        pdfmetrics.registerFont(TTFont('Korean', FONT_PATH))
+        font_name = 'Korean'
+    except:
+        font_name = 'Helvetica'
+    
+    contract_type = data.get('contract_type', '개인')
+    
+    # 페이지별 데이터 준비
+    pages_data = []
+    
+    if contract_type == '개인':
+        # 개인: 채무자 정보만
+        pages_data.append({
+            'name': data.get('debtor_name', ''),
+            'addr': data.get('debtor_addr', ''),
+            'rrn': data.get('debtor_rrn', '')
+        })
+    elif contract_type == '3자담보':
+        # 3자담보: 설정자(소유자) 정보만
+        pages_data.append({
+            'name': data.get('owner_name', ''),
+            'addr': data.get('owner_addr', ''),
+            'rrn': data.get('owner_rrn', '')
+        })
+    else:  # 공동담보
+        # 공동담보: 채무자 1페이지 + 설정자 1페이지
+        pages_data.append({
+            'name': data.get('debtor_name', ''),
+            'addr': data.get('debtor_addr', ''),
+            'rrn': data.get('debtor_rrn', '')
+        })
+        pages_data.append({
+            'name': data.get('owner_name', ''),
+            'addr': data.get('owner_addr', ''),
+            'rrn': data.get('owner_rrn', '')
+        })
+    
+    # 오버레이 PDF 생성
+    packet = BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    
+    for page_data in pages_data:
+        # 부동산의 표시 (박스: 34, 67 ~ 560, 317)
+        estate_x = 36
+        estate_y_start = height - 80
+        line_h = 13
+        c.setFont(font_name, 10)
+        
+        estate_lines = data.get('estate_text', '').split('\n')
+        for i, line in enumerate(estate_lines[:18]):
+            if line.strip():
+                c.drawString(estate_x, estate_y_start - (i * line_h), line)
+        
+        # 성명 (박스: 177, 323 ~ 477, 341)
+        name_x = 180
+        name_y = height - 335
+        c.setFont(font_name, 11)
+        if page_data['name']:
+            c.drawString(name_x, name_y, page_data['name'])
+        
+        # 주소 (박스: 176, 344 ~ 477, 384)
+        addr_x = 180
+        addr_y = height - 358
+        c.setFont(font_name, 9)
+        if page_data['addr']:
+            addr = page_data['addr']
+            if len(addr) > 35:
+                split_idx = addr.rfind(' ', 0, 35)
+                if split_idx == -1:
+                    split_idx = 35
+                c.drawString(addr_x, addr_y, addr[:split_idx])
+                c.drawString(addr_x, addr_y - 13, addr[split_idx:].strip())
+            else:
+                c.drawString(addr_x, addr_y, addr)
+        
+        # 주민번호 (박스: 177, 388 ~ 476, 406)
+        rrn_x = 180
+        rrn_y = height - 400
+        c.setFont(font_name, 11)
+        if page_data['rrn']:
+            c.drawString(rrn_x, rrn_y, page_data['rrn'])
+        
+        # 등기유형 - 세로쓰기 (박스: 486, 354 ~ 557, 397)
+        reg_type_x = 490
+        reg_type_y = height - 370
+        c.setFont(font_name, 10)
+        reg_type = data.get('reg_type', '근저당권설정')
+        if reg_type:
+            for i, char in enumerate(reg_type):
+                c.drawString(reg_type_x, reg_type_y - (i * 12), char)
+        
+        # 작성일자 (박스: 31, 718 ~ 564, 744) - 중앙 정렬
+        date_y = height - 735
+        c.setFont(font_name, 12)
+        date_text = data.get('date', '')
+        if date_text:
+            text_width = c.stringWidth(date_text, font_name, 12)
+            date_x = (width - text_width) / 2
+            c.drawString(date_x, date_y, date_text)
+        
+        c.showPage()
+    
+    c.save()
+    packet.seek(0)
+    
+    # 템플릿과 병합
+    overlay_pdf = PdfReader(packet)
+    writer = PdfWriter()
+    output_buffer = BytesIO()
+    
+    # 각 오버레이 페이지마다 템플릿 1페이지와 병합
+    for i in range(len(pages_data)):
+        # 템플릿을 매번 새로 읽어서 페이지 복제 문제 방지
+        template_pdf = PdfReader(template_path)
+        template_page = template_pdf.pages[0]
+        template_page.merge_page(overlay_pdf.pages[i])
+        writer.add_page(template_page)
+    
+    writer.write(output_buffer)
+    output_buffer.seek(0)
+    return output_buffer
 
 def make_malso_signature_pdf(template_path, data):
     """말소용 자필서명정보 PDF 생성 (탭2와 유사)"""
@@ -581,6 +988,14 @@ def make_malso_signature_pdf(template_path, data):
     if len(holders) >= 2:
         c.drawString(400, 322, str(holders[1].get('name', '')))
         c.drawString(400, 298, str(holders[1].get('rrn', '')))
+    
+    # 등기목적 (좌표: 36, 558.5 → RL Y ≈ 272) 좌측정렬
+    # 질권말소, 근저당권말소, 전세권말소 등
+    reg_purpose = data.get('reg_purpose', '')
+    if reg_purpose:
+        c.setFont(font_name, 11)
+        c.drawString(38, 272, reg_purpose)
+        c.setFont(font_name, 10)
     
     # 날짜 (중앙)
     if data.get("date"):
@@ -2050,6 +2465,178 @@ with tab1:
                         use_container_width=True
                     )
                 except Exception as e: st.error(f"오류: {e}")
+        
+        # 자필서명정보 생성 버튼
+        sig_template_path = st.session_state['template_status'].get('자필')
+        sig_disabled = not sig_template_path or not LIBS_OK
+        
+        if st.button("✍️ 자필서명정보\nPDF 생성", key="generate_sig_pdf_tab1", disabled=sig_disabled, use_container_width=True):
+            if not LIBS_OK:
+                st.error("PDF 라이브러리 미설치")
+            else:
+                contract_type = st.session_state.get('contract_type', '개인')
+                
+                sig_data = {
+                    "date": format_date_korean(st.session_state['input_date']),
+                    "estate_text": st.session_state.get('estate_text', ''),
+                    "contract_type": contract_type,
+                    "debtor_name": st.session_state.get('t1_debtor_name', ''),
+                    "debtor_rrn": st.session_state.get('t1_debtor_rrn', ''),
+                    "owner_name": st.session_state.get('t1_owner_name', ''),
+                    "owner_rrn": st.session_state.get('t1_owner_rrn', ''),
+                    "reg_purpose": "근저당권설정"
+                }
+                
+                # 파일명 결정
+                if contract_type == '개인':
+                    filename = f"자필서명정보_{st.session_state.get('t1_debtor_name', '')}.pdf"
+                elif contract_type == '3자담보':
+                    filename = f"자필서명정보_{st.session_state.get('t1_owner_name', '')}.pdf"
+                else:
+                    filename = f"자필서명정보_{st.session_state.get('t1_debtor_name', '')}_{st.session_state.get('t1_owner_name', '')}.pdf"
+                
+                try:
+                    pdf_buffer = make_setting_signature_pdf(sig_template_path, sig_data)
+                    st.download_button(
+                        label="⬇️ 자필서명정보 다운로드",
+                        data=pdf_buffer,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="dl_sig_pdf_tab1"
+                    )
+                except Exception as e:
+                    st.error(f"자필서명정보 생성 오류: {e}")
+        
+        # 위임장 생성 버튼
+        power_template_path = st.session_state['template_status'].get('설정_위임장')
+        power_disabled = not power_template_path or not LIBS_OK
+        
+        if power_template_path:
+            pass  # 템플릿 있음
+        else:
+            st.caption("⚠️ 위임장.pdf 필요")
+        
+        if st.button("📋 위임장\nPDF 생성", key="generate_power_pdf_tab1", disabled=power_disabled, use_container_width=True):
+            if not LIBS_OK:
+                st.error("PDF 라이브러리 미설치")
+            else:
+                contract_type = st.session_state.get('contract_type', '개인')
+                
+                # 채권자 정보
+                creditor_name_for_pdf = st.session_state['input_creditor'] if st.session_state['input_creditor'] != "🖊️ 직접입력" else st.session_state.get('input_creditor_name', '')
+                creditor_addr_for_pdf = CREDITORS.get(st.session_state['input_creditor'], {}).get('addr', '') if st.session_state['input_creditor'] != "🖊️ 직접입력" else st.session_state.get('input_creditor_addr', '')
+                creditor_corp_num = CREDITORS.get(st.session_state['input_creditor'], {}).get('corp_num', '') if st.session_state['input_creditor'] != "🖊️ 직접입력" else st.session_state.get('input_creditor_corp_num', '')
+                
+                power_data = {
+                    "date": format_date_korean(st.session_state['input_date']),
+                    "estate_text": st.session_state.get('estate_text', ''),
+                    "contract_type": contract_type,
+                    "debtor_name": st.session_state.get('t1_debtor_name', ''),
+                    "debtor_addr": st.session_state.get('t1_debtor_addr', ''),
+                    "debtor_rrn": st.session_state.get('t1_debtor_rrn', ''),
+                    "owner_name": st.session_state.get('t1_owner_name', ''),
+                    "owner_addr": st.session_state.get('t1_owner_addr', ''),
+                    "owner_rrn": st.session_state.get('t1_owner_rrn', ''),
+                    "creditor_name": creditor_name_for_pdf,
+                    "creditor_addr": creditor_addr_for_pdf,
+                    "creditor_corp_num": creditor_corp_num,
+                    "claim_amount": convert_multiple_amounts_to_korean(remove_commas(st.session_state['input_amount']))
+                }
+                
+                # 파일명 결정
+                if contract_type == '개인':
+                    filename = f"위임장_{st.session_state.get('t1_debtor_name', '')}.pdf"
+                elif contract_type == '3자담보':
+                    filename = f"위임장_{st.session_state.get('t1_owner_name', '')}.pdf"
+                else:  # 공동담보 (1장에 모두 표시)
+                    filename = f"위임장_{st.session_state.get('t1_debtor_name', '')}_{st.session_state.get('t1_owner_name', '')}.pdf"
+                
+                try:
+                    pdf_buffer = make_setting_power_pdf(power_template_path, power_data)
+                    st.download_button(
+                        label="⬇️ 위임장 다운로드",
+                        data=pdf_buffer,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="dl_power_pdf_tab1"
+                    )
+                except Exception as e:
+                    st.error(f"위임장 생성 오류: {e}")
+        
+        # 확인서면 생성 버튼 (계약서 버튼과 동일 레벨)
+        st.markdown("---")
+        
+        # 확인서면 등기유형 선택
+        if 'confirm_reg_type' not in st.session_state:
+            st.session_state['confirm_reg_type'] = '근저당권설정'
+        
+        confirm_reg_type = st.text_input(
+            "등기유형 (수기입력)", 
+            value=st.session_state.get('confirm_reg_type', '근저당권설정'),
+            placeholder="근저당권설정 / 소유권이전 등",
+            key='confirm_reg_type_input'
+        )
+        st.session_state['confirm_reg_type'] = confirm_reg_type
+        
+        confirm_template_path = st.session_state['template_status'].get('확인서면')
+        confirm_disabled = not confirm_template_path or not LIBS_OK
+        
+        if confirm_template_path:
+            st.success("✅ 확인서면 템플릿 준비완료")
+        else:
+            st.warning("⚠️ 확인서면.pdf 템플릿 없음")
+        
+        if st.button("📄 확인서면\nPDF 생성", key="generate_confirm_pdf", disabled=confirm_disabled, use_container_width=True):
+            if not LIBS_OK:
+                st.error("PDF 라이브러리 미설치")
+            else:
+                contract_type = st.session_state.get('contract_type', '개인')
+                
+                # 채무자 정보
+                debtor_name = st.session_state.get('t1_debtor_name', '')
+                debtor_addr = st.session_state.get('t1_debtor_addr', '')
+                debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
+                
+                # 설정자(소유자) 정보
+                owner_name = st.session_state.get('t1_owner_name', '')
+                owner_addr = st.session_state.get('t1_owner_addr', '')
+                owner_rrn = st.session_state.get('t1_owner_rrn', '')
+                
+                confirm_data = {
+                    "date": format_date_korean(st.session_state['input_date']),
+                    "estate_text": st.session_state.get('estate_text', ''),
+                    "contract_type": contract_type,
+                    "debtor_name": debtor_name,
+                    "debtor_addr": debtor_addr,
+                    "debtor_rrn": debtor_rrn,
+                    "owner_name": owner_name,
+                    "owner_addr": owner_addr,
+                    "owner_rrn": owner_rrn,
+                    "reg_type": st.session_state.get('confirm_reg_type', '근저당권설정')
+                }
+                
+                # 파일명 결정
+                if contract_type == '개인':
+                    filename = f"확인서면_{debtor_name}.pdf"
+                elif contract_type == '3자담보':
+                    filename = f"확인서면_{owner_name}.pdf"
+                else:  # 공동담보
+                    filename = f"확인서면_{debtor_name}_{owner_name}.pdf"
+                
+                try:
+                    pdf_buffer = make_confirmation_pdf(confirm_template_path, confirm_data)
+                    st.download_button(
+                        label="⬇️ 확인서면 다운로드",
+                        data=pdf_buffer,
+                        file_name=filename,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="dl_confirm_pdf"
+                    )
+                except Exception as e:
+                    st.error(f"확인서면 생성 오류: {e}")
     
     # =========================================================================
     # 위택스 등록면허세 신고 섹션
@@ -3302,7 +3889,8 @@ with tab4:
                 sig_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
                     'estate_list': st.session_state.get('malso_estate_detail', '').strip().split('\n'),
-                    'holders': holders
+                    'holders': holders,
+                    'reg_purpose': f"{st.session_state.get('malso_type', '근저당권')}말소"
                 }
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
                 st.download_button(

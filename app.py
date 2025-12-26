@@ -1717,6 +1717,10 @@ def parse_registry_pdf(uploaded_file):
                 건물번호 = (row[2] or "").replace('\n', ' ').strip() if len(row) > 2 else ""
                 건물내역 = (row[3] or "").replace('\n', ' ').strip() if len(row) > 3 else ""
                 
+                # 워터마크 제거 ("열람용" 잔여)
+                건물번호 = re.sub(r'\s*(열|람|용)\s*$', '', 건물번호).strip()
+                건물번호 = re.sub(r'\s+(열|람|용)\s+', ' ', 건물번호).strip()
+                
                 if result["동명칭"] and result["동명칭"] not in 건물번호:
                     건물번호 = f"{result['동명칭']} {건물번호}"
                 
@@ -1779,9 +1783,19 @@ def format_estate_text(data):
     
     # 1동의 건물의 표시
     lines.append("1. 1동의 건물의 표시")
-    lines.append(f"   {data['1동건물표시']}")
     
-    # 아파트명/동명칭 (4가지 케이스 대응)
+    # 1동건물표시에서 아파트명/동명칭 제거하여 순수 주소만 추출
+    주소_text = data['1동건물표시']
+    if data["아파트명"]:
+        주소_text = 주소_text.replace(data["아파트명"], "").strip()
+    if data["동명칭"]:
+        주소_text = 주소_text.replace(data["동명칭"], "").strip()
+    주소_text = 주소_text.strip()
+    
+    if 주소_text:
+        lines.append(f"   {주소_text}")
+    
+    # 아파트명/동명칭 별도 줄
     건물명칭_parts = []
     if data["아파트명"]:
         건물명칭_parts.append(data["아파트명"])

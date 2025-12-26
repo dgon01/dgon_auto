@@ -2404,7 +2404,7 @@ with tab4:
             st.session_state['tab2_date_input'] = date_val
             st.session_state['tab2_date'] = date_val
             
-            st.success("✅ 1탭 정보를 불러왔습니다!")
+            st.success("✅ 2탭(대부업) 정보를 불러왔습니다!")
             st.rerun()
     
     with col_btn2:
@@ -2631,7 +2631,7 @@ with tab5:
                 st.session_state['cost_manual_교통비'] = "100,000"
                 st.session_state['cost_manual_원인증서'] = "50,000"
             
-            st.success("✅ 1탭 정보가 동기화되었습니다!")
+            st.success("✅ 2탭(대부업) 정보가 동기화되었습니다!")
             st.rerun()
     with col_btn2:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab3", help="모든 입력 초기화"):
@@ -3196,9 +3196,7 @@ with tab3:
             # 물건지 주소
             st.session_state['malso_property_addr'] = st.session_state.get('input_collateral_addr', '')
             
-            st.success("✅ 2탭 정보를 불러왔습니다!")
-            
-            st.success("✅ 1탭 정보를 불러왔습니다!")
+            st.success("✅ 2탭(대부업) 정보를 불러왔습니다!")
             st.rerun()
     with col_btn2:
         if st.button("💾 임시저장", type="secondary", use_container_width=True, key="save_malso_temp", help="현재 말소건 임시저장"):
@@ -3794,12 +3792,12 @@ with tab1:
                 on_change=auto_format_rrn_tab5,
                 args=(f'tab5_owner{i}_rrn_input',)
             )
-            addr_col1, addr_col2 = st.columns([4, 1])
+            addr_col1, addr_col2 = st.columns([3, 2])
             with addr_col1:
                 st.text_input("주소", key=f'tab5_owner{i}_addr_input', placeholder="서울시 강남구 테헤란로 123")
             with addr_col2:
                 st.markdown("<div style='height: 28px'></div>", unsafe_allow_html=True)
-                if st.button("📍", key=f'tab5_addr_copy_{i}', help="물건지 주소 복사"):
+                if st.button("📍 물건지 주소복사", key=f'tab5_addr_copy_{i}', use_container_width=True):
                     st.session_state[f'_pending_tab5_owner{i}_addr'] = st.session_state.get('tab5_property_addr', '')
                     st.rerun()
     
@@ -4265,7 +4263,7 @@ with tab6:
                                 key=f'wetax_malso_chk_{idx}'
                             )
                 else:
-                    st.warning("⚠️ 말소 건이 없습니다. 4탭에서 임시저장 후 다시 불러오세요.")
+                    st.warning("⚠️ 말소 건이 없습니다. 3탭에서 임시저장 후 다시 불러오세요.")
             
             elif data_source == 'tab1':
                 # 5탭: 1금융권 설정/주소변경

@@ -250,7 +250,7 @@ TEMPLATE_FILENAMES = {
     "개인": "1.pdf",
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
-    "자필": "자필서명정보 템플릿.pdf",
+    "자필": "자필서명정보_템플릿.pdf",
     "영수증": "receipt_template.xlsx",
     "확인서면": "확인서면_개인.pdf",
     "설정_위임장": "위임장.pdf"
@@ -658,14 +658,7 @@ def make_setting_power_pdf(template_path, data):
     - 3자담보: 소유자(의무자) 1페이지
     - 공동담보: 1페이지에 채무자 + 소유자 모두 표시
     
-    좌표 (PyMuPDF 기준 → ReportLab 변환):
-    - 부동산의 표시: (102.0, 90.0, 533.33, 348.67)
-    - 등기연월일(작성일자): (172.0, 352.67, 367.33, 370.0) 좌측정렬
-    - "설정계약": (390, 352.67, 530, 370.0) 우측정렬
-    - 등기의 목적: (172.0, 372.67, 368.0, 390.0) 좌측정렬
-    - 채권최고액: (172.0, 394.0, 440.0, 458.67) 상하중앙, 좌측정렬
-    - 등기의무자: (60.0, 689.33, 420.0, 781.33)
-    - 등기권리자: (60.0, 588.0, 420.0, 685.0)
+    좌표는 4탭 말소 위임장과 동일하게 맞춤
     """
     width, height = A4  # 595.28, 841.89
     
@@ -686,73 +679,60 @@ def make_setting_power_pdf(template_path, data):
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=A4)
     
-    # 부동산의 표시 (102, 90) → RL: x=102, y=842-90=752
     c.setFont(font_name, 9)
-    estate_x = 104
-    estate_y = 750
+    
+    # 부동산 표시 (말소와 동일: 105, 745)
+    estate_x = 105
+    estate_y = 745
     line_h = 12
     estate_lines = data.get('estate_text', '').split('\n')
-    for i, line in enumerate(estate_lines[:21]):  # 최대 21줄
+    for i, line in enumerate(estate_lines[:20]):
         if line.strip():
             c.drawString(estate_x, estate_y - (i * line_h), line)
     
-    # 등기연월일 (172, 352.67) → RL: y = 842 - 361 ≈ 481, 좌측정렬
+    # 등기원인과 그 년월일 - 작성일자 (말소와 동일 높이: 478)
     cause_date = data.get('date', '')
-    c.setFont(font_name, 10)
-    c.drawString(174, 480, cause_date)
+    c.drawString(175, 478, cause_date)
     
-    # "설정계약" (390, 352.67, 530, 370) → 우측정렬
-    # 박스 우측 x=530, 텍스트를 우측정렬
-    c.drawRightString(528, 480, "설정계약")
+    # "설정계약" - 작성일자와 같은 높이 (478), 우측정렬
+    c.drawRightString(528, 478, "설정계약")
     
-    # 등기의 목적 "근저당권설정" (172, 372.67) → RL: y = 842 - 381 ≈ 461
-    c.drawString(174, 460, "근저당권설정")
+    # 등기의 목적 (말소와 동일 높이: 458)
+    c.drawString(175, 458, "근저당권설정")
     
-    # 채권최고액 (172, 394 ~ 458.67) 상하중앙 → 중앙 y ≈ 426 → RL: 842-426=416
+    # 채권최고액 - 말소할 등기사항과 동일 위치, 상하 중앙 (416)
     claim_amount = data.get('claim_amount', '')
     if claim_amount:
-        c.setFont(font_name, 9)
-        c.drawString(174, 412, f"금{claim_amount}")
+        c.drawString(175, 416, f"금{claim_amount}")
     
-    # 등기의무자 (60, 689.33 ~ 781.33) → RL: 상단 y=153, 하단 y=61
-    c.setFont(font_name, 10)
-    obligor_x = 62
-    obligor_y = 150  # 박스 상단부터 시작
+    # 등기의무자 (말소와 동일: 라벨 248, 이름 232, 주소 217)
+    c.setFont(font_name, 8)
+    c.drawString(70, 248, "등기의무자")
+    c.setFont(font_name, 9)
     
     if contract_type == '개인':
-        # 개인: 채무자만
         debtor_name = data.get('debtor_name', '')
         debtor_addr = data.get('debtor_addr', '')
         
-        c.drawString(obligor_x, obligor_y, debtor_name)
-        c.setFont(font_name, 9)
+        c.drawString(70, 232, debtor_name)
         if debtor_addr:
-            # 주소가 길면 2줄로
-            if len(debtor_addr) > 45:
-                split_idx = debtor_addr.rfind(' ', 0, 45)
-                if split_idx == -1:
-                    split_idx = 45
-                c.drawString(obligor_x, obligor_y - 14, debtor_addr[:split_idx])
-                c.drawString(obligor_x, obligor_y - 26, debtor_addr[split_idx:].strip())
+            if len(debtor_addr) > 50:
+                c.drawString(70, 217, debtor_addr[:50])
+                c.drawString(70, 205, debtor_addr[50:])
             else:
-                c.drawString(obligor_x, obligor_y - 14, debtor_addr)
+                c.drawString(70, 217, debtor_addr)
                 
     elif contract_type == '3자담보':
-        # 3자담보: 소유자만
         owner_name = data.get('owner_name', '')
         owner_addr = data.get('owner_addr', '')
         
-        c.drawString(obligor_x, obligor_y, owner_name)
-        c.setFont(font_name, 9)
+        c.drawString(70, 232, owner_name)
         if owner_addr:
-            if len(owner_addr) > 45:
-                split_idx = owner_addr.rfind(' ', 0, 45)
-                if split_idx == -1:
-                    split_idx = 45
-                c.drawString(obligor_x, obligor_y - 14, owner_addr[:split_idx])
-                c.drawString(obligor_x, obligor_y - 26, owner_addr[split_idx:].strip())
+            if len(owner_addr) > 50:
+                c.drawString(70, 217, owner_addr[:50])
+                c.drawString(70, 205, owner_addr[50:])
             else:
-                c.drawString(obligor_x, obligor_y - 14, owner_addr)
+                c.drawString(70, 217, owner_addr)
                 
     else:  # 공동담보: 1장에 채무자 + 소유자 모두
         debtor_name = data.get('debtor_name', '')
@@ -761,43 +741,27 @@ def make_setting_power_pdf(template_path, data):
         owner_addr = data.get('owner_addr', '')
         
         # 첫 번째: 채무자
-        c.drawString(obligor_x, obligor_y, debtor_name)
-        c.setFont(font_name, 9)
+        c.drawString(70, 232, debtor_name)
         if debtor_addr:
-            # 주소 1줄만 (공간 절약)
-            addr_display = debtor_addr[:50] + "..." if len(debtor_addr) > 50 else debtor_addr
-            c.drawString(obligor_x, obligor_y - 13, addr_display)
+            c.drawString(70, 217, debtor_addr[:55] if len(debtor_addr) > 55 else debtor_addr)
         
-        # 두 번째: 소유자 (아래에 표시)
-        owner_y = obligor_y - 35
-        c.setFont(font_name, 10)
-        c.drawString(obligor_x, owner_y, owner_name)
-        c.setFont(font_name, 9)
+        # 두 번째: 소유자
+        c.drawString(70, 195, owner_name)
         if owner_addr:
-            addr_display = owner_addr[:50] + "..." if len(owner_addr) > 50 else owner_addr
-            c.drawString(obligor_x, owner_y - 13, addr_display)
+            c.drawString(70, 180, owner_addr[:55] if len(owner_addr) > 55 else owner_addr)
     
-    # 등기권리자 (60, 588 ~ 685) → RL: 상단 y=254, 하단 y=157
-    c.setFont(font_name, 10)
-    creditor_x = 62
-    creditor_y = 250  # 박스 상단부터 시작
+    # 등기권리자 (말소와 동일: 라벨 118, 이름 102, 주소 87)
+    c.setFont(font_name, 8)
+    c.drawString(70, 118, "등기권리자")
+    c.setFont(font_name, 9)
     
     if creditor_corp_num:
         creditor_display = f"{creditor_name}({creditor_corp_num})"
     else:
         creditor_display = creditor_name
     
-    c.drawString(creditor_x, creditor_y, creditor_display)
-    c.setFont(font_name, 9)
-    if creditor_addr:
-        if len(creditor_addr) > 45:
-            split_idx = creditor_addr.rfind(' ', 0, 45)
-            if split_idx == -1:
-                split_idx = 45
-            c.drawString(creditor_x, creditor_y - 14, creditor_addr[:split_idx])
-            c.drawString(creditor_x, creditor_y - 26, creditor_addr[split_idx:].strip())
-        else:
-            c.drawString(creditor_x, creditor_y - 14, creditor_addr)
+    c.drawString(70, 102, creditor_display)
+    c.drawString(70, 87, creditor_addr)
     
     c.showPage()
     c.save()

@@ -1977,10 +1977,10 @@ def _create_simple_receipt(sheet, data):
 # UI 구현
 # =============================================================================
 
-tab5, tab1, tab4, tab2, tab3, tab6 = st.tabs(["🏦 시중은행", "📄 대부업(전자설정)", "🗑️ 말소문서", "✍️ 자필서명정보", "🧾 비용계산 및 영수증(대부업)", "🏛️ 위택스신고"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🏦 시중은행", "📄 대부업(전자설정)", "🗑️ 말소문서", "✍️ 자필서명정보", "🧾 비용계산(대부업)", "🏛️ 위택스신고"])
 
-# Tab 1: 근저당권 설정 (입력)
-with tab1:
+# Tab 2: 대부업(전자설정)
+with tab2:
     col_header = st.columns([6, 1])
     col_header[0].markdown("### 📝 대부업(전자설정) 작성")
     with col_header[1]:
@@ -2316,9 +2316,9 @@ with tab1:
                 except Exception as e: st.error(f"오류: {e}")
     
 # =============================================================================
-# Tab 2: 자필서명정보 작성
+# Tab 4: 자필서명정보 작성
 # =============================================================================
-with tab2:
+with tab4:
     # [추가됨] 주민/법인번호 자동 포맷팅 함수 (13자리 숫자 입력 시 '-' 자동 삽입)
     def auto_format_rrn(key):
         if key in st.session_state:
@@ -2335,7 +2335,7 @@ with tab2:
     
     # [수정됨] 1탭 가져오기 로직 (위젯 Key 강제 동기화 적용)
     with col_btn1:
-        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab2", help="1탭 정보 불러오기"):
+        if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab2", help="2탭(대부업) 정보 불러오기"):
             # 1. 1탭 데이터 확보 (위젯 Key 기준)
             contract_type = st.session_state.get('contract_type', '개인')
             debtor_name = st.session_state.get('t1_debtor_name', '')
@@ -2472,7 +2472,7 @@ with tab2:
         
         # 등기의무자 정보
         st.markdown("#### 👤 등기의무자 정보")
-        st.caption("※ 1탭 가져오기: 단독(채무자), 3자(소유자), 공동(채무자+소유자)")
+        st.caption("※ 2탭 가져오기: 단독(채무자), 3자(소유자), 공동(채무자+소유자)")
         
         col1, col2 = st.columns(2)
         
@@ -2579,16 +2579,16 @@ with tab2:
             except Exception as e:
                 st.error(f"PDF 생성 오류: {e}")
     
-    st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 계약 유형에 따라 정보를 자동으로 불러올 수 있습니다.")
+    st.info("💡 **사용 방법**: '📥 2탭 가져오기' 버튼을 눌러 계약 유형에 따라 정보를 자동으로 불러올 수 있습니다.")
 
 
-# Tab 3: 비용계산 및 영수증(대부업)
-with tab3:
+# Tab 5: 비용계산(대부업)
+with tab5:
     # 헤더와 버튼을 분리
     st.markdown("### 🧾 등기비용 계산기(대부업)")
     col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
     with col_btn1:
-        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="1탭 정보 불러오기"):
+        if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="2탭(대부업) 정보 불러오기"):
             # 1탭 값 직접 가져와서 Tab3 위젯에 설정
             creditor_val = st.session_state.get('input_creditor', '')
             debtor_val = st.session_state.get('t1_debtor_name', '')
@@ -3108,9 +3108,9 @@ with tab3:
                 st.button("🏦 영수증 Excel 다운로드", disabled=True, use_container_width=True)
 
 
-# Tab 4: 말소 문서 작성
+# Tab 3: 말소문서
 # =============================================================================
-with tab4:
+with tab3:
     # 말소 임시저장 목록 초기화
     if 'malso_saved_list' not in st.session_state:
         st.session_state['malso_saved_list'] = []
@@ -3119,8 +3119,8 @@ with tab4:
     st.markdown("### 🗑️ 말소 문서 작성")
     col_btn1, col_btn2, col_btn3, col_spacer = st.columns([1, 1, 1, 3])
     with col_btn1:
-        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab4", help="1탭 정보 불러오기"):
-            # 1탭 데이터 동기화
+        if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab4", help="2탭(대부업) 정보 불러오기"):
+            # 2탭 데이터 동기화
             contract_type = st.session_state.get('contract_type', '개인')
             
             # 등기권리자 (소유자) - 3자담보면 소유자, 아니면 채무자
@@ -3169,11 +3169,16 @@ with tab4:
                 st.session_state['malso_obligor_addr_input'] = obligor_addr
                 st.session_state['malso_obligor_branch_input'] = ''
                 
-                # 선택 드롭다운을 "직접입력"으로 (1탭에서 가져온 값이므로)
+                # 선택 드롭다운을 "직접입력"으로 (2탭에서 가져온 값이므로)
                 st.session_state['malso_obligor_select'] = "직접입력"
             
             # 부동산 표시
             st.session_state['malso_estate_detail'] = st.session_state.get('estate_text', '')
+            
+            # 물건지 주소
+            st.session_state['malso_property_addr'] = st.session_state.get('input_collateral_addr', '')
+            
+            st.success("✅ 2탭 정보를 불러왔습니다!")
             
             st.success("✅ 1탭 정보를 불러왔습니다!")
             st.rerun()
@@ -3184,7 +3189,7 @@ with tab4:
             holder_name = st.session_state.get('malso_holder1_name', '')
             holder_rrn = st.session_state.get('malso_holder1_rrn', '')
             holder_addr = st.session_state.get('malso_holder1_addr', '')
-            estate_detail = st.session_state.get('malso_estate_detail', '')
+            property_addr = st.session_state.get('malso_property_addr', '')
             
             if not holder_name:
                 st.error("❌ 등기권리자(소유자) 성명을 입력하세요!")
@@ -3201,7 +3206,7 @@ with tab4:
                     'holder_name': holder_name,
                     'holder_rrn': holder_rrn,
                     'holder_addr': holder_addr,
-                    'property_addr': estate_detail.split('\n')[0] if estate_detail else ''
+                    'property_addr': property_addr
                 }
                 
                 if existing_idx is not None:
@@ -3242,6 +3247,9 @@ with tab4:
             
             # 부동산 표시
             st.session_state['malso_estate_detail'] = ''
+            
+            # 물건지 주소
+            st.session_state['malso_property_addr'] = ''
             
             # 말소 내역
             st.session_state['malso_cancel_text'] = ''
@@ -3418,6 +3426,16 @@ with tab4:
             placeholder="1동의 건물의 표시\n서울특별시 송파구 문정동 150\n..."
         )
     
+    # 물건지 주소 (위택스용)
+    st.markdown("#### 📍 물건지 주소 (위택스 신고용)")
+    if 'malso_property_addr' not in st.session_state:
+        st.session_state['malso_property_addr'] = ''
+    st.text_input(
+        "물건지 주소",
+        key="malso_property_addr",
+        placeholder="서울특별시 강남구 테헤란로 123"
+    )
+    
     st.markdown("#### 6️⃣ 말소할 등기")
     st.text_input(
         "말소할 등기 (접수번호 등)",
@@ -3579,12 +3597,12 @@ with tab4:
             st.error(f"이관증명서 생성 오류: {e}")
     
     # 안내 메시지
-    st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")
+    st.info("💡 **사용 방법**: '📥 2탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")
 
 # =============================================================================
-# Tab 5: 시중은행 서류
+# Tab 1: 시중은행
 # =============================================================================
-with tab5:
+with tab1:
     st.markdown("### 🏦 시중은행 서류 (설정계약서/위임장/자필서명정보)")
     
     # 세션 상태 초기화
@@ -3596,6 +3614,8 @@ with tab5:
         st.session_state['tab5_date'] = datetime.now().date()
     if 'tab5_amount' not in st.session_state:
         st.session_state['tab5_amount'] = ""
+    if 'tab5_property_addr' not in st.session_state:
+        st.session_state['tab5_property_addr'] = ""
     
     # 등기의무자 3명 초기화 (이름, 주민번호, 주소)
     for i in range(1, 4):
@@ -3606,53 +3626,15 @@ with tab5:
         if f'tab5_owner{i}_addr_input' not in st.session_state:
             st.session_state[f'tab5_owner{i}_addr_input'] = ''
     
-    # 상단 버튼들
-    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
+    # 상단 버튼
+    col_btn1, col_spacer = st.columns([1, 5])
     with col_btn1:
-        if st.button("📥 1탭 가져오기", type="primary", use_container_width=True, key="sync_tab5"):
-            # 1탭 데이터 가져오기
-            contract_type = st.session_state.get('contract_type', '3자담보')
-            debtor_name = st.session_state.get('t1_debtor_name', '')
-            debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
-            debtor_addr = st.session_state.get('t1_debtor_addr', '')
-            owner_name = st.session_state.get('t1_owner_name', '')
-            owner_rrn = st.session_state.get('t1_owner_rrn', '')
-            owner_addr = st.session_state.get('t1_owner_addr', '')
-            estate_info = st.session_state.get('estate_text_area', '')
-            date_val = st.session_state.get('input_date', datetime.now().date())
-            amount_val = st.session_state.get('input_amount', '')
-            
-            # session_state 업데이트
-            st.session_state['tab5_estate_input'] = estate_info
-            st.session_state['tab5_date'] = date_val
-            st.session_state['tab5_amount'] = amount_val
-            
-            # 계약 유형에 따라 등기의무자 배치
-            if contract_type == "개인":
-                st.session_state['tab5_owner1_name_input'] = debtor_name
-                st.session_state['tab5_owner1_rrn_input'] = debtor_rrn
-                st.session_state['tab5_owner1_addr_input'] = debtor_addr
-            elif contract_type == "3자담보":
-                st.session_state['tab5_owner1_name_input'] = owner_name
-                st.session_state['tab5_owner1_rrn_input'] = owner_rrn
-                st.session_state['tab5_owner1_addr_input'] = owner_addr
-            elif contract_type == "공동담보":
-                st.session_state['tab5_owner1_name_input'] = debtor_name
-                st.session_state['tab5_owner1_rrn_input'] = debtor_rrn
-                st.session_state['tab5_owner1_addr_input'] = debtor_addr
-                st.session_state['tab5_owner2_name_input'] = owner_name
-                st.session_state['tab5_owner2_rrn_input'] = owner_rrn
-                st.session_state['tab5_owner2_addr_input'] = owner_addr
-            
-            st.success("✅ 1탭 정보를 불러왔습니다!")
-            st.rerun()
-    
-    with col_btn2:
         if st.button("🔄 초기화", key="reset_tab5", use_container_width=True):
             st.session_state['tab5_bank'] = "하나은행"
             st.session_state['tab5_estate_input'] = ""
             st.session_state['tab5_date'] = datetime.now().date()
             st.session_state['tab5_amount'] = ""
+            st.session_state['tab5_property_addr'] = ""
             for i in range(1, 4):
                 st.session_state[f'tab5_owner{i}_name_input'] = ""
                 st.session_state[f'tab5_owner{i}_rrn_input'] = ""
@@ -3747,6 +3729,16 @@ with tab5:
     )
     st.session_state['tab5_estate'] = estate_text
     
+    # 물건지 주소 입력
+    st.markdown("#### 📍 물건지 주소")
+    tab5_property = st.text_input(
+        "물건지 주소 (위택스 신고용)",
+        value=st.session_state.get('tab5_property_addr', ''),
+        key='tab5_property_addr_input',
+        placeholder="서울특별시 강남구 테헤란로 123"
+    )
+    st.session_state['tab5_property_addr'] = tab5_property
+    
     st.markdown("---")
     
     # 등기의무자 정보 입력 (3명까지)
@@ -3776,7 +3768,14 @@ with tab5:
                 on_change=auto_format_rrn_tab5,
                 args=(f'tab5_owner{i}_rrn_input',)
             )
-            st.text_input("주소", key=f'tab5_owner{i}_addr_input', placeholder="서울시 강남구 테헤란로 123")
+            addr_col1, addr_col2 = st.columns([4, 1])
+            with addr_col1:
+                st.text_input("주소", key=f'tab5_owner{i}_addr_input', placeholder="서울시 강남구 테헤란로 123")
+            with addr_col2:
+                st.markdown("<div style='height: 28px'></div>", unsafe_allow_html=True)
+                if st.button("📍", key=f'tab5_addr_copy_{i}', help="물건지 주소 복사"):
+                    st.session_state[f'tab5_owner{i}_addr_input'] = st.session_state.get('tab5_property_addr', '')
+                    st.rerun()
     
     st.markdown("---")
     
@@ -3966,9 +3965,9 @@ with tab6:
     btn_cols = st.columns(4)
     
     with btn_cols[0]:
-        if st.button("🏦 1탭 가져오기\n(시중은행 설정)", key="wetax_load_tab5", use_container_width=True, type="primary"):
+        if st.button("🏦 1탭 가져오기\n(시중은행 설정)", key="wetax_load_tab1", use_container_width=True, type="primary"):
             # 1탭(시중은행)에서 데이터 가져오기
-            st.session_state['wetax_data_source'] = 'tab5'
+            st.session_state['wetax_data_source'] = 'tab1'
             st.session_state['wetax_report_type'] = '설정'
             
             # 은행 정보
@@ -3992,20 +3991,19 @@ with tab6:
                 addr = st.session_state.get(f'tab5_owner{i}_addr_input', '').strip()
                 if name:
                     owners.append({'name': name, 'rrn': rrn, 'addr': addr})
-            st.session_state['wetax_tab5_owners'] = owners
+            st.session_state['wetax_tab1_owners'] = owners
             
             # 물건지, 채권최고액
-            estate_text = st.session_state.get('tab5_estate', '')
-            st.session_state['wetax_property_addr'] = estate_text.split('\n')[0] if estate_text else ''
+            st.session_state['wetax_property_addr'] = st.session_state.get('tab5_property_addr', '')
             st.session_state['wetax_amount'] = st.session_state.get('tab5_amount', '')
             
             st.success("✅ 1탭(시중은행) 데이터 불러오기 완료!")
             st.rerun()
     
     with btn_cols[1]:
-        if st.button("📄 2탭 가져오기\n(대부업 설정)", key="wetax_load_tab1", use_container_width=True, type="primary"):
+        if st.button("📄 2탭 가져오기\n(대부업 설정)", key="wetax_load_tab2", use_container_width=True, type="primary"):
             # 2탭(대부업)에서 데이터 가져오기
-            st.session_state['wetax_data_source'] = 'tab1'
+            st.session_state['wetax_data_source'] = 'tab2'
             st.session_state['wetax_report_type'] = '설정'
             
             # 채권자(근저당권자) 정보
@@ -4030,9 +4028,9 @@ with tab6:
             st.rerun()
     
     with btn_cols[2]:
-        if st.button("🗑️ 3탭 가져오기\n(말소)", key="wetax_load_tab4", use_container_width=True, type="primary"):
+        if st.button("🗑️ 3탭 가져오기\n(말소)", key="wetax_load_tab3", use_container_width=True, type="primary"):
             # 3탭(말소)에서 임시저장 목록 가져오기
-            st.session_state['wetax_data_source'] = 'tab4'
+            st.session_state['wetax_data_source'] = 'tab3'
             st.session_state['wetax_report_type'] = '말소'
             
             # 임시저장 목록 가져오기
@@ -4050,7 +4048,7 @@ with tab6:
                         'holder_name': holder_name,
                         'holder_rrn': st.session_state.get('malso_holder1_rrn', ''),
                         'holder_addr': st.session_state.get('malso_holder1_addr', ''),
-                        'property_addr': st.session_state.get('malso_estate_detail', '').split('\n')[0] if st.session_state.get('malso_estate_detail') else ''
+                        'property_addr': st.session_state.get('malso_property_addr', '')
                     }]
                     st.success("✅ 3탭(말소) 1건 불러오기 완료!")
                 else:
@@ -4080,7 +4078,7 @@ with tab6:
             # 미리보기 데이터 수집
             preview_rows = []
             
-            if data_source == 'tab1':
+            if data_source == 'tab2':
                 # 1탭: 설정/주소변경
                 contract_type = st.session_state.get('wetax_contract_type', '개인')
                 creditor_name = st.session_state.get('wetax_creditor_name', '')
@@ -4131,6 +4129,7 @@ with tab6:
                         addr_preview.append({
                             '납세자': debtor_name, '주민번호': debtor_rrn, 
                             '주소': debtor_addr[:30] + '...' if len(debtor_addr) > 30 else debtor_addr,
+                            '물건지': property_addr[:25] + '...' if len(property_addr) > 25 else property_addr,
                             '신고유형': '주소변경'
                         })
                         correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
@@ -4138,6 +4137,7 @@ with tab6:
                             addr_preview.insert(0, {
                                 '납세자': debtor_name, '주민번호': debtor_rrn,
                                 '주소': debtor_addr[:30] + '...' if len(debtor_addr) > 30 else debtor_addr,
+                                '물건지': property_addr[:25] + '...' if len(property_addr) > 25 else property_addr,
                                 '신고유형': '경정'
                             })
                     elif contract_type == "3자담보":
@@ -4147,6 +4147,7 @@ with tab6:
                         addr_preview.append({
                             '납세자': owner_name, '주민번호': owner_rrn,
                             '주소': owner_addr[:30] + '...' if len(owner_addr) > 30 else owner_addr,
+                            '물건지': property_addr[:25] + '...' if len(property_addr) > 25 else property_addr,
                             '신고유형': '주소변경'
                         })
                         correction = st.checkbox("      └─ 경정 포함 (2건 신고)", key='wetax_include_correction')
@@ -4154,6 +4155,7 @@ with tab6:
                             addr_preview.insert(0, {
                                 '납세자': owner_name, '주민번호': owner_rrn,
                                 '주소': owner_addr[:30] + '...' if len(owner_addr) > 30 else owner_addr,
+                                '물건지': property_addr[:25] + '...' if len(property_addr) > 25 else property_addr,
                                 '신고유형': '경정'
                             })
                     else:  # 공동담보
@@ -4168,20 +4170,20 @@ with tab6:
                         with col_o:
                             addr_owner = st.checkbox(f"소유자 ({owner_name})", key='wetax_addr_owner')
                             if addr_owner:
-                                addr_preview.append({'납세자': owner_name, '주민번호': owner_rrn, '주소': owner_addr[:25]+'...' if len(owner_addr)>25 else owner_addr, '신고유형': '주소변경'})
+                                addr_preview.append({'납세자': owner_name, '주민번호': owner_rrn, '주소': owner_addr[:25]+'...' if len(owner_addr)>25 else owner_addr, '물건지': property_addr[:20]+'...' if len(property_addr)>20 else property_addr, '신고유형': '주소변경'})
                                 if st.checkbox("   └─ 경정 포함", key='wetax_owner_correction'):
-                                    addr_preview.insert(len(addr_preview)-1, {'납세자': owner_name, '주민번호': owner_rrn, '주소': owner_addr[:25]+'...' if len(owner_addr)>25 else owner_addr, '신고유형': '경정'})
+                                    addr_preview.insert(len(addr_preview)-1, {'납세자': owner_name, '주민번호': owner_rrn, '주소': owner_addr[:25]+'...' if len(owner_addr)>25 else owner_addr, '물건지': property_addr[:20]+'...' if len(property_addr)>20 else property_addr, '신고유형': '경정'})
                         with col_d:
                             addr_debtor = st.checkbox(f"채무자 ({debtor_name})", key='wetax_addr_debtor')
                             if addr_debtor:
-                                addr_preview.append({'납세자': debtor_name, '주민번호': debtor_rrn, '주소': debtor_addr[:25]+'...' if len(debtor_addr)>25 else debtor_addr, '신고유형': '주소변경'})
+                                addr_preview.append({'납세자': debtor_name, '주민번호': debtor_rrn, '주소': debtor_addr[:25]+'...' if len(debtor_addr)>25 else debtor_addr, '물건지': property_addr[:20]+'...' if len(property_addr)>20 else property_addr, '신고유형': '주소변경'})
                                 if st.checkbox("   └─ 경정 포함", key='wetax_debtor_correction'):
-                                    addr_preview.insert(len(addr_preview)-1, {'납세자': debtor_name, '주민번호': debtor_rrn, '주소': debtor_addr[:25]+'...' if len(debtor_addr)>25 else debtor_addr, '신고유형': '경정'})
+                                    addr_preview.insert(len(addr_preview)-1, {'납세자': debtor_name, '주민번호': debtor_rrn, '주소': debtor_addr[:25]+'...' if len(debtor_addr)>25 else debtor_addr, '물건지': property_addr[:20]+'...' if len(property_addr)>20 else property_addr, '신고유형': '경정'})
                     
                     if addr_preview:
                         st.dataframe(addr_preview, hide_index=True, use_container_width=True)
             
-            elif data_source == 'tab4':
+            elif data_source == 'tab3':
                 # 4탭: 말소 (여러 건 지원)
                 malso_list = st.session_state.get('wetax_malso_list', [])
                 
@@ -4216,14 +4218,14 @@ with tab6:
                 else:
                     st.warning("⚠️ 말소 건이 없습니다. 4탭에서 임시저장 후 다시 불러오세요.")
             
-            elif data_source == 'tab5':
+            elif data_source == 'tab1':
                 # 5탭: 1금융권 설정/주소변경
                 creditor_name = st.session_state.get('wetax_creditor_name', '')
                 creditor_corp_num = st.session_state.get('wetax_creditor_corp_num', '')
                 creditor_addr = st.session_state.get('wetax_creditor_addr', '')
                 property_addr = st.session_state.get('wetax_property_addr', '')
                 amount = st.session_state.get('wetax_amount', '')
-                owners = st.session_state.get('wetax_tab5_owners', [])
+                owners = st.session_state.get('wetax_tab1_owners', [])
                 
                 # 근저당설정 미리보기
                 st.markdown("**📊 신고 미리보기**")
@@ -4249,7 +4251,8 @@ with tab6:
                             '신고유형': '주소변경',
                             '납세자': owner['name'],
                             '주민번호': owner['rrn'],
-                            '주소': owner['addr'][:30] + '...' if len(owner.get('addr', '')) > 30 else owner.get('addr', '')
+                            '주소': owner['addr'][:30] + '...' if len(owner.get('addr', '')) > 30 else owner.get('addr', ''),
+                            '물건지': property_addr[:25] + '...' if len(property_addr) > 25 else property_addr
                         })
                     
                     st.dataframe(addr_preview, hide_index=True, use_container_width=True)
@@ -4380,7 +4383,7 @@ with tab6:
                 else:
                     cases = []
                     
-                    if data_source == 'tab1':
+                    if data_source == 'tab2':
                         # 1탭: 설정/주소변경
                         creditor_name = st.session_state.get('wetax_creditor_name', '')
                         creditor_corp_num = st.session_state.get('wetax_creditor_corp_num', '')
@@ -4473,7 +4476,7 @@ with tab6:
                                         "address": road_addr, "address_detail": detail_addr,
                                         "property_address": prop_road, "property_detail": prop_detail, "tax_base": None})
                     
-                    elif data_source == 'tab4':
+                    elif data_source == 'tab3':
                         # 4탭: 말소 (여러 건 처리)
                         malso_list = st.session_state.get('wetax_malso_list', [])
                         
@@ -4498,14 +4501,14 @@ with tab6:
                                     "tax_base": None
                                 })
                     
-                    elif data_source == 'tab5':
+                    elif data_source == 'tab1':
                         # 5탭: 1금융권 설정/주소변경
                         creditor_name = st.session_state.get('wetax_creditor_name', '')
                         creditor_corp_num = st.session_state.get('wetax_creditor_corp_num', '')
                         creditor_addr = st.session_state.get('wetax_creditor_addr', '')
                         property_addr = st.session_state.get('wetax_property_addr', '')
                         tax_base = remove_commas(st.session_state.get('wetax_amount', '0'))
-                        owners = st.session_state.get('wetax_tab5_owners', [])
+                        owners = st.session_state.get('wetax_tab1_owners', [])
                         
                         front, back = parse_corp_num(creditor_corp_num)
                         road_addr, detail_addr = extract_road_address(creditor_addr)

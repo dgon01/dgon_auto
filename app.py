@@ -3385,7 +3385,6 @@ with tab4:
                 
                 # 선택 드롭다운을 "직접입력"으로 (1탭에서 가져온 값이므로)
                 st.session_state['malso_obligor_select'] = "직접입력"
-                st.session_state['_prev_obligor_select'] = "직접입력"
             
             # 부동산 표시
             st.session_state['malso_estate_detail'] = st.session_state.get('estate_text', '')
@@ -3404,7 +3403,6 @@ with tab4:
             st.session_state['malso_obligor_rep'] = ''
             st.session_state['malso_obligor_branch'] = ''
             st.session_state['malso_obligor_select'] = "직접입력"
-            st.session_state['_prev_obligor_select'] = "직접입력"
             st.session_state['malso_obligor_name_input'] = ''
             st.session_state['malso_obligor_id_input'] = ''
             st.session_state['malso_obligor_addr_input'] = ''
@@ -3484,40 +3482,36 @@ with tab4:
     # 2. 등기의무자 / 등기권리자 입력
     col_input1, col_input2 = st.columns(2)
     
+    # 콜백 함수 정의
+    def on_obligor_change():
+        selected = st.session_state.get('malso_obligor_select', '직접입력')
+        if selected and selected != "직접입력":
+            obligor_info = OBLIGORS.get(selected, {})
+            st.session_state['malso_obligor_name_input'] = selected
+            st.session_state['malso_obligor_id_input'] = obligor_info.get("corp_num", "")
+            st.session_state['malso_obligor_addr_input'] = obligor_info.get("addr", "")
+            st.session_state['malso_obligor_rep_input'] = obligor_info.get("rep", "")
+            st.session_state['malso_obligor_branch_input'] = obligor_info.get("branch", "")
+        else:
+            st.session_state['malso_obligor_name_input'] = ""
+            st.session_state['malso_obligor_id_input'] = ""
+            st.session_state['malso_obligor_addr_input'] = ""
+            st.session_state['malso_obligor_rep_input'] = ""
+            st.session_state['malso_obligor_branch_input'] = ""
+    
     with col_input1:
         st.markdown(f"#### 1️⃣ 등기의무자 ({obligor_label})")
         with st.container(border=True):
             # 등기의무자 선택
             obligor_options = list(OBLIGORS.keys())
             
-            # 이전 선택값 저장
-            prev_selected = st.session_state.get('_prev_obligor_select', None)
-            
             selected_obligor = st.selectbox(
                 "등기의무자 선택",
                 options=obligor_options,
                 key="malso_obligor_select",
-                index=0
+                index=0,
+                on_change=on_obligor_change
             )
-            
-            # 선택이 변경되었으면 session_state 업데이트
-            if prev_selected != selected_obligor:
-                st.session_state['_prev_obligor_select'] = selected_obligor
-                if selected_obligor and selected_obligor != "직접입력":
-                    obligor_info = OBLIGORS.get(selected_obligor, {})
-                    st.session_state['malso_obligor_name_input'] = selected_obligor
-                    st.session_state['malso_obligor_id_input'] = obligor_info.get("corp_num", "")
-                    st.session_state['malso_obligor_addr_input'] = obligor_info.get("addr", "")
-                    st.session_state['malso_obligor_rep_input'] = obligor_info.get("rep", "")
-                    st.session_state['malso_obligor_branch_input'] = obligor_info.get("branch", "")
-                else:
-                    # 직접입력 선택 시 빈값
-                    st.session_state['malso_obligor_name_input'] = ""
-                    st.session_state['malso_obligor_id_input'] = ""
-                    st.session_state['malso_obligor_addr_input'] = ""
-                    st.session_state['malso_obligor_rep_input'] = ""
-                    st.session_state['malso_obligor_branch_input'] = ""
-                st.rerun()
             
             # 입력 필드 (수정 가능)
             obligor_name = st.text_input("성명(법인명)", key="malso_obligor_name_input", placeholder="주식회사티플레인대부")
@@ -3853,21 +3847,23 @@ with tab5:
         key='registry_upload_tab5'
     )
     
+    # PDF 업로드 시 추출 버튼
     if uploaded_registry is not None:
-        try:
-            # 기존 parse_registry_pdf 함수 사용
-            data, debug = parse_registry_pdf(uploaded_registry)
-            
-            if debug["errors"]:
-                for err in debug["errors"]:
-                    st.error(f"❌ {err}")
-            else:
-                formatted = format_estate_text(data)
-                st.session_state['tab5_estate'] = formatted
-                st.success("✅ 부동산표시 추출 완료!")
-                st.rerun()
-        except Exception as e:
-            st.error(f"❌ PDF 파싱 오류: {e}")
+        if st.button("📋 부동산표시 추출", key='extract_estate_btn_tab5', use_container_width=True):
+            try:
+                # 기존 parse_registry_pdf 함수 사용
+                data, debug = parse_registry_pdf(uploaded_registry)
+                
+                if debug["errors"]:
+                    for err in debug["errors"]:
+                        st.error(f"❌ {err}")
+                else:
+                    formatted = format_estate_text(data)
+                    st.session_state['tab5_estate'] = formatted
+                    st.success("✅ 부동산표시 추출 완료!")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"❌ PDF 파싱 오류: {e}")
     
     estate_text = st.text_area(
         "부동산 표시 (자동 추출 또는 직접 입력)",

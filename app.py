@@ -3850,24 +3850,33 @@ with tab5:
     # PDF 업로드 시 추출 버튼
     if uploaded_registry is not None:
         if st.button("📋 부동산표시 추출", key='extract_estate_btn_tab5', use_container_width=True):
-            try:
-                # 기존 parse_registry_pdf 함수 사용
-                data, debug = parse_registry_pdf(uploaded_registry)
-                
-                if debug["errors"]:
-                    for err in debug["errors"]:
-                        st.error(f"❌ {err}")
-                else:
-                    formatted = format_estate_text(data)
-                    st.session_state['tab5_estate'] = formatted
-                    st.success("✅ 부동산표시 추출 완료!")
-                    st.rerun()
-            except Exception as e:
-                st.error(f"❌ PDF 파싱 오류: {e}")
+            with st.spinner("등기부 분석 중..."):
+                try:
+                    # 기존 parse_registry_pdf 함수 사용
+                    data, debug = parse_registry_pdf(uploaded_registry)
+                    
+                    if debug["errors"]:
+                        for err in debug["errors"]:
+                            st.error(f"❌ {err}")
+                    else:
+                        formatted = format_estate_text(data)
+                        st.session_state['tab5_estate_input'] = formatted
+                        st.session_state['_tab5_extract_done'] = True
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"❌ PDF 파싱 오류: {e}")
+    
+    # 추출 완료 메시지 (rerun 후 표시)
+    if st.session_state.get('_tab5_extract_done'):
+        st.success("✅ 부동산표시 추출 완료!")
+        st.session_state['_tab5_extract_done'] = False
+    
+    # 초기값 설정
+    if 'tab5_estate_input' not in st.session_state:
+        st.session_state['tab5_estate_input'] = ''
     
     estate_text = st.text_area(
         "부동산 표시 (자동 추출 또는 직접 입력)",
-        value=st.session_state.get('tab5_estate', ''),
         height=250,
         key='tab5_estate_input'
     )

@@ -3757,6 +3757,13 @@ with tab1:
     
     owner_cols = st.columns(3)
     
+    # 물건지 주소 복사 pending 처리
+    for i in range(1, 4):
+        pending_key = f'_pending_tab5_owner{i}_addr'
+        if st.session_state.get(pending_key):
+            st.session_state[f'tab5_owner{i}_addr_input'] = st.session_state[pending_key]
+            del st.session_state[pending_key]
+    
     for i in range(1, 4):
         with owner_cols[i-1]:
             st.markdown(f"**등기의무자 {i}**")
@@ -3774,7 +3781,7 @@ with tab1:
             with addr_col2:
                 st.markdown("<div style='height: 28px'></div>", unsafe_allow_html=True)
                 if st.button("📍", key=f'tab5_addr_copy_{i}', help="물건지 주소 복사"):
-                    st.session_state[f'tab5_owner{i}_addr_input'] = st.session_state.get('tab5_property_addr', '')
+                    st.session_state[f'_pending_tab5_owner{i}_addr'] = st.session_state.get('tab5_property_addr', '')
                     st.rerun()
     
     st.markdown("---")

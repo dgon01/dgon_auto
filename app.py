@@ -252,7 +252,7 @@ TEMPLATE_FILENAMES = {
     "공동담보": "3.pdf",
     "자필": "자필서명정보 템플릿.pdf",
     "영수증": "receipt_template.xlsx",
-    "확인서면": "확인서면.pdf",
+    "확인서면": "확인서면_개인.pdf",
     "설정_위임장": "위임장.pdf"
 }
 
@@ -2586,7 +2586,7 @@ with tab1:
         if confirm_template_path:
             st.success("✅ 확인서면 템플릿 준비완료")
         else:
-            st.warning("⚠️ 확인서면.pdf 템플릿 없음")
+            st.warning("⚠️ 확인서면_개인.pdf 템플릿 없음")
         
         if st.button("📄 확인서면\nPDF 생성", key="generate_confirm_pdf", disabled=confirm_disabled, use_container_width=True):
             if not LIBS_OK:

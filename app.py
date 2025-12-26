@@ -250,10 +250,8 @@ TEMPLATE_FILENAMES = {
     "개인": "1.pdf",
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
-    "자필": "자필서명정보_서면_템플릿.pdf",
-    "영수증": "receipt_template.xlsx",
-    "확인서면": "확인서면_개인.pdf",
-    "설정_위임장": "위임장.pdf"
+    "자필": "자필서명정보 템플릿.pdf",
+    "영수증": "receipt_template.xlsx"
 }
 
 CREDITORS = {
@@ -264,6 +262,125 @@ CREDITORS = {
     "(주)마젤란트러스트대부 대표이사 김병수": {"addr": "서울특별시 서초구 강남대로34길 7, 7층(양재동,이안빌딩)", "corp_num": "110111-6649979", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
     "(주)하이클래스대부 사내이사 성윤호": {"addr": "서울특별시 강남구 도곡로 188, 3층 4호(도곡동,도곡스퀘어)", "corp_num": "110111-0933512", "fee": {"제증명": 50000, "교통비": 100000, "원인증서": 50000}},
     "㈜엘하비스트대부 대표이사 김상수": {"addr": "서울특별시 중구 무교로 15, 16층(무교동,남강건설회관빌딩)", "corp_num": "110111-3648627", "fee": {"제증명": 20000, "교통비": 0, "원인증서": 0}}
+}
+
+# =============================================================================
+# 등기의무자(근저당권자) 목록 - 말소용
+# =============================================================================
+# name: 법인명, addr: 주소, corp_num: 법인등록번호, rep: 대표자직위+성명, branch: 기본 취급지점
+OBLIGORS = {
+    # === 대부업체 ===
+    "(주)티플레인대부": {
+        "addr": "서울특별시 마포구 삼개로16, 2신관1층103호(도화동,근신빌딩)",
+        "corp_num": "110111-7350161",
+        "rep": "대표이사 윤웅원",
+        "branch": ""
+    },
+    "(주)유노스프레스티지대부": {
+        "addr": "서울특별시 강남구 압구정로28길24, 5층 501호(신사동,디앤씨빌딩)",
+        "corp_num": "110111-4138560",
+        "rep": "사내이사 한은수",
+        "branch": ""
+    },
+    "(주)파트너스대부": {
+        "addr": "부산광역시 부산진구 서면문화로 43, 2층(부전동)",
+        "corp_num": "180111-1452175",
+        "rep": "사내이사 허성",
+        "branch": ""
+    },
+    "(주)드림앤캐쉬대부": {
+        "addr": "서울특별시 강남구 압구정로28길24, 6층 601호(신사동,디앤씨빌딩)",
+        "corp_num": "110111-4176552",
+        "rep": "대표이사 김재섭",
+        "branch": ""
+    },
+    "(주)마젤란트러스트대부": {
+        "addr": "서울특별시 서초구 강남대로34길 7, 7층(양재동,이안빌딩)",
+        "corp_num": "110111-6649979",
+        "rep": "대표이사 김병수",
+        "branch": ""
+    },
+    "(주)하이클래스대부": {
+        "addr": "서울특별시 강남구 도곡로 188, 3층 4호(도곡동,도곡스퀘어)",
+        "corp_num": "110111-0933512",
+        "rep": "사내이사 성윤호",
+        "branch": ""
+    },
+    "(주)엘하비스트대부": {
+        "addr": "서울특별시 중구 무교로 15, 16층(무교동,남강건설회관빌딩)",
+        "corp_num": "110111-3648627",
+        "rep": "대표이사 김상수",
+        "branch": ""
+    },
+    # === 1금융권 ===
+    "주식회사 하나은행": {
+        "addr": "서울특별시 중구 을지로 35(을지로1가)",
+        "corp_num": "110111-0672538",
+        "rep": "지배인 강석윤",
+        "branch": "업무혁신부"
+    },
+    "주식회사 국민은행": {
+        "addr": "서울특별시 영등포구 국제금융로8길 26(여의도동)",
+        "corp_num": "110111-2365321",
+        "rep": "지배인 김동선",
+        "branch": "대출실행센터"
+    },
+    "주식회사 우리은행": {
+        "addr": "서울특별시 중구 소공로51(회현동1가)",
+        "corp_num": "110111-0023393",
+        "rep": "지배인 김미정",
+        "branch": "본점"
+    },
+    "주식회사 신한은행": {
+        "addr": "서울특별시 중구 세종대로9길 20(태평로2가)",
+        "corp_num": "110111-0012809",
+        "rep": "지배인 홍길동",
+        "branch": ""
+    },
+    "농협은행주식회사": {
+        "addr": "서울특별시 중구 통일로 120(충정로1가)",
+        "corp_num": "110111-4809385",
+        "rep": "지배인 전경호",
+        "branch": "가양중앙지점"
+    },
+    "북파주농업협동조합": {
+        "addr": "경기도 파주시 문산읍 문향로 75",
+        "corp_num": "115636-0000297",
+        "rep": "조합장 이갑영",
+        "branch": "적성지점"
+    },
+    "삼성화재해상보험주식회사": {
+        "addr": "서울특별시 서초구 서초대로74길 14(서초동)",
+        "corp_num": "110111-0005078",
+        "rep": "대표이사 이문화",
+        "branch": ""
+    },
+    # === 직접입력 ===
+    "직접입력": {
+        "addr": "",
+        "corp_num": "",
+        "rep": "",
+        "branch": ""
+    }
+}
+
+# =============================================================================
+# 1금융권 좌표 설정 (부동산표시 영역)
+# =============================================================================
+# 좌표: x=시작X, y_top=PDF상단기준Y, box_height=박스높이
+BANK_COORDS = {
+    "하나은행": {
+        "설정계약서": {"x": 42, "y_top": 114, "box_height": 140},
+        "위임장": {"x": 89, "y_top": 116, "box_height": 289}
+    },
+    "신한은행": {
+        "설정계약서": {"x": 49, "y_top": 273, "box_height": 177},
+        "위임장": {"x": 100, "y_top": 127, "box_height": 251}
+    },
+    "우리은행": {
+        "설정계약서": {"x": 82, "y_top": 84, "box_height": 252},
+        "위임장": {"x": 85, "y_top": 118, "box_height": 228}
+    }
 }
 
 def resource_path(relative_path):
@@ -548,20 +665,14 @@ def make_signature_pdf(template_path, data):
     writer.write(output_buffer); output_buffer.seek(0)
     return output_buffer
 
-def make_setting_signature_pdf(template_path, data):
-    """
-    설정용 자필서명정보 PDF 생성
-    - 개인: 채무자 1페이지
-    - 3자담보: 소유자 1페이지
-    - 공동담보: 채무자 + 소유자 2페이지
-    
-    좌표:
-    - 부동산 표시: estate_x=150, estate_y=height-170
-    - 등기의무자 성명: 250, 322
-    - 등기의무자 주민번호: 250, 298
-    - 등기목적 (근저당권설정): (36.0, 558.5) → RL Y = 842 - 570 ≈ 272, 좌측정렬
-    - 작성일자: 중앙, 150
-    """
+# =============================================================================
+# 1금융권 PDF 생성 함수들
+# =============================================================================
+
+def make_bank_estate_pdf(bank_name, doc_type, estate_text):
+    """1금융권 설정계약서/위임장 PDF 생성 (부동산표시만, 빈 PDF, 자동 크기 조절)"""
+    packet = BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
     width, height = A4
     
     try:
@@ -570,97 +681,56 @@ def make_setting_signature_pdf(template_path, data):
     except:
         font_name = 'Helvetica'
     
-    contract_type = data.get('contract_type', '개인')
-    reg_purpose = data.get('reg_purpose', '근저당권설정')  # 1탭: 근저당권설정, 4탭: XX말소
+    coords = BANK_COORDS.get(bank_name, {}).get(doc_type, {})
+    x = coords.get("x", 50)
+    y_top = coords.get("y_top", 100)
+    box_height = coords.get("box_height", 200)
     
-    # 페이지별 데이터 준비
-    pages_data = []
+    # y 좌표 변환 (PDF 상단 기준 → reportlab 좌표)
+    y_start = height - y_top
     
-    if contract_type == '개인':
-        pages_data.append({
-            'name': data.get('debtor_name', ''),
-            'rrn': data.get('debtor_rrn', '')
-        })
-    elif contract_type == '3자담보':
-        pages_data.append({
-            'name': data.get('owner_name', ''),
-            'rrn': data.get('owner_rrn', '')
-        })
-    else:  # 공동담보
-        pages_data.append({
-            'name': data.get('debtor_name', ''),
-            'rrn': data.get('debtor_rrn', '')
-        })
-        pages_data.append({
-            'name': data.get('owner_name', ''),
-            'rrn': data.get('owner_rrn', '')
-        })
+    lines = [line for line in (estate_text.split("\n") if estate_text else []) if line.strip()]
+    num_lines = len(lines)
     
-    # 오버레이 PDF 생성
-    packet = BytesIO()
-    c = canvas.Canvas(packet, pagesize=A4)
-    
-    for page_data in pages_data:
-        c.setFont(font_name, 10)
-        
-        # 부동산 표시 (자동 크기 조절)
-        estate_text = data.get('estate_text', '')
-        draw_estate_auto_fit(c, font_name, estate_text, 
-                            box_x=150, box_y_start=height-170, box_height=240,
-                            max_font=10, min_font=7, max_line_h=14, min_line_h=10)
-        
-        # 등기의무자 성명
-        c.setFont(font_name, 10)
-        if page_data['name']:
-            c.drawString(250, 322, str(page_data['name']))
-        
-        # 등기의무자 주민번호
-        if page_data['rrn']:
-            c.drawString(250, 298, str(page_data['rrn']))
-        
-        # 등기목적 (좌표: 136.5, 558.5, 322.5, 580.5) 
-        # 박스 RL y: 261.5 ~ 283.5, 상하 중앙 정렬 (baseline 보정)
-        c.setFont(font_name, 11)
-        c.drawString(138, 269, reg_purpose)
-        
-        # 작성일자 (좌표: 70, 673, 527, 693)
-        # PyMuPDF y 중앙 683 → RL y = 842 - 683 = 159, 중앙정렬
-        if data.get("date"):
-            c.setFont(font_name, 11)
-            text = str(data["date"])
-            tw = c.stringWidth(text, font_name, 11)
-            c.drawString((width - tw) / 2, 159, text)
-        
+    if num_lines == 0:
         c.showPage()
+        c.save()
+        packet.seek(0)
+        return packet
     
+    # 폰트 크기와 줄 간격 자동 계산 (박스 높이 내에 맞추기)
+    # 기본: 폰트 9pt, 줄간격 12pt
+    # 텍스트가 많으면 폰트와 줄간격을 줄임
+    max_font = 9
+    min_font = 6
+    
+    # 필요한 총 높이 계산 (줄 수 * 줄간격)
+    # 줄간격은 폰트 크기의 약 1.3배
+    for font_size in [9, 8.5, 8, 7.5, 7, 6.5, 6]:
+        line_h = font_size * 1.35
+        total_height = num_lines * line_h
+        if total_height <= box_height:
+            break
+    else:
+        # 최소 폰트로도 안 맞으면 줄 간격 더 줄임
+        font_size = min_font
+        line_h = box_height / num_lines if num_lines > 0 else 10
+    
+    c.setFont(font_name, font_size)
+    
+    for i, line in enumerate(lines):
+        c.drawString(x, y_start - (i * line_h), line)
+    
+    c.showPage()
     c.save()
     packet.seek(0)
-    
-    # 템플릿과 병합
-    overlay_pdf = PdfReader(packet)
-    writer = PdfWriter()
-    output_buffer = BytesIO()
-    
-    for i in range(len(pages_data)):
-        template_pdf = PdfReader(template_path)
-        template_page = template_pdf.pages[0]
-        template_page.merge_page(overlay_pdf.pages[i])
-        writer.add_page(template_page)
-    
-    writer.write(output_buffer)
-    output_buffer.seek(0)
-    return output_buffer
+    return packet
 
-def make_setting_power_pdf(template_path, data):
-    """
-    설정용 위임장 PDF 생성
-    - 개인: 채무자(의무자) 1페이지
-    - 3자담보: 소유자(의무자) 1페이지
-    - 공동담보: 1페이지에 채무자 + 소유자 모두 표시
-    
-    좌표는 4탭 말소 위임장과 동일하게 맞춤
-    """
-    width, height = A4  # 595.28, 841.89
+def make_bank_signature_pdf(template_path, data):
+    """1금융권 자필서명정보 PDF 생성"""
+    packet = BytesIO()
+    c = canvas.Canvas(packet, pagesize=A4)
+    width, height = A4
     
     try:
         pdfmetrics.registerFont(TTFont('Korean', FONT_PATH))
@@ -668,114 +738,36 @@ def make_setting_power_pdf(template_path, data):
     except:
         font_name = 'Helvetica'
     
-    contract_type = data.get('contract_type', '개인')
+    # 부동산표시 (기존 템플릿 좌표 사용)
+    c.setFont(font_name, 10)
+    estate_x = 150
+    estate_y = height - 170
+    line_h = 14
     
-    # 권리자(채권자) 정보 - 회사명과 대표이사 분리
-    creditor_full = data.get('creditor_name', '')
-    creditor_addr = data.get('creditor_addr', '')
+    estate_text = data.get("estate_text", "")
+    if estate_text:
+        for i, line in enumerate(str(estate_text).split("\n")[:17]):
+            if line.strip():
+                c.drawString(estate_x, estate_y - (i * line_h), line)
     
-    # "(주)티플레인대부 대표이사 윤웅원" → 회사명, 대표이사명 분리
-    if '대표이사' in creditor_full:
-        parts = creditor_full.split('대표이사')
-        creditor_company = parts[0].strip()
-        creditor_rep = parts[1].strip() if len(parts) > 1 else ''
-    elif '사내이사' in creditor_full:
-        parts = creditor_full.split('사내이사')
-        creditor_company = parts[0].strip()
-        creditor_rep = parts[1].strip() if len(parts) > 1 else ''
-    else:
-        creditor_company = creditor_full
-        creditor_rep = ''
+    # 채무자 정보
+    if data.get("debtor_name"):
+        c.drawString(250, 322, str(data["debtor_name"]))
+    if data.get("debtor_rrn"):
+        c.drawString(250, 298, str(data["debtor_rrn"]))
     
-    # 오버레이 PDF 생성
-    packet = BytesIO()
-    c = canvas.Canvas(packet, pagesize=A4)
+    # 소유자 정보
+    if data.get("owner_name"):
+        c.drawString(400, 322, str(data["owner_name"]))
+    if data.get("owner_rrn"):
+        c.drawString(400, 298, str(data["owner_rrn"]))
     
-    c.setFont(font_name, 9)
-    
-    # 부동산 표시 (자동 크기 조절) - 박스 높이 약 250
-    estate_text = data.get('estate_text', '')
-    draw_estate_auto_fit(c, font_name, estate_text, 
-                        box_x=105, box_y_start=745, box_height=250,
-                        max_font=9, min_font=6, max_line_h=12, min_line_h=9)
-    
-    c.setFont(font_name, 9)
-    
-    # 등기원인과 그 년월일 - 작성일자 (말소와 동일 높이: 478)
-    cause_date = data.get('date', '')
-    c.drawString(175, 478, cause_date)
-    
-    # "설정계약" - 작성일자와 같은 높이 (478), 우측정렬
-    c.drawRightString(528, 478, "설정계약")
-    
-    # 등기의 목적 (말소와 동일 높이: 458)
-    c.drawString(175, 458, "근저당권설정")
-    
-    # 채권최고액 - 좌측 라벨과 같은 높이 (416)
-    claim_amount = data.get('claim_amount', '')
-    if claim_amount:
-        c.drawString(175, 416, f"금{claim_amount}")
-    
-    # 등기의무자 박스 (위쪽) - RL y: 157~254
-    c.setFont(font_name, 9)
-    label_x = 62
-    content_x = 80  # 들여쓰기
-    
-    if contract_type == '개인':
-        debtor_name = data.get('debtor_name', '')
-        debtor_addr = data.get('debtor_addr', '')
-        
-        # 라벨: 채무자 겸 근저당권설정자
-        c.drawString(label_x, 240, "채무자 겸 근저당권설정자")
-        c.drawString(content_x, 225, debtor_name)
-        if debtor_addr:
-            if len(debtor_addr) > 48:
-                c.drawString(content_x, 210, debtor_addr[:48])
-                c.drawString(content_x, 195, debtor_addr[48:])
-            else:
-                c.drawString(content_x, 210, debtor_addr)
-                
-    elif contract_type == '3자담보':
-        debtor_name = data.get('debtor_name', '')
-        owner_name = data.get('owner_name', '')
-        owner_addr = data.get('owner_addr', '')
-        
-        # 채무자
-        c.drawString(label_x, 240, "채무자")
-        c.drawString(content_x, 225, debtor_name)
-        # 근저당권설정자
-        c.drawString(label_x, 205, "근저당권설정자")
-        c.drawString(content_x, 190, owner_name)
-        if owner_addr:
-            c.drawString(content_x, 175, owner_addr[:48] if len(owner_addr) > 48 else owner_addr)
-                
-    else:  # 공동담보
-        debtor_name = data.get('debtor_name', '')
-        debtor_addr = data.get('debtor_addr', '')
-        owner_name = data.get('owner_name', '')
-        owner_addr = data.get('owner_addr', '')
-        
-        # 채무자 겸 근저당권설정자
-        c.drawString(label_x, 240, "채무자 겸 근저당권설정자")
-        c.drawString(content_x, 225, debtor_name)
-        if debtor_addr:
-            c.drawString(content_x, 210, debtor_addr[:48] if len(debtor_addr) > 48 else debtor_addr)
-        
-        # 근저당권설정자
-        c.drawString(label_x, 190, "근저당권설정자")
-        c.drawString(content_x, 175, owner_name)
-        if owner_addr:
-            c.drawString(content_x, 160, owner_addr[:48] if len(owner_addr) > 48 else owner_addr)
-    
-    # 등기권리자 박스 (아래쪽) - RL y: 60~153
-    # 형식: 근저당권자 / 회사명 / 주소 / 대표이사 xxx
-    c.setFont(font_name, 9)
-    
-    c.drawString(label_x, 140, "근저당권자")
-    c.drawString(content_x, 125, creditor_company)
-    c.drawString(content_x, 110, creditor_addr)
-    if creditor_rep:
-        c.drawString(content_x, 95, f"대표이사 {creditor_rep}")
+    # 날짜 (중앙)
+    if data.get("date"):
+        c.setFont(font_name, 11)
+        text = str(data["date"])
+        tw = c.stringWidth(text, font_name, 11)
+        c.drawString((width - tw) / 2, 150, text)
     
     c.showPage()
     c.save()
@@ -788,209 +780,17 @@ def make_setting_power_pdf(template_path, data):
     output_buffer = BytesIO()
     
     template_page = template_pdf.pages[0]
-    template_page.merge_page(overlay_pdf.pages[0])
+    overlay_page = overlay_pdf.pages[0]
+    template_page.merge_page(overlay_page)
     writer.add_page(template_page)
     
     writer.write(output_buffer)
     output_buffer.seek(0)
     return output_buffer
 
-def make_confirmation_pdf(template_path, data):
-    """
-    확인서면 PDF 생성
-    - 개인: 채무자 정보 1페이지
-    - 3자담보: 설정자(소유자) 정보 1페이지
-    - 공동담보: 채무자 1페이지 + 설정자 1페이지 = 2페이지
-    
-    좌표 (PyMuPDF 기준, 좌상단 원점):
-    - 부동산의 표시: (34.0, 67.0, 560.0, 317.0)
-    - 채무자(소유자) 성명: (177.0, 323.0, 477.0, 341.0)
-    - 채무자(소유자) 주소: (176.0, 344.0, 477.0, 384.0)
-    - 채무자(소유자) 주민번호: (177.0, 388.0, 476.0, 406.0)
-    - 등기유형(근저당권설정/소유권이전): (486.0, 354.0, 557.0, 397.0)
-    - 작성일자: (31.0, 718.0, 564.0, 744.0)
-    """
-    width, height = A4  # 595.28, 841.89
-    
-    try:
-        pdfmetrics.registerFont(TTFont('Korean', FONT_PATH))
-        font_name = 'Korean'
-    except:
-        font_name = 'Helvetica'
-    
-    contract_type = data.get('contract_type', '개인')
-    
-    # 페이지별 데이터 준비
-    pages_data = []
-    
-    if contract_type == '개인':
-        # 개인: 채무자 정보만
-        pages_data.append({
-            'name': data.get('debtor_name', ''),
-            'addr': data.get('debtor_addr', ''),
-            'rrn': data.get('debtor_rrn', '')
-        })
-    elif contract_type == '3자담보':
-        # 3자담보: 설정자(소유자) 정보만
-        pages_data.append({
-            'name': data.get('owner_name', ''),
-            'addr': data.get('owner_addr', ''),
-            'rrn': data.get('owner_rrn', '')
-        })
-    else:  # 공동담보
-        # 공동담보: 채무자 1페이지 + 설정자 1페이지
-        pages_data.append({
-            'name': data.get('debtor_name', ''),
-            'addr': data.get('debtor_addr', ''),
-            'rrn': data.get('debtor_rrn', '')
-        })
-        pages_data.append({
-            'name': data.get('owner_name', ''),
-            'addr': data.get('owner_addr', ''),
-            'rrn': data.get('owner_rrn', '')
-        })
-    
-    # 오버레이 PDF 생성
-    packet = BytesIO()
-    c = canvas.Canvas(packet, pagesize=A4)
-    
-    for page_data in pages_data:
-        # 부동산의 표시 (박스: 34, 67 ~ 560, 317) - 자동 크기 조절
-        estate_text = data.get('estate_text', '')
-        draw_estate_auto_fit(c, font_name, estate_text, 
-                            box_x=36, box_y_start=height-80, box_height=235,
-                            max_font=10, min_font=7, max_line_h=13, min_line_h=10)
-        
-        # 성명 (박스: 177, 323 ~ 477, 341) - 폰트 10pt 통일
-        name_x = 180
-        name_y = height - 335
-        c.setFont(font_name, 10)
-        if page_data['name']:
-            c.drawString(name_x, name_y, page_data['name'])
-        
-        # 주소 (박스: 176, 344 ~ 477, 384) - 폰트 10pt, 상하 중앙정렬
-        # 박스 y중앙 = (344+384)/2 = 364 → RL y = 842 - 364 = 478
-        addr_x = 180
-        c.setFont(font_name, 10)
-        if page_data['addr']:
-            addr = page_data['addr']
-            if len(addr) > 30:
-                # 2줄: 중앙에서 위아래로 배치
-                split_idx = addr.rfind(' ', 0, 30)
-                if split_idx == -1:
-                    split_idx = 30
-                c.drawString(addr_x, height - 357, addr[:split_idx])
-                c.drawString(addr_x, height - 371, addr[split_idx:].strip())
-            else:
-                # 1줄: 박스 중앙
-                c.drawString(addr_x, height - 364, addr)
-        
-        # 주민번호 (박스: 177, 388 ~ 476, 406) - 폰트 10pt 통일
-        rrn_x = 180
-        rrn_y = height - 400
-        c.setFont(font_name, 10)
-        if page_data['rrn']:
-            c.drawString(rrn_x, rrn_y, page_data['rrn'])
-        
-        # 등기의 목적 - 가로쓰기 (박스: 486, 354 ~ 557, 397)
-        # 폰트 10pt로 통일, 상하좌우 중앙 정렬
-        reg_type = data.get('reg_type', '근저당권설정')
-        if reg_type:
-            c.setFont(font_name, 10)
-            # 박스 중앙 y = (354+397)/2 = 375.5 → RL y = 842 - 375.5 ≈ 466
-            reg_type_y = height - 379
-            # 텍스트 좌우 중앙 정렬 (박스 x: 486~557, 중앙 521.5)
-            text_width = c.stringWidth(reg_type, font_name, 10)
-            reg_type_x = 521 - (text_width / 2)
-            c.drawString(reg_type_x, reg_type_y, reg_type)
-        
-        # 작성일자 (박스: 31, 718 ~ 564, 744) - 중앙 정렬
-        date_y = height - 735
-        c.setFont(font_name, 12)
-        date_text = data.get('date', '')
-        if date_text:
-            text_width = c.stringWidth(date_text, font_name, 12)
-            date_x = (width - text_width) / 2
-            c.drawString(date_x, date_y, date_text)
-        
-        c.showPage()
-    
-    c.save()
-    packet.seek(0)
-    
-    # 템플릿과 병합
-    overlay_pdf = PdfReader(packet)
-    writer = PdfWriter()
-    output_buffer = BytesIO()
-    
-    # 각 오버레이 페이지마다 템플릿 1페이지와 병합
-    for i in range(len(pages_data)):
-        # 템플릿을 매번 새로 읽어서 페이지 복제 문제 방지
-        template_pdf = PdfReader(template_path)
-        template_page = template_pdf.pages[0]
-        template_page.merge_page(overlay_pdf.pages[i])
-        writer.add_page(template_page)
-    
-    writer.write(output_buffer)
-    output_buffer.seek(0)
-    return output_buffer
-
-def draw_estate_auto_fit(c, font_name, estate_text, box_x, box_y_start, box_height, 
-                          max_font=10, min_font=6, max_line_h=14, min_line_h=9):
-    """
-    부동산 표시를 박스 내에 자동 맞춤
-    - 텍스트가 많으면 폰트 크기와 줄 간격을 자동으로 줄임
-    """
-    if not estate_text:
-        return
-    
-    lines = [l for l in estate_text.split('\n') if l.strip()]
-    num_lines = len(lines)
-    
-    if num_lines == 0:
-        return
-    
-    # 적합한 폰트 크기 찾기
-    for font_size in range(max_font, min_font - 1, -1):
-        # 폰트 크기에 비례해서 줄 간격 조절
-        line_h = max_line_h - (max_font - font_size) * 0.8
-        line_h = max(line_h, min_line_h)
-        
-        total_height = num_lines * line_h
-        if total_height <= box_height:
-            break
-    
-    # 그래도 안 맞으면 줄 간격 더 줄이기
-    if num_lines * line_h > box_height:
-        line_h = box_height / num_lines
-        line_h = max(line_h, 8)  # 최소 8pt
-    
-    c.setFont(font_name, font_size)
-    
-    for i, line in enumerate(lines):
-        y_pos = box_y_start - (i * line_h)
-        if y_pos < (box_y_start - box_height):
-            break  # 박스 벗어나면 중단
-        c.drawString(box_x, y_pos, line)
-
-def extract_building_only(estate_text):
-    """
-    전세권말소용: 부동산 표시에서 건물 부분만 추출
-    '전유부분의 대지권의 표시' 또는 '대지권의 표시' 이전까지만 반환
-    """
-    if not estate_text:
-        return estate_text
-    
-    lines = estate_text.split('\n')
-    result_lines = []
-    
-    for line in lines:
-        # 대지권 관련 키워드가 나오면 중단
-        if '대지권의 표시' in line or '대지권의 목적' in line:
-            break
-        result_lines.append(line)
-    
-    return '\n'.join(result_lines)
+# =============================================================================
+# 말소 문서 PDF 생성 함수들
+# =============================================================================
 
 def make_malso_signature_pdf(template_path, data):
     """말소용 자필서명정보 PDF 생성 (탭2와 유사)"""
@@ -1006,15 +806,16 @@ def make_malso_signature_pdf(template_path, data):
     
     c.setFont(font_name, 10)
     
-    # 부동산 표시 (자동 크기 조절)
+    # 부동산 표시
+    estate_x = 150
+    estate_y = height - 170
+    line_h = 14
     estate_list = data.get('estate_list', [])
-    estate_text = '\n'.join(estate_list) if estate_list else ''
-    draw_estate_auto_fit(c, font_name, estate_text, 
-                        box_x=150, box_y_start=height-170, box_height=240,
-                        max_font=10, min_font=7, max_line_h=14, min_line_h=10)
+    for i, line in enumerate(estate_list[:17]):
+        if line.strip():
+            c.drawString(estate_x, estate_y - (i * line_h), line)
     
     # 권리자 정보 (최대 2명)
-    c.setFont(font_name, 10)
     holders = data.get('holders', [])
     if len(holders) >= 1:
         c.drawString(250, 322, str(holders[0].get('name', '')))
@@ -1023,20 +824,12 @@ def make_malso_signature_pdf(template_path, data):
         c.drawString(400, 322, str(holders[1].get('name', '')))
         c.drawString(400, 298, str(holders[1].get('rrn', '')))
     
-    # 등기목적 (좌표: 136.5, 558.5, 322.5, 580.5) 
-    # 박스 RL y: 261.5 ~ 283.5, 상하 중앙 정렬 (baseline 보정)
-    reg_purpose = data.get('reg_purpose', '')
-    if reg_purpose:
-        c.setFont(font_name, 11)
-        c.drawString(138, 269, reg_purpose)
-        c.setFont(font_name, 10)
-    
-    # 작성일자 (좌표: 70, 673, 527, 693) → RL y = 159, 중앙정렬
+    # 날짜 (중앙)
     if data.get("date"):
         c.setFont(font_name, 11)
         text = str(data["date"])
         tw = c.stringWidth(text, font_name, 11)
-        c.drawString((width - tw) / 2, 159, text)
+        c.drawString((width - tw) / 2, 150, text)
     
     c.showPage()
     c.save()
@@ -1075,13 +868,16 @@ def make_malso_power_pdf(template_path, data):
     # 말소할 사항: (172.0, 397.1) ~ (530.3, 455.4), RL Y: 386.6 ~ 444.9
     # 의무자/권리자: (65.1, 590.3) ~ (415.4, 778.9), RL Y: 63.1 ~ 251.7
     
-    # 부동산 표시 (자동 크기 조절) - 박스 높이 약 250
-    estate_text = data.get('estate_text', '')
-    draw_estate_auto_fit(c, font_name, estate_text, 
-                        box_x=105, box_y_start=745, box_height=250,
-                        max_font=9, min_font=6, max_line_h=12, min_line_h=9)
-    
     c.setFont(font_name, 9)
+    
+    # 부동산 표시 (Box 1)
+    estate_x = 105
+    estate_y = 745
+    line_h = 12
+    estate_lines = data.get('estate_text', '').split('\n')
+    for i, line in enumerate(estate_lines[:20]):
+        if line.strip():
+            c.drawString(estate_x, estate_y - (i * line_h), line)
     
     # 등기원인과 그 년월일 (Box 2) - 상하 중앙정렬, RL Y: 470.6 ~ 491.1, 중앙 480.85
     cause_date = data.get('date', '')
@@ -1132,22 +928,27 @@ def make_malso_power_pdf(template_path, data):
     obligor_id = data.get('obligor_id', '')
     obligor_addr = data.get('obligor_addr', '')
     obligor_rep = data.get('obligor_rep', '')
+    obligor_branch = data.get('obligor_branch', '')
     
     # 등기권리자 라벨
     c.setFont(font_name, 8)
     c.drawString(70, 118, "등기권리자")
     c.setFont(font_name, 9)
     
-    # 법인 형식: 주식회사티플레인대부(110111-7350161)
-    if obligor_id:
-        obligor_display = f"{obligor_name}({obligor_id})"
-    else:
-        obligor_display = obligor_name
-    
-    c.drawString(70, 102, obligor_display)
+    # 위임장: 법인등록번호 없이 출력
+    c.drawString(70, 102, obligor_name)
     c.drawString(70, 87, obligor_addr)
-    if obligor_rep:
-        c.drawString(70, 72, f"(대표이사){obligor_rep}")
+    
+    # 취급지점 + 대표자 형식
+    if obligor_branch and obligor_rep:
+        rep_text = f"(취급지점:{obligor_branch}) {obligor_rep}"
+    elif obligor_rep:
+        rep_text = obligor_rep
+    else:
+        rep_text = ""
+    
+    if rep_text:
+        c.drawString(70, 72, rep_text)
     
     c.showPage()
     c.save()
@@ -1198,11 +999,15 @@ def make_malso_termination_pdf(data):
     subtitle_width = c.stringWidth(subtitle, font_name, 11)
     c.drawString(center_x - subtitle_width/2, 720, subtitle)
     
-    # 부동산 표시 내용 (자동 크기 조절) - 박스 높이 약 300
+    # 부동산 표시 내용
+    c.setFont(font_name, 10)
     estate_text = data.get('estate_text', '')
-    draw_estate_auto_fit(c, font_name, estate_text, 
-                        box_x=left_x, box_y_start=695, box_height=290,
-                        max_font=10, min_font=7, max_line_h=13, min_line_h=10)
+    estate_lines = estate_text.split('\n')
+    estate_y = 695
+    line_h = 13
+    for i, line in enumerate(estate_lines[:22]):
+        if line.strip():
+            c.drawString(left_x, estate_y - (i * line_h), line)
     
     # 내용 영역
     c.setFont(font_name, 10)
@@ -1234,12 +1039,13 @@ def make_malso_termination_pdf(data):
     obligor_id = data.get('obligor_id', '')
     obligor_addr = data.get('obligor_addr', '')
     obligor_rep = data.get('obligor_rep', '')
+    obligor_branch = data.get('obligor_branch', '')
     
     # 라벨 (좌측)
     c.setFont(font_name, 10)
     c.drawString(left_x, 280, obligor_label)
     
-    # 내용 (중앙)
+    # 내용 (중앙) - 해지증서는 법인등록번호 포함
     c.setFont(font_name, 10)
     if obligor_id:
         obligor_display = f"{obligor_name}({obligor_id})"
@@ -1253,8 +1059,15 @@ def make_malso_termination_pdf(data):
     addr_width = c.stringWidth(obligor_addr, font_name, 9)
     c.drawString(center_x - addr_width/2, 245, obligor_addr)
     
-    if obligor_rep:
-        rep_text = f"(대표이사){obligor_rep}"
+    # 취급지점 + 대표자 형식
+    if obligor_branch and obligor_rep:
+        rep_text = f"(취급지점:{obligor_branch}) {obligor_rep}"
+    elif obligor_rep:
+        rep_text = obligor_rep
+    else:
+        rep_text = ""
+    
+    if rep_text:
         rep_width = c.stringWidth(rep_text, font_name, 10)
         c.setFont(font_name, 10)
         c.drawString(center_x - rep_width/2, 225, rep_text)
@@ -1306,11 +1119,15 @@ def make_malso_transfer_pdf(data):
     subtitle_width = c.stringWidth(subtitle, font_name, 11)
     c.drawString(center_x - subtitle_width/2, 720, subtitle)
     
-    # 부동산 표시 (자동 크기 조절) - 박스 높이 약 290
+    # 부동산 표시
+    c.setFont(font_name, 10)
     estate_text = data.get('estate_text', '')
-    draw_estate_auto_fit(c, font_name, estate_text, 
-                        box_x=left_x, box_y_start=695, box_height=290,
-                        max_font=10, min_font=7, max_line_h=13, min_line_h=10)
+    estate_lines = estate_text.split('\n')
+    estate_y = 695
+    line_h = 13
+    for i, line in enumerate(estate_lines[:22]):
+        if line.strip():
+            c.drawString(left_x, estate_y - (i * line_h), line)
     
     # 내용
     c.setFont(font_name, 10)
@@ -1346,10 +1163,12 @@ def make_malso_transfer_pdf(data):
     obligor_id = data.get('obligor_id', '')
     obligor_addr = data.get('obligor_addr', '')
     obligor_rep = data.get('obligor_rep', '')
+    obligor_branch = data.get('obligor_branch', '')
     
     c.setFont(font_name, 10)
     c.drawString(left_x, 280, obligor_label)
     
+    # 이관증명서도 법인등록번호 포함
     if obligor_id:
         obligor_display = f"{obligor_name}({obligor_id})"
     else:
@@ -1362,8 +1181,15 @@ def make_malso_transfer_pdf(data):
     addr_width = c.stringWidth(obligor_addr, font_name, 9)
     c.drawString(center_x - addr_width/2, 245, obligor_addr)
     
-    if obligor_rep:
-        rep_text = f"(대표이사){obligor_rep}"
+    # 취급지점 + 대표자 형식
+    if obligor_branch and obligor_rep:
+        rep_text = f"(취급지점:{obligor_branch}) {obligor_rep}"
+    elif obligor_rep:
+        rep_text = obligor_rep
+    else:
+        rep_text = ""
+    
+    if rep_text:
         rep_width = c.stringWidth(rep_text, font_name, 10)
         c.setFont(font_name, 10)
         c.drawString(center_x - rep_width/2, 225, rep_text)
@@ -1563,7 +1389,7 @@ def parse_registry_pdf(uploaded_file):
                         row0_clean = str(row[0]).strip()
                         if re.match(r'^\d+$', row0_clean) or re.match(r'^\d+\n\(전', row0_clean):
                             
-                            # 토지 섹션: 토지번호 + 표시번호 기반으로 최신만 취함
+                            # 토지 섹션: 삭선 감지 적용
                             if current_section == "토지":
                                 소재지 = (row[1] or "") if len(row) > 1 else ""
                                 
@@ -1571,28 +1397,18 @@ def parse_registry_pdf(uploaded_file):
                                 if not re.search(r'(시|군|구|동|리|읍|면)\s', 소재지):
                                     continue
                                 
-                                # 표시번호 추출
-                                표시번호_str = str(row[0]).strip().split('\n')[0]
-                                표시번호 = int(표시번호_str) if 표시번호_str.isdigit() else 0
-                                
-                                # 토지번호 추출 (1., 2. 등)
+                                # 번지 추출
                                 소재지_clean = 소재지.replace('\n', ' ').strip()
-                                토지번호_matches = re.findall(r'(\d+)\.\s*[가-힣]', 소재지_clean)
+                                번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_clean)
+                                번지 = 번지_match.group(1) if 번지_match else None
                                 
-                                # 컬러 PDF면 삭선 체크 (번지 기준)
-                                skip_row = False
-                                if has_color:
-                                    번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_clean)
-                                    번지 = 번지_match.group(1) if 번지_match else None
-                                    if 번지:
-                                        info = page_info[page_idx]
-                                        if is_번지_strikethrough(번지, info['words'], info['red_ys']):
-                                            skip_row = True
+                                # 컬러 PDF면 삭선 체크
+                                if has_color and 번지:
+                                    info = page_info[page_idx]
+                                    if is_번지_strikethrough(번지, info['words'], info['red_ys']):
+                                        continue  # 말소 스킵
                                 
-                                if not skip_row:
-                                    # 각 토지번호별로 저장 (표시번호와 함께)
-                                    for 토지번호 in 토지번호_matches:
-                                        sections["토지"].append((토지번호, 표시번호, row))
+                                sections["토지"].append((번지, row))
                             else:
                                 sections[current_section].append(row)
             
@@ -1649,63 +1465,60 @@ def parse_registry_pdf(uploaded_file):
                     else:
                         result["1동건물표시"] = convert_region(' '.join(content_lines))
             
-            # ===== 토지: 토지번호별로 표시번호가 가장 큰 것만 취함 =====
-            # 그리고 최근 표시번호 범위에 있는 토지만 유효로 간주
-            토지_by_번호 = {}
-            for 토지번호, 표시번호, row in sections["토지"]:
-                if 토지번호 not in 토지_by_번호 or 표시번호 > 토지_by_번호[토지번호][0]:
-                    토지_by_번호[토지번호] = (표시번호, row)
+            # ===== 토지: 같은 번지면 마지막만 =====
+            토지_by_번지 = {}
+            for 번지, row in sections["토지"]:
+                토지_by_번지[번지] = row
             
-            # 모든 토지 항목 중 최대 표시번호 찾기
-            max_표시번호 = max([v[0] for v in 토지_by_번호.values()]) if 토지_by_번호 else 0
+            # 번지 숫자순 정렬
+            토지_items = sorted(토지_by_번지.items(), key=lambda x: (int(re.search(r'^(\d+)', x[0]).group(1)) if x[0] and re.search(r'^(\d+)', x[0]) else 0))
             
-            # 최대 표시번호 - 1 이상인 것만 유효 (최근 변경된 토지만)
-            min_valid_표시번호 = max(1, max_표시번호 - 1)
-            
-            # 토지번호 숫자순 정렬
-            토지_items = sorted(토지_by_번호.items(), key=lambda x: int(x[0]) if x[0] and x[0].isdigit() else 0)
-            
-            for 토지번호, (표시번호, row) in 토지_items:
-                # 최근 표시번호 범위에 없으면 스킵 (말소된 토지)
-                if 표시번호 < min_valid_표시번호:
-                    continue
-                    
+            for idx, (번지, row) in enumerate(토지_items, 1):
                 소재지_raw = (row[1] or "").replace('\n', ' ').strip()
                 
-                # 지목과 면적: row[2:]에서 패턴으로 찾기
+                # 지목과 면적: row[2:]에서 패턴으로 찾기 (pdfplumber 파싱 차이 대응)
                 지목_raw = ""
                 면적_raw = ""
                 for col in row[2:]:
                     col_str = (col or "").strip()
                     if col_str:
+                        # 지목: 대, 전, 답 등으로만 구성
                         if re.match(r'^(대|전|답|임야|잡종지|도로|하천)(\n(대|전|답|임야|잡종지|도로|하천))*$', col_str):
                             지목_raw = col_str
+                        # 면적: ㎡ 포함
                         elif '㎡' in col_str:
                             면적_raw = col_str
                 
-                # 해당 토지번호에 맞는 필지만 추출
-                # "1. xxx 2. xxx" 형태에서 토지번호에 해당하는 것만 찾기
-                필지_pattern = rf'{토지번호}\.\s*([가-힣].*?)(?=\s*\d+\.\s*[가-힣]|$)'
-                필지_match = re.search(필지_pattern, 소재지_raw)
+                # 여러 필지가 한 행에 있는 경우 분리 (1. xxx 2. xxx 3. xxx 형태)
+                필지_matches = re.split(r'(?=\d+\.\s*[가-힣])', 소재지_raw)
+                필지_matches = [p.strip() for p in 필지_matches if p.strip()]
                 
-                if 필지_match:
-                    소재지 = 필지_match.group(1).strip()
+                if len(필지_matches) > 1:
+                    # 지목과 면적도 분리
+                    지목_list = re.findall(r'(대|전|답|임야|잡종지|도로|하천|공장용지|학교용지|주차장|창고용지|목장용지|광천지|염전|유지|양어장|수도용지|공원|체육용지|유원지|종교용지|사적지|묘지|주유소용지)', 지목_raw)
+                    면적_list = re.findall(r'([\d.]+㎡)', 면적_raw)
+                    
+                    for i, 필지 in enumerate(필지_matches):
+                        소재지 = re.sub(r'^\d+\.\s*', '', 필지).strip()
+                        지목 = 지목_list[i] if i < len(지목_list) else (지목_list[0] if 지목_list else "")
+                        면적 = 면적_list[i] if i < len(면적_list) else ""
+                        
+                        result["토지"].append({
+                            "번호": str(len(result["토지"]) + 1),
+                            "소재지": convert_region(소재지),
+                            "지목": 지목,
+                            "면적": 면적
+                        })
                 else:
-                    # 단일 필지인 경우
+                    # 단일 필지
                     소재지 = re.sub(r'^\d+\.\s*', '', 소재지_raw)
-                
-                # 지목과 면적 추출 (해당 토지번호 위치에 맞게)
-                지목_list = re.findall(r'(대|전|답|임야|잡종지|도로|하천)', 지목_raw)
-                면적_list = re.findall(r'([\d.]+㎡)', 면적_raw)
-                
-                # 토지번호가 여러 개 있는 행이면 해당 위치의 지목/면적 사용
-                idx = int(토지번호) - 1 if 토지번호.isdigit() else 0
-                지목 = 지목_list[0] if len(지목_list) == 1 else (지목_list[idx] if idx < len(지목_list) else "")
-                면적 = 면적_list[0] if len(면적_list) == 1 else (면적_list[idx] if idx < len(면적_list) else "")
-                
-                if 소재지:
+                    지목_match = re.search(r'(대|전|답|임야|잡종지)', 지목_raw)
+                    지목 = 지목_match.group(1) if 지목_match else 지목_raw
+                    면적_match = re.search(r'([\d.]+㎡)', 면적_raw)
+                    면적 = 면적_match.group(1) if 면적_match else 면적_raw
+                    
                     result["토지"].append({
-                        "번호": 토지번호,
+                        "번호": str(len(result["토지"]) + 1),
                         "소재지": convert_region(소재지),
                         "지목": 지목,
                         "면적": 면적
@@ -1716,10 +1529,6 @@ def parse_registry_pdf(uploaded_file):
                 row = sections["전유부분"][-1]
                 건물번호 = (row[2] or "").replace('\n', ' ').strip() if len(row) > 2 else ""
                 건물내역 = (row[3] or "").replace('\n', ' ').strip() if len(row) > 3 else ""
-                
-                # 워터마크 제거 ("열람용" 잔여)
-                건물번호 = re.sub(r'\s*(열|람|용)\s*$', '', 건물번호).strip()
-                건물번호 = re.sub(r'\s+(열|람|용)\s+', ' ', 건물번호).strip()
                 
                 if result["동명칭"] and result["동명칭"] not in 건물번호:
                     건물번호 = f"{result['동명칭']} {건물번호}"
@@ -1783,19 +1592,9 @@ def format_estate_text(data):
     
     # 1동의 건물의 표시
     lines.append("1. 1동의 건물의 표시")
+    lines.append(f"   {data['1동건물표시']}")
     
-    # 1동건물표시에서 아파트명/동명칭 제거하여 순수 주소만 추출
-    주소_text = data['1동건물표시']
-    if data["아파트명"]:
-        주소_text = 주소_text.replace(data["아파트명"], "").strip()
-    if data["동명칭"]:
-        주소_text = 주소_text.replace(data["동명칭"], "").strip()
-    주소_text = 주소_text.strip()
-    
-    if 주소_text:
-        lines.append(f"   {주소_text}")
-    
-    # 아파트명/동명칭 별도 줄
+    # 아파트명/동명칭 (4가지 케이스 대응)
     건물명칭_parts = []
     if data["아파트명"]:
         건물명칭_parts.append(data["아파트명"])
@@ -2178,7 +1977,7 @@ def _create_simple_receipt(sheet, data):
 # UI 구현
 # =============================================================================
 
-tab1, tab2, tab3, tab4 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증", "🗑️ 말소 문서"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📄 근저당권설정 계약서", "✍️ 자필서명정보", "🧾 비용 계산 및 영수증", "🗑️ 말소 문서", "🏦 1금융권 서류"])
 
 # Tab 1: 근저당권 설정 (입력)
 with tab1:
@@ -2486,9 +2285,9 @@ with tab1:
     with col_estate:
         st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=300, key='estate_text_area', label_visibility="collapsed")
     with col_pdf:
-        st.markdown("#### 📑 근저당권설정 첨부서류")
+        st.markdown("#### 📑 파일 생성")
         selected_template_path = st.session_state['template_status'].get(st.session_state['contract_type'])
-        if selected_template_path: st.success(f"✅ 기본(계약서,자필,위임장)서류 템플릿 준비완료"); is_disabled = False
+        if selected_template_path: st.success(f"✅ 템플릿 준비완료"); is_disabled = False
         else: st.warning(f"⚠️ 템플릿 없음"); is_disabled = True
         
         if st.button("🚀 계약서\nPDF 생성", key="generate_pdf_tab1", disabled=is_disabled or not LIBS_OK, use_container_width=True):
@@ -2515,183 +2314,6 @@ with tab1:
                         use_container_width=True
                     )
                 except Exception as e: st.error(f"오류: {e}")
-        
-        # 자필서명정보 생성 버튼
-        sig_template_path = st.session_state['template_status'].get('자필')
-        sig_disabled = not sig_template_path or not LIBS_OK
-        
-        if not sig_template_path:
-            st.caption("⚠️ 자필서명정보_서면_템플릿.pdf 필요")
-        
-        if st.button("✍️ 자필서명정보\nPDF 생성", key="generate_sig_pdf_tab1", disabled=sig_disabled, use_container_width=True):
-            if not LIBS_OK:
-                st.error("PDF 라이브러리 미설치")
-            else:
-                contract_type = st.session_state.get('contract_type', '개인')
-                
-                sig_data = {
-                    "date": format_date_korean(st.session_state['input_date']),
-                    "estate_text": st.session_state.get('estate_text', ''),
-                    "contract_type": contract_type,
-                    "debtor_name": st.session_state.get('t1_debtor_name', ''),
-                    "debtor_rrn": st.session_state.get('t1_debtor_rrn', ''),
-                    "owner_name": st.session_state.get('t1_owner_name', ''),
-                    "owner_rrn": st.session_state.get('t1_owner_rrn', ''),
-                    "reg_purpose": "근저당권설정"
-                }
-                
-                # 파일명 결정
-                if contract_type == '개인':
-                    filename = f"자필서명정보_{st.session_state.get('t1_debtor_name', '')}.pdf"
-                elif contract_type == '3자담보':
-                    filename = f"자필서명정보_{st.session_state.get('t1_owner_name', '')}.pdf"
-                else:
-                    filename = f"자필서명정보_{st.session_state.get('t1_debtor_name', '')}_{st.session_state.get('t1_owner_name', '')}.pdf"
-                
-                try:
-                    pdf_buffer = make_setting_signature_pdf(sig_template_path, sig_data)
-                    st.download_button(
-                        label="⬇️ 자필서명정보 다운로드",
-                        data=pdf_buffer,
-                        file_name=filename,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key="dl_sig_pdf_tab1"
-                    )
-                except Exception as e:
-                    st.error(f"자필서명정보 생성 오류: {e}")
-        
-        # 위임장 생성 버튼
-        power_template_path = st.session_state['template_status'].get('설정_위임장')
-        power_disabled = not power_template_path or not LIBS_OK
-        
-        if power_template_path:
-            pass  # 템플릿 있음
-        else:
-            st.caption("⚠️ 위임장.pdf 필요")
-        
-        if st.button("📋 위임장\nPDF 생성", key="generate_power_pdf_tab1", disabled=power_disabled, use_container_width=True):
-            if not LIBS_OK:
-                st.error("PDF 라이브러리 미설치")
-            else:
-                contract_type = st.session_state.get('contract_type', '개인')
-                
-                # 채권자 정보
-                creditor_name_for_pdf = st.session_state['input_creditor'] if st.session_state['input_creditor'] != "🖊️ 직접입력" else st.session_state.get('input_creditor_name', '')
-                creditor_addr_for_pdf = CREDITORS.get(st.session_state['input_creditor'], {}).get('addr', '') if st.session_state['input_creditor'] != "🖊️ 직접입력" else st.session_state.get('input_creditor_addr', '')
-                creditor_corp_num = CREDITORS.get(st.session_state['input_creditor'], {}).get('corp_num', '') if st.session_state['input_creditor'] != "🖊️ 직접입력" else st.session_state.get('input_creditor_corp_num', '')
-                
-                power_data = {
-                    "date": format_date_korean(st.session_state['input_date']),
-                    "estate_text": st.session_state.get('estate_text', ''),
-                    "contract_type": contract_type,
-                    "debtor_name": st.session_state.get('t1_debtor_name', ''),
-                    "debtor_addr": st.session_state.get('t1_debtor_addr', ''),
-                    "debtor_rrn": st.session_state.get('t1_debtor_rrn', ''),
-                    "owner_name": st.session_state.get('t1_owner_name', ''),
-                    "owner_addr": st.session_state.get('t1_owner_addr', ''),
-                    "owner_rrn": st.session_state.get('t1_owner_rrn', ''),
-                    "creditor_name": creditor_name_for_pdf,
-                    "creditor_addr": creditor_addr_for_pdf,
-                    "creditor_corp_num": creditor_corp_num,
-                    "claim_amount": convert_multiple_amounts_to_korean(remove_commas(st.session_state['input_amount']))
-                }
-                
-                # 파일명 결정
-                if contract_type == '개인':
-                    filename = f"위임장_{st.session_state.get('t1_debtor_name', '')}.pdf"
-                elif contract_type == '3자담보':
-                    filename = f"위임장_{st.session_state.get('t1_owner_name', '')}.pdf"
-                else:  # 공동담보 (1장에 모두 표시)
-                    filename = f"위임장_{st.session_state.get('t1_debtor_name', '')}_{st.session_state.get('t1_owner_name', '')}.pdf"
-                
-                try:
-                    pdf_buffer = make_setting_power_pdf(power_template_path, power_data)
-                    st.download_button(
-                        label="⬇️ 위임장 다운로드",
-                        data=pdf_buffer,
-                        file_name=filename,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key="dl_power_pdf_tab1"
-                    )
-                except Exception as e:
-                    st.error(f"위임장 생성 오류: {e}")
-        
-        # 확인서면 생성 버튼 (계약서 버튼과 동일 레벨)
-        st.markdown("---")
-        
-        # 1. 템플릿 상태 확인
-        confirm_template_path = st.session_state['template_status'].get('확인서면')
-        confirm_disabled = not confirm_template_path or not LIBS_OK
-        
-        if confirm_template_path:
-            st.success("✅ 확인서면 템플릿 준비완료")
-        else:
-            st.warning("⚠️ 확인서면_개인.pdf 템플릿 없음")
-        
-        # 2. 등기유형 선택
-        if 'confirm_reg_type' not in st.session_state:
-            st.session_state['confirm_reg_type'] = '근저당권설정'
-        
-        confirm_reg_type = st.text_input(
-            "등기유형 (수기입력)", 
-            value=st.session_state.get('confirm_reg_type', '근저당권설정'),
-            placeholder="근저당권설정 / 소유권이전 등",
-            key='confirm_reg_type_input'
-        )
-        st.session_state['confirm_reg_type'] = confirm_reg_type
-        
-        # 3. 생성 버튼
-        if st.button("📄 확인서면\nPDF 생성", key="generate_confirm_pdf", disabled=confirm_disabled, use_container_width=True):
-            if not LIBS_OK:
-                st.error("PDF 라이브러리 미설치")
-            else:
-                contract_type = st.session_state.get('contract_type', '개인')
-                
-                # 채무자 정보
-                debtor_name = st.session_state.get('t1_debtor_name', '')
-                debtor_addr = st.session_state.get('t1_debtor_addr', '')
-                debtor_rrn = st.session_state.get('t1_debtor_rrn', '')
-                
-                # 설정자(소유자) 정보
-                owner_name = st.session_state.get('t1_owner_name', '')
-                owner_addr = st.session_state.get('t1_owner_addr', '')
-                owner_rrn = st.session_state.get('t1_owner_rrn', '')
-                
-                confirm_data = {
-                    "date": format_date_korean(st.session_state['input_date']),
-                    "estate_text": st.session_state.get('estate_text', ''),
-                    "contract_type": contract_type,
-                    "debtor_name": debtor_name,
-                    "debtor_addr": debtor_addr,
-                    "debtor_rrn": debtor_rrn,
-                    "owner_name": owner_name,
-                    "owner_addr": owner_addr,
-                    "owner_rrn": owner_rrn,
-                    "reg_type": st.session_state.get('confirm_reg_type', '근저당권설정')
-                }
-                
-                # 파일명 결정
-                if contract_type == '개인':
-                    filename = f"확인서면_{debtor_name}.pdf"
-                elif contract_type == '3자담보':
-                    filename = f"확인서면_{owner_name}.pdf"
-                else:  # 공동담보
-                    filename = f"확인서면_{debtor_name}_{owner_name}.pdf"
-                
-                try:
-                    pdf_buffer = make_confirmation_pdf(confirm_template_path, confirm_data)
-                    st.download_button(
-                        label="⬇️ 확인서면 다운로드",
-                        data=pdf_buffer,
-                        file_name=filename,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key="dl_confirm_pdf"
-                    )
-                except Exception as e:
-                    st.error(f"확인서면 생성 오류: {e}")
     
     # =========================================================================
     # 위택스 등록면허세 신고 섹션
@@ -3759,6 +3381,8 @@ with tab4:
             st.session_state['malso_obligor_id'] = ''
             st.session_state['malso_obligor_addr'] = ''
             st.session_state['malso_obligor_rep'] = ''
+            st.session_state['malso_obligor_branch'] = ''
+            st.session_state['malso_obligor_select'] = list(OBLIGORS.keys())[0]
             
             # 등기권리자 1
             st.session_state['malso_holder1_name'] = ''
@@ -3836,11 +3460,49 @@ with tab4:
     with col_input1:
         st.markdown(f"#### 1️⃣ 등기의무자 ({obligor_label})")
         with st.container(border=True):
-            st.text_input("성명(법인명)", key="malso_obligor_name", placeholder="주식회사티플레인대부")
-            st.text_input("주민(법인)등록번호", key="malso_obligor_id", placeholder="110111-7350161")
-            st.text_area("주소", key="malso_obligor_addr", height=80,
+            # 등기의무자 선택
+            obligor_options = list(OBLIGORS.keys())
+            selected_obligor = st.selectbox(
+                "등기의무자 선택",
+                options=obligor_options,
+                key="malso_obligor_select",
+                index=0
+            )
+            
+            # 선택된 등기의무자 정보 자동 입력
+            if selected_obligor and selected_obligor != "직접입력":
+                obligor_info = OBLIGORS.get(selected_obligor, {})
+                default_name = selected_obligor
+                default_addr = obligor_info.get("addr", "")
+                default_corp_num = obligor_info.get("corp_num", "")
+                default_rep = obligor_info.get("rep", "")
+                default_branch = obligor_info.get("branch", "")
+            else:
+                default_name = st.session_state.get('malso_obligor_name', '')
+                default_addr = st.session_state.get('malso_obligor_addr', '')
+                default_corp_num = st.session_state.get('malso_obligor_id', '')
+                default_rep = st.session_state.get('malso_obligor_rep', '')
+                default_branch = st.session_state.get('malso_obligor_branch', '')
+            
+            # 입력 필드 (수정 가능)
+            obligor_name = st.text_input("성명(법인명)", value=default_name, key="malso_obligor_name_input", placeholder="주식회사티플레인대부")
+            st.session_state['malso_obligor_name'] = obligor_name
+            
+            obligor_id = st.text_input("법인등록번호", value=default_corp_num, key="malso_obligor_id_input", placeholder="110111-7350161")
+            st.session_state['malso_obligor_id'] = obligor_id
+            
+            obligor_addr = st.text_area("주소", value=default_addr, key="malso_obligor_addr_input", height=80,
                         placeholder="서울특별시 마포구 삼개로 16, 2신관 1층 103호")
-            st.text_input("대표자 성명 (법인인 경우)", key="malso_obligor_rep", placeholder="윤웅원")
+            st.session_state['malso_obligor_addr'] = obligor_addr
+            
+            # 취급지점 & 대표자 (같은 줄)
+            rep_cols = st.columns([1, 1])
+            with rep_cols[0]:
+                obligor_branch = st.text_input("취급지점", value=default_branch, key="malso_obligor_branch_input", placeholder="업무혁신부")
+                st.session_state['malso_obligor_branch'] = obligor_branch
+            with rep_cols[1]:
+                obligor_rep = st.text_input("대표자 직위/성명", value=default_rep, key="malso_obligor_rep_input", placeholder="대표이사 윤웅원")
+                st.session_state['malso_obligor_rep'] = obligor_rep
     
     with col_input2:
         st.markdown("#### 2️⃣ 등기권리자 (소유자)")
@@ -3943,9 +3605,8 @@ with tab4:
                     })
                 sig_data = {
                     'date': format_date_korean(st.session_state.get('malso_cause_date', datetime.now().date())),
-                    'estate_list': (extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', '')).strip().split('\n'),
-                    'holders': holders,
-                    'reg_purpose': f"{st.session_state.get('malso_type', '근저당권')}말소"
+                    'estate_list': st.session_state.get('malso_estate_detail', '').strip().split('\n'),
+                    'holders': holders
                 }
                 pdf_buffer = make_malso_signature_pdf(sig_template, sig_data)
                 st.download_button(
@@ -3971,11 +3632,12 @@ with tab4:
                     'obligor_id': st.session_state.get('malso_obligor_id', ''),
                     'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
                     'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
+                    'obligor_branch': st.session_state.get('malso_obligor_branch', ''),
                     'holder1_name': st.session_state.get('malso_holder1_name', ''),
                     'holder1_addr': st.session_state.get('malso_holder1_addr', ''),
                     'holder2_name': st.session_state.get('malso_holder2_name', ''),
                     'holder2_addr': st.session_state.get('malso_holder2_addr', ''),
-                    'estate_text': extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', ''),
+                    'estate_text': st.session_state.get('malso_estate_detail', ''),
                     'cancel_text': st.session_state.get('malso_cancel_text', '')
                 }
                 pdf_buffer = make_malso_power_pdf(power_template_path, power_data)
@@ -4000,9 +3662,10 @@ with tab4:
                 'obligor_id': st.session_state.get('malso_obligor_id', ''),
                 'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
                 'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
+                'obligor_branch': st.session_state.get('malso_obligor_branch', ''),
                 'holder1_name': st.session_state.get('malso_holder1_name', ''),
                 'holder2_name': st.session_state.get('malso_holder2_name', ''),
-                'estate_text': extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', ''),
+                'estate_text': st.session_state.get('malso_estate_detail', ''),
                 'cancel_text': st.session_state.get('malso_cancel_text', '')
             }
             pdf_buffer = make_malso_termination_pdf(term_data)
@@ -4027,7 +3690,8 @@ with tab4:
                 'obligor_id': st.session_state.get('malso_obligor_id', ''),
                 'obligor_addr': st.session_state.get('malso_obligor_addr', ''),
                 'obligor_rep': st.session_state.get('malso_obligor_rep', ''),
-                'estate_text': extract_building_only(st.session_state.get('malso_estate_detail', '')) if malso_type == '전세권' else st.session_state.get('malso_estate_detail', ''),
+                'obligor_branch': st.session_state.get('malso_obligor_branch', ''),
+                'estate_text': st.session_state.get('malso_estate_detail', ''),
                 'cancel_text': st.session_state.get('malso_cancel_text', ''),
                 'from_branch': st.session_state.get('malso_from_branch', ''),
                 'to_branch': st.session_state.get('malso_to_branch', '')
@@ -4101,6 +3765,200 @@ with tab4:
     
     # 안내 메시지
     st.info("💡 **사용 방법**: '📥 1탭 가져오기' 버튼을 눌러 소유자 정보와 부동산 표시를 자동으로 불러올 수 있습니다.")
+
+# =============================================================================
+# Tab 5: 1금융권 서류
+# =============================================================================
+with tab5:
+    st.markdown("### 🏦 1금융권 서류 (설정계약서/위임장/자필서명정보)")
+    
+    # 세션 상태 초기화
+    if 'tab5_bank' not in st.session_state:
+        st.session_state['tab5_bank'] = "하나은행"
+    if 'tab5_estate' not in st.session_state:
+        st.session_state['tab5_estate'] = ""
+    if 'tab5_debtor_name' not in st.session_state:
+        st.session_state['tab5_debtor_name'] = ""
+    if 'tab5_debtor_rrn' not in st.session_state:
+        st.session_state['tab5_debtor_rrn'] = ""
+    if 'tab5_owner_name' not in st.session_state:
+        st.session_state['tab5_owner_name'] = ""
+    if 'tab5_owner_rrn' not in st.session_state:
+        st.session_state['tab5_owner_rrn'] = ""
+    
+    col_top = st.columns([4, 1])
+    with col_top[1]:
+        if st.button("🔄 초기화", key="reset_tab5", use_container_width=True):
+            st.session_state['tab5_estate'] = ""
+            st.session_state['tab5_debtor_name'] = ""
+            st.session_state['tab5_debtor_rrn'] = ""
+            st.session_state['tab5_owner_name'] = ""
+            st.session_state['tab5_owner_rrn'] = ""
+            st.rerun()
+    
+    # 은행 선택
+    st.markdown("#### 🏛️ 거래은행 선택")
+    bank_cols = st.columns(3)
+    bank_list = ["하나은행", "신한은행", "우리은행"]
+    for i, bank in enumerate(bank_list):
+        with bank_cols[i]:
+            btn_type = "primary" if st.session_state['tab5_bank'] == bank else "secondary"
+            if st.button(bank, key=f"bank_{bank}", type=btn_type, use_container_width=True):
+                st.session_state['tab5_bank'] = bank
+                st.rerun()
+    
+    st.markdown("---")
+    
+    # 등기부등본 업로드 및 부동산표시 추출
+    st.markdown("#### 📋 부동산 표시")
+    
+    uploaded_registry = st.file_uploader(
+        "📤 등기부등본 PDF 업로드 (인터넷등기소 열람용)", 
+        type=['pdf'], 
+        key='registry_upload_tab5'
+    )
+    
+    if uploaded_registry is not None:
+        try:
+            import pdfplumber
+            
+            with pdfplumber.open(uploaded_registry) as pdf:
+                # 부동산표시 추출 (기존 extract_estate_info 함수 활용)
+                estate_result = extract_estate_info(pdf)
+                if estate_result:
+                    formatted = format_estate_display(estate_result)
+                    st.session_state['tab5_estate'] = formatted
+                    st.success("✅ 부동산표시 추출 완료!")
+        except Exception as e:
+            st.error(f"❌ PDF 파싱 오류: {e}")
+    
+    estate_text = st.text_area(
+        "부동산 표시 (자동 추출 또는 직접 입력)",
+        value=st.session_state.get('tab5_estate', ''),
+        height=250,
+        key='tab5_estate_input'
+    )
+    st.session_state['tab5_estate'] = estate_text
+    
+    st.markdown("---")
+    
+    # 채무자/소유자 정보 입력
+    st.markdown("#### 👤 채무자/소유자 정보")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**채무자**")
+        debtor_name = st.text_input(
+            "성명", 
+            value=st.session_state.get('tab5_debtor_name', ''),
+            key='tab5_debtor_name_input'
+        )
+        st.session_state['tab5_debtor_name'] = debtor_name
+        
+        debtor_rrn = st.text_input(
+            "주민등록번호", 
+            value=st.session_state.get('tab5_debtor_rrn', ''),
+            key='tab5_debtor_rrn_input',
+            placeholder="000000-0000000"
+        )
+        st.session_state['tab5_debtor_rrn'] = debtor_rrn
+    
+    with col2:
+        st.markdown("**소유자**")
+        owner_name = st.text_input(
+            "성명", 
+            value=st.session_state.get('tab5_owner_name', ''),
+            key='tab5_owner_name_input'
+        )
+        st.session_state['tab5_owner_name'] = owner_name
+        
+        owner_rrn = st.text_input(
+            "주민등록번호", 
+            value=st.session_state.get('tab5_owner_rrn', ''),
+            key='tab5_owner_rrn_input',
+            placeholder="000000-0000000"
+        )
+        st.session_state['tab5_owner_rrn'] = owner_rrn
+    
+    st.markdown("---")
+    
+    # PDF 생성 버튼
+    st.markdown("#### 📥 PDF 생성")
+    
+    btn_cols = st.columns(3)
+    
+    selected_bank = st.session_state['tab5_bank']
+    current_estate = st.session_state.get('tab5_estate', '')
+    
+    # 설정계약서 PDF 생성
+    with btn_cols[0]:
+        if st.button("📄 설정계약서", key="gen_contract_tab5", use_container_width=True, type="primary"):
+            if current_estate:
+                try:
+                    pdf_buffer = make_bank_estate_pdf(selected_bank, "설정계약서", current_estate)
+                    st.download_button(
+                        label="⬇️ 설정계약서 다운로드",
+                        data=pdf_buffer.getvalue(),
+                        file_name=f"{selected_bank}_설정계약서.pdf",
+                        mime="application/pdf",
+                        key="dl_contract_tab5"
+                    )
+                except Exception as e:
+                    st.error(f"❌ PDF 생성 오류: {e}")
+            else:
+                st.warning("⚠️ 부동산 표시를 입력하세요.")
+    
+    # 위임장 PDF 생성
+    with btn_cols[1]:
+        if st.button("📝 위임장", key="gen_power_tab5", use_container_width=True, type="primary"):
+            if current_estate:
+                try:
+                    pdf_buffer = make_bank_estate_pdf(selected_bank, "위임장", current_estate)
+                    st.download_button(
+                        label="⬇️ 위임장 다운로드",
+                        data=pdf_buffer.getvalue(),
+                        file_name=f"{selected_bank}_위임장.pdf",
+                        mime="application/pdf",
+                        key="dl_power_tab5"
+                    )
+                except Exception as e:
+                    st.error(f"❌ PDF 생성 오류: {e}")
+            else:
+                st.warning("⚠️ 부동산 표시를 입력하세요.")
+    
+    # 자필서명정보 PDF 생성
+    with btn_cols[2]:
+        if st.button("✍️ 자필서명정보", key="gen_sig_tab5", use_container_width=True, type="primary"):
+            if current_estate:
+                try:
+                    template_path = resource_path("자필서명정보_서면_템플릿.pdf")
+                    if not os.path.exists(template_path):
+                        st.error("❌ 자필서명정보 템플릿 파일이 없습니다.")
+                    else:
+                        sig_data = {
+                            "estate_text": current_estate,
+                            "debtor_name": st.session_state.get('tab5_debtor_name', ''),
+                            "debtor_rrn": st.session_state.get('tab5_debtor_rrn', ''),
+                            "owner_name": st.session_state.get('tab5_owner_name', ''),
+                            "owner_rrn": st.session_state.get('tab5_owner_rrn', ''),
+                            "date": datetime.now().strftime("%Y년 %m월 %d일")
+                        }
+                        pdf_buffer = make_bank_signature_pdf(template_path, sig_data)
+                        st.download_button(
+                            label="⬇️ 자필서명정보 다운로드",
+                            data=pdf_buffer.getvalue(),
+                            file_name=f"{selected_bank}_자필서명정보.pdf",
+                            mime="application/pdf",
+                            key="dl_sig_tab5"
+                        )
+                except Exception as e:
+                    st.error(f"❌ PDF 생성 오류: {e}")
+            else:
+                st.warning("⚠️ 부동산 표시를 입력하세요.")
+    
+    st.markdown("---")
+    st.info(f"💡 현재 선택된 은행: **{selected_bank}** | 설정계약서/위임장은 빈 PDF에 부동산표시만 출력됩니다.")
 
 # =============================================================================
 # 하단 푸터

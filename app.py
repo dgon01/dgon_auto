@@ -250,7 +250,7 @@ TEMPLATE_FILENAMES = {
     "개인": "1.pdf",
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
-    "자필": "자필서명정보_템플릿.pdf",
+    "자필": "자필서명정보_서면_템플릿.pdf",
     "영수증": "receipt_template.xlsx",
     "확인서면": "확인서면_개인.pdf",
     "설정_위임장": "위임장.pdf"
@@ -620,16 +620,18 @@ def make_setting_signature_pdf(template_path, data):
         if page_data['rrn']:
             c.drawString(250, 298, str(page_data['rrn']))
         
-        # 등기목적 (좌표: 36, 558.5 → RL Y ≈ 272) 좌측정렬
+        # 등기목적 (좌표: 136.5, 558.5, 322.5, 580.5) 
+        # PyMuPDF y 중앙 569.5 → RL y = 842 - 569.5 ≈ 272, 좌측정렬 x=138
         c.setFont(font_name, 11)
-        c.drawString(38, 272, reg_purpose)
+        c.drawString(138, 272, reg_purpose)
         
-        # 작성일자 (중앙)
+        # 작성일자 (좌표: 70, 673, 527, 693)
+        # PyMuPDF y 중앙 683 → RL y = 842 - 683 = 159, 중앙정렬
         if data.get("date"):
             c.setFont(font_name, 11)
             text = str(data["date"])
             tw = c.stringWidth(text, font_name, 11)
-            c.drawString((width - tw) / 2, 150, text)
+            c.drawString((width - tw) / 2, 159, text)
         
         c.showPage()
     
@@ -852,43 +854,47 @@ def make_confirmation_pdf(template_path, data):
             if line.strip():
                 c.drawString(estate_x, estate_y_start - (i * line_h), line)
         
-        # 성명 (박스: 177, 323 ~ 477, 341)
+        # 성명 (박스: 177, 323 ~ 477, 341) - 폰트 10pt 통일
         name_x = 180
         name_y = height - 335
-        c.setFont(font_name, 11)
+        c.setFont(font_name, 10)
         if page_data['name']:
             c.drawString(name_x, name_y, page_data['name'])
         
-        # 주소 (박스: 176, 344 ~ 477, 384)
+        # 주소 (박스: 176, 344 ~ 477, 384) - 폰트 10pt 통일, 2줄까지
         addr_x = 180
         addr_y = height - 358
-        c.setFont(font_name, 9)
+        c.setFont(font_name, 10)
         if page_data['addr']:
             addr = page_data['addr']
-            if len(addr) > 35:
-                split_idx = addr.rfind(' ', 0, 35)
+            if len(addr) > 30:
+                # 공백 기준으로 줄바꿈 위치 찾기
+                split_idx = addr.rfind(' ', 0, 30)
                 if split_idx == -1:
-                    split_idx = 35
+                    split_idx = 30
                 c.drawString(addr_x, addr_y, addr[:split_idx])
-                c.drawString(addr_x, addr_y - 13, addr[split_idx:].strip())
+                c.drawString(addr_x, addr_y - 14, addr[split_idx:].strip())
             else:
                 c.drawString(addr_x, addr_y, addr)
         
-        # 주민번호 (박스: 177, 388 ~ 476, 406)
+        # 주민번호 (박스: 177, 388 ~ 476, 406) - 폰트 10pt 통일
         rrn_x = 180
         rrn_y = height - 400
-        c.setFont(font_name, 11)
+        c.setFont(font_name, 10)
         if page_data['rrn']:
             c.drawString(rrn_x, rrn_y, page_data['rrn'])
         
-        # 등기유형 - 세로쓰기 (박스: 486, 354 ~ 557, 397)
-        reg_type_x = 490
-        reg_type_y = height - 370
-        c.setFont(font_name, 10)
+        # 등기의 목적 - 가로쓰기 (박스: 486, 354 ~ 557, 397)
+        # 박스 상하 중앙에 가로로 표시
         reg_type = data.get('reg_type', '근저당권설정')
         if reg_type:
-            for i, char in enumerate(reg_type):
-                c.drawString(reg_type_x, reg_type_y - (i * 12), char)
+            c.setFont(font_name, 8)
+            # 박스 중앙 y = 842 - (354+397)/2 = 842 - 375.5 ≈ 466
+            reg_type_y = height - 375
+            # 텍스트 중앙 정렬 (박스 x: 486~557, 중앙 521.5)
+            text_width = c.stringWidth(reg_type, font_name, 8)
+            reg_type_x = 521 - (text_width / 2)
+            c.drawString(reg_type_x, reg_type_y, reg_type)
         
         # 작성일자 (박스: 31, 718 ~ 564, 744) - 중앙 정렬
         date_y = height - 735
@@ -953,20 +959,20 @@ def make_malso_signature_pdf(template_path, data):
         c.drawString(400, 322, str(holders[1].get('name', '')))
         c.drawString(400, 298, str(holders[1].get('rrn', '')))
     
-    # 등기목적 (좌표: 36, 558.5 → RL Y ≈ 272) 좌측정렬
-    # 질권말소, 근저당권말소, 전세권말소 등
+    # 등기목적 (좌표: 136.5, 558.5, 322.5, 580.5) 
+    # PyMuPDF y 중앙 569.5 → RL y = 272, 좌측정렬 x=138
     reg_purpose = data.get('reg_purpose', '')
     if reg_purpose:
         c.setFont(font_name, 11)
-        c.drawString(38, 272, reg_purpose)
+        c.drawString(138, 272, reg_purpose)
         c.setFont(font_name, 10)
     
-    # 날짜 (중앙)
+    # 작성일자 (좌표: 70, 673, 527, 693) → RL y = 159, 중앙정렬
     if data.get("date"):
         c.setFont(font_name, 11)
         text = str(data["date"])
         tw = c.stringWidth(text, font_name, 11)
-        c.drawString((width - tw) / 2, 150, text)
+        c.drawString((width - tw) / 2, 159, text)
     
     c.showPage()
     c.save()
@@ -2433,6 +2439,9 @@ with tab1:
         # 자필서명정보 생성 버튼
         sig_template_path = st.session_state['template_status'].get('자필')
         sig_disabled = not sig_template_path or not LIBS_OK
+        
+        if not sig_template_path:
+            st.caption("⚠️ 자필서명정보_서면_템플릿.pdf 필요")
         
         if st.button("✍️ 자필서명정보\nPDF 생성", key="generate_sig_pdf_tab1", disabled=sig_disabled, use_container_width=True):
             if not LIBS_OK:

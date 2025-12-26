@@ -719,57 +719,64 @@ def make_setting_power_pdf(template_path, data):
     if claim_amount:
         c.drawString(175, 416, f"금{claim_amount}")
     
-    # 등기의무자 박스 (60, 689.33, 420, 781.33) → RL y: 60~153
+    # 등기의무자 박스 (위쪽) - RL y: 157~254
     c.setFont(font_name, 9)
     
     if contract_type == '개인':
         debtor_name = data.get('debtor_name', '')
         debtor_addr = data.get('debtor_addr', '')
         
-        c.drawString(62, 140, debtor_name)
+        # 라벨: 채무자 겸 근저당권설정자
+        c.drawString(62, 240, "채무자 겸 근저당권설정자")
+        c.drawString(62, 225, debtor_name)
         if debtor_addr:
             if len(debtor_addr) > 50:
-                c.drawString(62, 125, debtor_addr[:50])
-                c.drawString(62, 110, debtor_addr[50:])
+                c.drawString(62, 210, debtor_addr[:50])
+                c.drawString(62, 195, debtor_addr[50:])
             else:
-                c.drawString(62, 125, debtor_addr)
+                c.drawString(62, 210, debtor_addr)
                 
     elif contract_type == '3자담보':
+        debtor_name = data.get('debtor_name', '')
         owner_name = data.get('owner_name', '')
         owner_addr = data.get('owner_addr', '')
         
-        c.drawString(62, 140, owner_name)
+        # 채무자
+        c.drawString(62, 240, "채무자")
+        c.drawString(62, 225, debtor_name)
+        # 근저당권설정자
+        c.drawString(62, 205, "근저당권설정자")
+        c.drawString(62, 190, owner_name)
         if owner_addr:
-            if len(owner_addr) > 50:
-                c.drawString(62, 125, owner_addr[:50])
-                c.drawString(62, 110, owner_addr[50:])
-            else:
-                c.drawString(62, 125, owner_addr)
+            c.drawString(62, 175, owner_addr[:55] if len(owner_addr) > 55 else owner_addr)
                 
-    else:  # 공동담보: 1장에 채무자 + 소유자 모두
+    else:  # 공동담보
         debtor_name = data.get('debtor_name', '')
         debtor_addr = data.get('debtor_addr', '')
         owner_name = data.get('owner_name', '')
         owner_addr = data.get('owner_addr', '')
         
-        # 첫 번째: 채무자
-        c.drawString(62, 140, debtor_name)
+        # 채무자 겸 근저당권설정자
+        c.drawString(62, 240, "채무자 겸 근저당권설정자")
+        c.drawString(62, 225, debtor_name)
         if debtor_addr:
-            c.drawString(62, 125, debtor_addr[:55] if len(debtor_addr) > 55 else debtor_addr)
+            c.drawString(62, 210, debtor_addr[:55] if len(debtor_addr) > 55 else debtor_addr)
         
-        # 두 번째: 소유자
-        c.drawString(62, 100, owner_name)
+        # 근저당권설정자
+        c.drawString(62, 190, "근저당권설정자")
+        c.drawString(62, 175, owner_name)
         if owner_addr:
-            c.drawString(62, 85, owner_addr[:55] if len(owner_addr) > 55 else owner_addr)
+            c.drawString(62, 160, owner_addr[:55] if len(owner_addr) > 55 else owner_addr)
     
-    # 등기권리자 박스 (60, 588, 420, 685) → RL y: 157~254
-    # 형식: 회사명 / 주소 / 대표이사 xxx
+    # 등기권리자 박스 (아래쪽) - RL y: 60~153
+    # 형식: 근저당권자 / 회사명 / 주소 / 대표이사 xxx
     c.setFont(font_name, 9)
     
-    c.drawString(62, 240, creditor_company)
-    c.drawString(62, 225, creditor_addr)
+    c.drawString(62, 140, "근저당권자")
+    c.drawString(62, 125, creditor_company)
+    c.drawString(62, 110, creditor_addr)
     if creditor_rep:
-        c.drawString(62, 210, f"대표이사 {creditor_rep}")
+        c.drawString(62, 95, f"대표이사 {creditor_rep}")
     
     c.showPage()
     c.save()

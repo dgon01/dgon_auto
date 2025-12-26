@@ -603,16 +603,14 @@ def make_setting_signature_pdf(template_path, data):
     for page_data in pages_data:
         c.setFont(font_name, 10)
         
-        # 부동산 표시
-        estate_x = 150
-        estate_y = height - 170
-        line_h = 14
+        # 부동산 표시 (자동 크기 조절)
         estate_text = data.get('estate_text', '')
-        if estate_text:
-            for i, line in enumerate(str(estate_text).split("\n")[:17]):
-                c.drawString(estate_x, estate_y - (i * line_h), line)
+        draw_estate_auto_fit(c, font_name, estate_text, 
+                            box_x=150, box_y_start=height-170, box_height=240,
+                            max_font=10, min_font=7, max_line_h=14, min_line_h=10)
         
         # 등기의무자 성명
+        c.setFont(font_name, 10)
         if page_data['name']:
             c.drawString(250, 322, str(page_data['name']))
         
@@ -695,14 +693,13 @@ def make_setting_power_pdf(template_path, data):
     
     c.setFont(font_name, 9)
     
-    # 부동산 표시 (말소와 동일: 105, 745)
-    estate_x = 105
-    estate_y = 745
-    line_h = 12
-    estate_lines = data.get('estate_text', '').split('\n')
-    for i, line in enumerate(estate_lines[:20]):
-        if line.strip():
-            c.drawString(estate_x, estate_y - (i * line_h), line)
+    # 부동산 표시 (자동 크기 조절) - 박스 높이 약 250
+    estate_text = data.get('estate_text', '')
+    draw_estate_auto_fit(c, font_name, estate_text, 
+                        box_x=105, box_y_start=745, box_height=250,
+                        max_font=9, min_font=6, max_line_h=12, min_line_h=9)
+    
+    c.setFont(font_name, 9)
     
     # 등기원인과 그 년월일 - 작성일자 (말소와 동일 높이: 478)
     cause_date = data.get('date', '')
@@ -858,16 +855,11 @@ def make_confirmation_pdf(template_path, data):
     c = canvas.Canvas(packet, pagesize=A4)
     
     for page_data in pages_data:
-        # 부동산의 표시 (박스: 34, 67 ~ 560, 317)
-        estate_x = 36
-        estate_y_start = height - 80
-        line_h = 13
-        c.setFont(font_name, 10)
-        
-        estate_lines = data.get('estate_text', '').split('\n')
-        for i, line in enumerate(estate_lines[:18]):
-            if line.strip():
-                c.drawString(estate_x, estate_y_start - (i * line_h), line)
+        # 부동산의 표시 (박스: 34, 67 ~ 560, 317) - 자동 크기 조절
+        estate_text = data.get('estate_text', '')
+        draw_estate_auto_fit(c, font_name, estate_text, 
+                            box_x=36, box_y_start=height-80, box_height=235,
+                            max_font=10, min_font=7, max_line_h=13, min_line_h=10)
         
         # 성명 (박스: 177, 323 ~ 477, 341) - 폰트 10pt 통일
         name_x = 180
@@ -943,6 +935,44 @@ def make_confirmation_pdf(template_path, data):
     output_buffer.seek(0)
     return output_buffer
 
+def draw_estate_auto_fit(c, font_name, estate_text, box_x, box_y_start, box_height, 
+                          max_font=10, min_font=6, max_line_h=14, min_line_h=9):
+    """
+    부동산 표시를 박스 내에 자동 맞춤
+    - 텍스트가 많으면 폰트 크기와 줄 간격을 자동으로 줄임
+    """
+    if not estate_text:
+        return
+    
+    lines = [l for l in estate_text.split('\n') if l.strip()]
+    num_lines = len(lines)
+    
+    if num_lines == 0:
+        return
+    
+    # 적합한 폰트 크기 찾기
+    for font_size in range(max_font, min_font - 1, -1):
+        # 폰트 크기에 비례해서 줄 간격 조절
+        line_h = max_line_h - (max_font - font_size) * 0.8
+        line_h = max(line_h, min_line_h)
+        
+        total_height = num_lines * line_h
+        if total_height <= box_height:
+            break
+    
+    # 그래도 안 맞으면 줄 간격 더 줄이기
+    if num_lines * line_h > box_height:
+        line_h = box_height / num_lines
+        line_h = max(line_h, 8)  # 최소 8pt
+    
+    c.setFont(font_name, font_size)
+    
+    for i, line in enumerate(lines):
+        y_pos = box_y_start - (i * line_h)
+        if y_pos < (box_y_start - box_height):
+            break  # 박스 벗어나면 중단
+        c.drawString(box_x, y_pos, line)
+
 def extract_building_only(estate_text):
     """
     전세권말소용: 부동산 표시에서 건물 부분만 추출
@@ -976,16 +1006,15 @@ def make_malso_signature_pdf(template_path, data):
     
     c.setFont(font_name, 10)
     
-    # 부동산 표시
-    estate_x = 150
-    estate_y = height - 170
-    line_h = 14
+    # 부동산 표시 (자동 크기 조절)
     estate_list = data.get('estate_list', [])
-    for i, line in enumerate(estate_list[:17]):
-        if line.strip():
-            c.drawString(estate_x, estate_y - (i * line_h), line)
+    estate_text = '\n'.join(estate_list) if estate_list else ''
+    draw_estate_auto_fit(c, font_name, estate_text, 
+                        box_x=150, box_y_start=height-170, box_height=240,
+                        max_font=10, min_font=7, max_line_h=14, min_line_h=10)
     
     # 권리자 정보 (최대 2명)
+    c.setFont(font_name, 10)
     holders = data.get('holders', [])
     if len(holders) >= 1:
         c.drawString(250, 322, str(holders[0].get('name', '')))
@@ -1046,16 +1075,13 @@ def make_malso_power_pdf(template_path, data):
     # 말소할 사항: (172.0, 397.1) ~ (530.3, 455.4), RL Y: 386.6 ~ 444.9
     # 의무자/권리자: (65.1, 590.3) ~ (415.4, 778.9), RL Y: 63.1 ~ 251.7
     
-    c.setFont(font_name, 9)
+    # 부동산 표시 (자동 크기 조절) - 박스 높이 약 250
+    estate_text = data.get('estate_text', '')
+    draw_estate_auto_fit(c, font_name, estate_text, 
+                        box_x=105, box_y_start=745, box_height=250,
+                        max_font=9, min_font=6, max_line_h=12, min_line_h=9)
     
-    # 부동산 표시 (Box 1)
-    estate_x = 105
-    estate_y = 745
-    line_h = 12
-    estate_lines = data.get('estate_text', '').split('\n')
-    for i, line in enumerate(estate_lines[:20]):
-        if line.strip():
-            c.drawString(estate_x, estate_y - (i * line_h), line)
+    c.setFont(font_name, 9)
     
     # 등기원인과 그 년월일 (Box 2) - 상하 중앙정렬, RL Y: 470.6 ~ 491.1, 중앙 480.85
     cause_date = data.get('date', '')
@@ -1172,15 +1198,11 @@ def make_malso_termination_pdf(data):
     subtitle_width = c.stringWidth(subtitle, font_name, 11)
     c.drawString(center_x - subtitle_width/2, 720, subtitle)
     
-    # 부동산 표시 내용
-    c.setFont(font_name, 10)
+    # 부동산 표시 내용 (자동 크기 조절) - 박스 높이 약 300
     estate_text = data.get('estate_text', '')
-    estate_lines = estate_text.split('\n')
-    estate_y = 695
-    line_h = 13
-    for i, line in enumerate(estate_lines[:22]):
-        if line.strip():
-            c.drawString(left_x, estate_y - (i * line_h), line)
+    draw_estate_auto_fit(c, font_name, estate_text, 
+                        box_x=left_x, box_y_start=695, box_height=290,
+                        max_font=10, min_font=7, max_line_h=13, min_line_h=10)
     
     # 내용 영역
     c.setFont(font_name, 10)
@@ -1284,15 +1306,11 @@ def make_malso_transfer_pdf(data):
     subtitle_width = c.stringWidth(subtitle, font_name, 11)
     c.drawString(center_x - subtitle_width/2, 720, subtitle)
     
-    # 부동산 표시
-    c.setFont(font_name, 10)
+    # 부동산 표시 (자동 크기 조절) - 박스 높이 약 290
     estate_text = data.get('estate_text', '')
-    estate_lines = estate_text.split('\n')
-    estate_y = 695
-    line_h = 13
-    for i, line in enumerate(estate_lines[:22]):
-        if line.strip():
-            c.drawString(left_x, estate_y - (i * line_h), line)
+    draw_estate_auto_fit(c, font_name, estate_text, 
+                        box_x=left_x, box_y_start=695, box_height=290,
+                        max_font=10, min_font=7, max_line_h=13, min_line_h=10)
     
     # 내용
     c.setFont(font_name, 10)
@@ -1545,7 +1563,7 @@ def parse_registry_pdf(uploaded_file):
                         row0_clean = str(row[0]).strip()
                         if re.match(r'^\d+$', row0_clean) or re.match(r'^\d+\n\(전', row0_clean):
                             
-                            # 토지 섹션: 삭선 감지 적용
+                            # 토지 섹션: 토지번호 + 표시번호 기반으로 최신만 취함
                             if current_section == "토지":
                                 소재지 = (row[1] or "") if len(row) > 1 else ""
                                 
@@ -1553,18 +1571,28 @@ def parse_registry_pdf(uploaded_file):
                                 if not re.search(r'(시|군|구|동|리|읍|면)\s', 소재지):
                                     continue
                                 
-                                # 번지 추출
+                                # 표시번호 추출
+                                표시번호_str = str(row[0]).strip().split('\n')[0]
+                                표시번호 = int(표시번호_str) if 표시번호_str.isdigit() else 0
+                                
+                                # 토지번호 추출 (1., 2. 등)
                                 소재지_clean = 소재지.replace('\n', ' ').strip()
-                                번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_clean)
-                                번지 = 번지_match.group(1) if 번지_match else None
+                                토지번호_matches = re.findall(r'(\d+)\.\s*[가-힣]', 소재지_clean)
                                 
-                                # 컬러 PDF면 삭선 체크
-                                if has_color and 번지:
-                                    info = page_info[page_idx]
-                                    if is_번지_strikethrough(번지, info['words'], info['red_ys']):
-                                        continue  # 말소 스킵
+                                # 컬러 PDF면 삭선 체크 (번지 기준)
+                                skip_row = False
+                                if has_color:
+                                    번지_match = re.search(r'(\d+(-\d+)?)$', 소재지_clean)
+                                    번지 = 번지_match.group(1) if 번지_match else None
+                                    if 번지:
+                                        info = page_info[page_idx]
+                                        if is_번지_strikethrough(번지, info['words'], info['red_ys']):
+                                            skip_row = True
                                 
-                                sections["토지"].append((번지, row))
+                                if not skip_row:
+                                    # 각 토지번호별로 저장 (표시번호와 함께)
+                                    for 토지번호 in 토지번호_matches:
+                                        sections["토지"].append((토지번호, 표시번호, row))
                             else:
                                 sections[current_section].append(row)
             
@@ -1621,60 +1649,63 @@ def parse_registry_pdf(uploaded_file):
                     else:
                         result["1동건물표시"] = convert_region(' '.join(content_lines))
             
-            # ===== 토지: 같은 번지면 마지막만 =====
-            토지_by_번지 = {}
-            for 번지, row in sections["토지"]:
-                토지_by_번지[번지] = row
+            # ===== 토지: 토지번호별로 표시번호가 가장 큰 것만 취함 =====
+            # 그리고 최근 표시번호 범위에 있는 토지만 유효로 간주
+            토지_by_번호 = {}
+            for 토지번호, 표시번호, row in sections["토지"]:
+                if 토지번호 not in 토지_by_번호 or 표시번호 > 토지_by_번호[토지번호][0]:
+                    토지_by_번호[토지번호] = (표시번호, row)
             
-            # 번지 숫자순 정렬
-            토지_items = sorted(토지_by_번지.items(), key=lambda x: (int(re.search(r'^(\d+)', x[0]).group(1)) if x[0] and re.search(r'^(\d+)', x[0]) else 0))
+            # 모든 토지 항목 중 최대 표시번호 찾기
+            max_표시번호 = max([v[0] for v in 토지_by_번호.values()]) if 토지_by_번호 else 0
             
-            for idx, (번지, row) in enumerate(토지_items, 1):
+            # 최대 표시번호 - 1 이상인 것만 유효 (최근 변경된 토지만)
+            min_valid_표시번호 = max(1, max_표시번호 - 1)
+            
+            # 토지번호 숫자순 정렬
+            토지_items = sorted(토지_by_번호.items(), key=lambda x: int(x[0]) if x[0] and x[0].isdigit() else 0)
+            
+            for 토지번호, (표시번호, row) in 토지_items:
+                # 최근 표시번호 범위에 없으면 스킵 (말소된 토지)
+                if 표시번호 < min_valid_표시번호:
+                    continue
+                    
                 소재지_raw = (row[1] or "").replace('\n', ' ').strip()
                 
-                # 지목과 면적: row[2:]에서 패턴으로 찾기 (pdfplumber 파싱 차이 대응)
+                # 지목과 면적: row[2:]에서 패턴으로 찾기
                 지목_raw = ""
                 면적_raw = ""
                 for col in row[2:]:
                     col_str = (col or "").strip()
                     if col_str:
-                        # 지목: 대, 전, 답 등으로만 구성
                         if re.match(r'^(대|전|답|임야|잡종지|도로|하천)(\n(대|전|답|임야|잡종지|도로|하천))*$', col_str):
                             지목_raw = col_str
-                        # 면적: ㎡ 포함
                         elif '㎡' in col_str:
                             면적_raw = col_str
                 
-                # 여러 필지가 한 행에 있는 경우 분리 (1. xxx 2. xxx 3. xxx 형태)
-                필지_matches = re.split(r'(?=\d+\.\s*[가-힣])', 소재지_raw)
-                필지_matches = [p.strip() for p in 필지_matches if p.strip()]
+                # 해당 토지번호에 맞는 필지만 추출
+                # "1. xxx 2. xxx" 형태에서 토지번호에 해당하는 것만 찾기
+                필지_pattern = rf'{토지번호}\.\s*([가-힣].*?)(?=\s*\d+\.\s*[가-힣]|$)'
+                필지_match = re.search(필지_pattern, 소재지_raw)
                 
-                if len(필지_matches) > 1:
-                    # 지목과 면적도 분리
-                    지목_list = re.findall(r'(대|전|답|임야|잡종지|도로|하천|공장용지|학교용지|주차장|창고용지|목장용지|광천지|염전|유지|양어장|수도용지|공원|체육용지|유원지|종교용지|사적지|묘지|주유소용지)', 지목_raw)
-                    면적_list = re.findall(r'([\d.]+㎡)', 면적_raw)
-                    
-                    for i, 필지 in enumerate(필지_matches):
-                        소재지 = re.sub(r'^\d+\.\s*', '', 필지).strip()
-                        지목 = 지목_list[i] if i < len(지목_list) else (지목_list[0] if 지목_list else "")
-                        면적 = 면적_list[i] if i < len(면적_list) else ""
-                        
-                        result["토지"].append({
-                            "번호": str(len(result["토지"]) + 1),
-                            "소재지": convert_region(소재지),
-                            "지목": 지목,
-                            "면적": 면적
-                        })
+                if 필지_match:
+                    소재지 = 필지_match.group(1).strip()
                 else:
-                    # 단일 필지
+                    # 단일 필지인 경우
                     소재지 = re.sub(r'^\d+\.\s*', '', 소재지_raw)
-                    지목_match = re.search(r'(대|전|답|임야|잡종지)', 지목_raw)
-                    지목 = 지목_match.group(1) if 지목_match else 지목_raw
-                    면적_match = re.search(r'([\d.]+㎡)', 면적_raw)
-                    면적 = 면적_match.group(1) if 면적_match else 면적_raw
-                    
+                
+                # 지목과 면적 추출 (해당 토지번호 위치에 맞게)
+                지목_list = re.findall(r'(대|전|답|임야|잡종지|도로|하천)', 지목_raw)
+                면적_list = re.findall(r'([\d.]+㎡)', 면적_raw)
+                
+                # 토지번호가 여러 개 있는 행이면 해당 위치의 지목/면적 사용
+                idx = int(토지번호) - 1 if 토지번호.isdigit() else 0
+                지목 = 지목_list[0] if len(지목_list) == 1 else (지목_list[idx] if idx < len(지목_list) else "")
+                면적 = 면적_list[0] if len(면적_list) == 1 else (면적_list[idx] if idx < len(면적_list) else "")
+                
+                if 소재지:
                     result["토지"].append({
-                        "번호": str(len(result["토지"]) + 1),
+                        "번호": 토지번호,
                         "소재지": convert_region(소재지),
                         "지목": 지목,
                         "면적": 면적

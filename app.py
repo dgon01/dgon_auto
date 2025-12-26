@@ -450,28 +450,35 @@ if FPDF_OK:
             pdf_buffer.seek(0); return pdf_buffer
 else: PDFConverter = None
 
-def draw_fit_text(canvas_obj, text, x, y, max_width, font_name, font_size):
-    """긴 텍스트를 max_width에 맞춰 여러 줄로 나눠 그리기"""
+def draw_fit_text(canvas_obj, text, x, y, max_width, font_name, font_size, min_font_size=5):
+    """텍스트를 max_width에 맞춰 폰트 크기 자동 조절 (1줄로 맞춤)"""
     if not text:
         return
-    words = text.split()
-    lines = []
-    current_line = []
     
-    for word in words:
-        test_line = ' '.join(current_line + [word])
-        if canvas_obj.stringWidth(test_line, font_name, font_size) <= max_width:
-            current_line.append(word)
-        else:
-            if current_line:
-                lines.append(' '.join(current_line))
-            current_line = [word]
+    current_font_size = font_size
     
-    if current_line:
-        lines.append(' '.join(current_line))
+    # 폰트 크기를 줄여가며 한 줄에 맞추기
+    while current_font_size >= min_font_size:
+        canvas_obj.setFont(font_name, current_font_size)
+        
+        # 한 줄에 들어가는지 확인
+        if canvas_obj.stringWidth(text, font_name, current_font_size) <= max_width:
+            canvas_obj.drawString(x, y, text)
+            canvas_obj.setFont(font_name, font_size)  # 원래 폰트 크기로 복원
+            return
+        
+        # 안 맞으면 폰트 크기 줄이기
+        current_font_size -= 0.5
     
-    for i, line in enumerate(lines):
-        canvas_obj.drawString(x, y - (i * (font_size + 2)), line)
+    # 최소 폰트로도 안 맞으면 잘라서 표시
+    canvas_obj.setFont(font_name, min_font_size)
+    truncated = text
+    while canvas_obj.stringWidth(truncated + "...", font_name, min_font_size) > max_width and len(truncated) > 10:
+        truncated = truncated[:-1]
+    if len(truncated) < len(text):
+        truncated += "..."
+    canvas_obj.drawString(x, y, truncated)
+    canvas_obj.setFont(font_name, font_size)  # 원래 폰트 크기로 복원
 
 def create_overlay_pdf(data, font_path):
     packet = BytesIO(); c = canvas.Canvas(packet, pagesize=A4); width, height = A4
@@ -1757,6 +1764,41 @@ with tab1:
             st.session_state['estate_text'] = default_estate
             st.session_state['estate_text_area'] = default_estate
             
+            # 2탭 관련 session_state 초기화
+            st.session_state['tab2_owner1_name'] = ''
+            st.session_state['tab2_owner1_name_input'] = ''
+            st.session_state['tab2_owner1_rrn'] = ''
+            st.session_state['tab2_owner1_rrn_input'] = ''
+            st.session_state['tab2_owner2_name'] = ''
+            st.session_state['tab2_owner2_name_input'] = ''
+            st.session_state['tab2_owner2_rrn'] = ''
+            st.session_state['tab2_owner2_rrn_input'] = ''
+            st.session_state['tab2_estate'] = ''
+            st.session_state['tab2_estate_input'] = ''
+            
+            # 3탭 관련 session_state 초기화
+            st.session_state['tab3_debtor_input'] = ''
+            st.session_state['tab3_estate_input'] = ''
+            st.session_state['calc_amount_input'] = ''
+            st.session_state['calc_debtor_view'] = ''
+            st.session_state['calc_estate_view'] = ''
+            st.session_state['calc_creditor_view'] = ''
+            st.session_state['calc_data'] = {}
+            st.session_state['input_parcels'] = 1
+            
+            # 수기입력 비용 초기화
+            st.session_state['cost_manual_제증명'] = '0'
+            st.session_state['cost_manual_교통비'] = '0'
+            st.session_state['cost_manual_원인증서'] = '0'
+            st.session_state['cost_manual_주소변경'] = '0'
+            st.session_state['cost_manual_확인서면'] = '0'
+            st.session_state['cost_manual_선순위 말소'] = '0'
+            st.session_state['use_address_change'] = False
+            st.session_state['address_change_count'] = 1
+            st.session_state['add_fee_val'] = '0'
+            st.session_state['etc_fee_val'] = '0'
+            st.session_state['disc_fee_val'] = '0'
+            
             st.success("✅ 초기화되었습니다!")
             st.rerun()
     st.markdown("---")
@@ -2036,7 +2078,7 @@ with tab1:
             if st.button("🔗 연결 테스트", key='wetax_test_conn'):
                 try:
                     test_url = wetax_url.rstrip('/') + "/"
-                    resp = requests.get(test_url, timeout=5)
+                    resp = requests.get(test_url, timeout=15)
                     if resp.status_code == 200:
                         st.success("✅ 연결 성공!")
                     else:

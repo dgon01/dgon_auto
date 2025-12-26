@@ -621,9 +621,9 @@ def make_setting_signature_pdf(template_path, data):
             c.drawString(250, 298, str(page_data['rrn']))
         
         # 등기목적 (좌표: 136.5, 558.5, 322.5, 580.5) 
-        # PyMuPDF y 중앙 569.5 → RL y = 842 - 569.5 ≈ 272, 좌측정렬 x=138
+        # 박스 RL y: 261.5 ~ 283.5, 상하 중앙 정렬 (baseline 보정)
         c.setFont(font_name, 11)
-        c.drawString(138, 272, reg_purpose)
+        c.drawString(138, 269, reg_purpose)
         
         # 작성일자 (좌표: 70, 673, 527, 693)
         # PyMuPDF y 중앙 683 → RL y = 842 - 683 = 159, 중앙정렬
@@ -672,10 +672,22 @@ def make_setting_power_pdf(template_path, data):
     
     contract_type = data.get('contract_type', '개인')
     
-    # 권리자(채권자) 정보
-    creditor_name = data.get('creditor_name', '')
+    # 권리자(채권자) 정보 - 회사명과 대표이사 분리
+    creditor_full = data.get('creditor_name', '')
     creditor_addr = data.get('creditor_addr', '')
-    creditor_corp_num = data.get('creditor_corp_num', '')
+    
+    # "(주)티플레인대부 대표이사 윤웅원" → 회사명, 대표이사명 분리
+    if '대표이사' in creditor_full:
+        parts = creditor_full.split('대표이사')
+        creditor_company = parts[0].strip()
+        creditor_rep = parts[1].strip() if len(parts) > 1 else ''
+    elif '사내이사' in creditor_full:
+        parts = creditor_full.split('사내이사')
+        creditor_company = parts[0].strip()
+        creditor_rep = parts[1].strip() if len(parts) > 1 else ''
+    else:
+        creditor_company = creditor_full
+        creditor_rep = ''
     
     # 오버레이 PDF 생성
     packet = BytesIO()
@@ -702,14 +714,12 @@ def make_setting_power_pdf(template_path, data):
     # 등기의 목적 (말소와 동일 높이: 458)
     c.drawString(175, 458, "근저당권설정")
     
-    # 채권최고액 - 말소할 등기사항과 동일 위치, 상하 중앙 (416)
+    # 채권최고액 - 좌측 라벨과 같은 높이 (416)
     claim_amount = data.get('claim_amount', '')
     if claim_amount:
         c.drawString(175, 416, f"금{claim_amount}")
     
-    # 등기의무자 (말소와 동일: 라벨 248, 이름 232, 주소 217)
-    c.setFont(font_name, 8)
-    c.drawString(70, 248, "등기의무자")
+    # 등기의무자 - 폰트 9pt 통일
     c.setFont(font_name, 9)
     
     if contract_type == '개인':
@@ -752,18 +762,14 @@ def make_setting_power_pdf(template_path, data):
         if owner_addr:
             c.drawString(70, 180, owner_addr[:55] if len(owner_addr) > 55 else owner_addr)
     
-    # 등기권리자 (말소와 동일: 라벨 118, 이름 102, 주소 87)
-    c.setFont(font_name, 8)
-    c.drawString(70, 118, "등기권리자")
+    # 등기권리자 - 폰트 9pt 통일
+    # 형식: 회사명 / 주소 / 대표이사 xxx
     c.setFont(font_name, 9)
     
-    if creditor_corp_num:
-        creditor_display = f"{creditor_name}({creditor_corp_num})"
-    else:
-        creditor_display = creditor_name
-    
-    c.drawString(70, 102, creditor_display)
+    c.drawString(70, 102, creditor_company)
     c.drawString(70, 87, creditor_addr)
+    if creditor_rep:
+        c.drawString(70, 72, f"대표이사 {creditor_rep}")
     
     c.showPage()
     c.save()
@@ -861,21 +867,22 @@ def make_confirmation_pdf(template_path, data):
         if page_data['name']:
             c.drawString(name_x, name_y, page_data['name'])
         
-        # 주소 (박스: 176, 344 ~ 477, 384) - 폰트 10pt 통일, 2줄까지
+        # 주소 (박스: 176, 344 ~ 477, 384) - 폰트 10pt, 상하 중앙정렬
+        # 박스 y중앙 = (344+384)/2 = 364 → RL y = 842 - 364 = 478
         addr_x = 180
-        addr_y = height - 358
         c.setFont(font_name, 10)
         if page_data['addr']:
             addr = page_data['addr']
             if len(addr) > 30:
-                # 공백 기준으로 줄바꿈 위치 찾기
+                # 2줄: 중앙에서 위아래로 배치
                 split_idx = addr.rfind(' ', 0, 30)
                 if split_idx == -1:
                     split_idx = 30
-                c.drawString(addr_x, addr_y, addr[:split_idx])
-                c.drawString(addr_x, addr_y - 14, addr[split_idx:].strip())
+                c.drawString(addr_x, height - 357, addr[:split_idx])
+                c.drawString(addr_x, height - 371, addr[split_idx:].strip())
             else:
-                c.drawString(addr_x, addr_y, addr)
+                # 1줄: 박스 중앙
+                c.drawString(addr_x, height - 364, addr)
         
         # 주민번호 (박스: 177, 388 ~ 476, 406) - 폰트 10pt 통일
         rrn_x = 180
@@ -885,14 +892,14 @@ def make_confirmation_pdf(template_path, data):
             c.drawString(rrn_x, rrn_y, page_data['rrn'])
         
         # 등기의 목적 - 가로쓰기 (박스: 486, 354 ~ 557, 397)
-        # 박스 상하 중앙에 가로로 표시
+        # 폰트 10pt로 통일, 상하좌우 중앙 정렬
         reg_type = data.get('reg_type', '근저당권설정')
         if reg_type:
-            c.setFont(font_name, 8)
-            # 박스 중앙 y = 842 - (354+397)/2 = 842 - 375.5 ≈ 466
-            reg_type_y = height - 375
-            # 텍스트 중앙 정렬 (박스 x: 486~557, 중앙 521.5)
-            text_width = c.stringWidth(reg_type, font_name, 8)
+            c.setFont(font_name, 10)
+            # 박스 중앙 y = (354+397)/2 = 375.5 → RL y = 842 - 375.5 ≈ 466
+            reg_type_y = height - 379
+            # 텍스트 좌우 중앙 정렬 (박스 x: 486~557, 중앙 521.5)
+            text_width = c.stringWidth(reg_type, font_name, 10)
             reg_type_x = 521 - (text_width / 2)
             c.drawString(reg_type_x, reg_type_y, reg_type)
         
@@ -960,11 +967,11 @@ def make_malso_signature_pdf(template_path, data):
         c.drawString(400, 298, str(holders[1].get('rrn', '')))
     
     # 등기목적 (좌표: 136.5, 558.5, 322.5, 580.5) 
-    # PyMuPDF y 중앙 569.5 → RL y = 272, 좌측정렬 x=138
+    # 박스 RL y: 261.5 ~ 283.5, 상하 중앙 정렬 (baseline 보정)
     reg_purpose = data.get('reg_purpose', '')
     if reg_purpose:
         c.setFont(font_name, 11)
-        c.drawString(138, 272, reg_purpose)
+        c.drawString(138, 269, reg_purpose)
         c.setFont(font_name, 10)
     
     # 작성일자 (좌표: 70, 673, 527, 693) → RL y = 159, 중앙정렬

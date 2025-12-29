@@ -251,7 +251,8 @@ TEMPLATE_FILENAMES = {
     "3자담보": "2.pdf",
     "공동담보": "3.pdf",
     "자필": "자필서명정보 템플릿.pdf",
-    "영수증": "receipt_template.xlsx"
+    "영수증": "receipt_template.xlsx",
+    "영수증1": "receipt_template1.xlsx"
 }
 
 CREDITORS = {
@@ -1847,17 +1848,72 @@ def create_receipt_excel(data, template_path=None):
     if not EXCEL_OK:
         return None
     
-    # 템플릿이 있으면 사용, 없으면 새로 생성
+    # 기본 정보 입력
+    client = data.get('client', {})
+    full_creditor = client.get('금융사', '')
+    
+    # ===== 엘하비스트대부 전용 처리 =====
+    if full_creditor == "㈜엘하비스트대부 대표이사 김상수":
+        # receipt_template1.xlsx 사용
+        template_dir = os.path.dirname(template_path) if template_path else APP_ROOT
+        elharvest_template = os.path.join(template_dir, "receipt_template1.xlsx")
+        
+        if os.path.exists(elharvest_template):
+            try:
+                workbook = openpyxl.load_workbook(elharvest_template)
+                ws = workbook.active
+                
+                # 채권최고액 (숫자만 추출)
+                amount_str = client.get('채권최고액', '0')
+                amount_val = int(re.sub(r'[^\d]', '', amount_str)) if amount_str else 0
+                
+                # 공과금 항목
+                cost_items = data.get('cost_items', {})
+                cost_total = int(data.get('cost_totals', {}).get('공과금 총액', 0))
+                
+                # 보수료 고정값
+                fee_amount = 70000        # 보수액
+                vat_amount = 7000         # 부가가치세
+                fee_total = fee_amount + vat_amount  # 보수료 합계
+                
+                # ===== 기본 정보 =====
+                ws['C5'] = client.get('채무자', '')       # 채무자
+                ws['D7'] = client.get('물건지', '')       # 소재지
+                ws['G8'] = amount_val                     # 채권최고액
+                
+                # ===== 보수료 항목 =====
+                ws['D11'] = fee_amount                    # 보수료
+                ws['D21'] = fee_amount                    # 보수료소계
+                ws['D22'] = vat_amount                    # 부가가치세
+                ws['D23'] = fee_total                     # 보수료소계(합계)
+                
+                # ===== 공과금 항목 =====
+                ws['G11'] = int(cost_items.get('등록면허세', 0))      # 등록면허세
+                ws['G12'] = int(cost_items.get('지방교육세', 0))      # 지방교육세
+                ws['G13'] = int(cost_items.get('증지대', 0))          # 등기신청수수료
+                ws['G14'] = int(cost_items.get('채권할인', 0))        # 채권할인액
+                ws['G23'] = cost_total                                # 공과금합계
+                
+                # ===== 총합계 및 작성일자 =====
+                ws['F24'] = fee_total + cost_total                    # 총합계
+                ws['C27'] = data.get('date_input', '')                # 작성일자
+                
+                output = BytesIO()
+                workbook.save(output)
+                output.seek(0)
+                return output
+                
+            except Exception as e:
+                # 템플릿 사용 실패 시 기본 템플릿으로 폴백
+                pass
+    
+    # ===== 기존 템플릿 처리 (일반 금융사) =====
     if template_path and os.path.exists(template_path):
         try:
             workbook = openpyxl.load_workbook(template_path)
             ws = workbook.active
             
-            # 기본 정보 입력
-            client = data.get('client', {})
-            
             # 금융사명에서 회사명만 추출 (대표이사/사내이사 앞까지)
-            full_creditor = client.get('금융사', '')
             if '대표이사' in full_creditor:
                 company_name = full_creditor.split('대표이사')[0].strip()
             elif '사내이사' in full_creditor:

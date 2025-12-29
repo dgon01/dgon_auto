@@ -2963,19 +2963,27 @@ with tab5:
             current_creditor = st.session_state.get('tab3_creditor_select', '')
             is_elharvest = (current_creditor == "㈜엘하비스트대부 대표이사 김상수")
             
+            # 이전 금융사 상태 추적 (금융사 변경 감지용)
+            prev_creditor = st.session_state.get('_prev_creditor_for_fee', '')
+            if prev_creditor != current_creditor:
+                # 금융사가 변경되면 기본료를 자동계산 값으로 리셋
+                st.session_state['base_fee_val'] = format_number_with_comma(auto_base_fee)
+                st.session_state['_prev_creditor_for_fee'] = current_creditor
+            
             c1, c2 = st.columns([1, 1.8])
             with c1: 
                 st.markdown("<div class='row-label'>기본료</div>", unsafe_allow_html=True)
                 st.caption(f"(자동: {format_number_with_comma(auto_base_fee)})")
             with c2:
                 if is_elharvest:
-                    # 엘하비스트대부는 항상 70,000원 고정
+                    # 엘하비스트대부는 항상 70,000원 고정 (별도 표시)
+                    st.text_input("기본료", value="70,000", disabled=True, label_visibility="collapsed", key="base_fee_display_elharvest")
                     st.session_state['base_fee_val'] = "70,000"
                 else:
                     # 수기입력 값이 0이면 자동계산 값으로 초기화
                     if st.session_state.get('base_fee_val', "0") == "0" and auto_base_fee > 0:
                         st.session_state['base_fee_val'] = format_number_with_comma(auto_base_fee)
-                st.text_input("기본료", value=st.session_state.get('base_fee_val', "0"), key="base_fee_val", on_change=format_cost_input, args=("base_fee_val",), label_visibility="collapsed", disabled=is_elharvest)
+                    st.text_input("기본료", key="base_fee_val", on_change=format_cost_input, args=("base_fee_val",), label_visibility="collapsed")
             
             make_row("추가보수", st.session_state['add_fee_val'], "add_fee_val", format_cost_input)
             make_row("기타보수", st.session_state['etc_fee_val'], "etc_fee_val", format_cost_input)

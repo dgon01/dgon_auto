@@ -1758,11 +1758,11 @@ def handle_creditor_change():
         st.session_state['input_creditor_corp_num'] = ""
         st.session_state['input_creditor_addr'] = ""
     else:
-        # 유노스프레스티지일 경우 제증명 20,000원, 나머지 기본값
+        # 유노스프레스티지일 경우 제증명만 20,000원, 교통비/원인증서는 0
         if "(주)유노스프레스티지대부" in creditor_key:
             st.session_state['cost_manual_제증명'] = "20,000"
-            st.session_state['cost_manual_교통비'] = "100,000"
-            st.session_state['cost_manual_원인증서'] = "50,000"
+            st.session_state['cost_manual_교통비'] = "0"
+            st.session_state['cost_manual_원인증서'] = "0"
             st.session_state['cost_manual_확인서면'] = "0"
             st.session_state['cost_manual_선순위 말소'] = "0"
         else:
@@ -2669,9 +2669,9 @@ with tab5:
             st.rerun()
     
     # 2탭 가져오기 버튼
-    col_btn1, col_spacer = st.columns([1, 5])
+    col_btn1, col_spacer = st.columns([2, 4])
     with col_btn1:
-        if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="2탭(대부업) 정보 불러오기"):
+        if st.button("📥 대부업(전자설정)내용 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="2탭(대부업) 정보 불러오기"):
             # 1탭 값 직접 가져와서 Tab3 위젯에 설정
             creditor_val = st.session_state.get('input_creditor', '')
             debtor_val = st.session_state.get('t1_debtor_name', '')
@@ -2689,8 +2689,8 @@ with tab5:
             # 수기입력 기본값 설정 (금융사에 따라)
             if "(주)유노스프레스티지대부" in creditor_val:
                 st.session_state['cost_manual_제증명'] = "20,000"
-                st.session_state['cost_manual_교통비'] = "100,000"
-                st.session_state['cost_manual_원인증서'] = "50,000"
+                st.session_state['cost_manual_교통비'] = "0"
+                st.session_state['cost_manual_원인증서'] = "0"
             else:
                 st.session_state['cost_manual_제증명'] = "50,000"
                 st.session_state['cost_manual_교통비'] = "100,000"

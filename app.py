@@ -1299,7 +1299,8 @@ def parse_registry_pdf(uploaded_file):
         for word in page_words:
             if 번지 in word['text']:
                 word_y = word['top']
-                has_strike = any(word_y < ry < word_y + 12 for ry in red_ys)
+                # 삭선이 단어 위나 아래에 있을 수 있으므로 양방향 체크
+                has_strike = any(abs(word_y - ry) < 15 for ry in red_ys)
                 found_positions.append({'y': word_y, 'strike': has_strike})
         
         if not found_positions:
@@ -1608,10 +1609,10 @@ def format_estate_text(data):
     lines = []
     
     # 1동의 건물의 표시
-    lines.append("1. 1동의 건물의 표시")
+    lines.append("1동의 건물의 표시")
     lines.append(f"   {data['1동건물표시']}")
     
-    # 아파트명/동명칭 (4가지 케이스 대응)
+    # 아파트명/동명칭
     건물명칭_parts = []
     if data["아파트명"]:
         건물명칭_parts.append(data["아파트명"])
@@ -1620,30 +1621,29 @@ def format_estate_text(data):
     if 건물명칭_parts:
         lines.append(f"   {' '.join(건물명칭_parts)}")
     
-    if data["도로명주소"]:
-        lines.append(f"   [도로명주소] {data['도로명주소']}")
-    
     lines.append("")  # 빈 줄
     
     # 전유부분의 건물의 표시
     lines.append("전유부분의 건물의 표시")
-    # 건물번호에 이미 동이 포함되어 있음 (예: 제110동 제10층 제1002호)
-    lines.append(f"  1. 건물의 번호 : {data['건물번호']} [고유번호: {data['고유번호']}]")
+    lines.append(f"  1. 건물의 번호 : {data['건물번호']}[고유번호:{data['고유번호']}]")
     lines.append(f"      구조 및 면적 : {data['구조']} {data['면적']}")
     
     lines.append("")  # 빈 줄
     
     # 전유부분의 대지권의 표시
     lines.append("전유부분의 대지권의 표시")
-    lines.append("  토지의 표시")
+    lines.append("      토지의 표시")
     
-    for t in data["토지"]:
+    # 토지는 최신 것만 (행정구역 변경된 경우 마지막 것만)
+    if data["토지"]:
+        # 마지막 토지만 사용 (최신)
+        t = data["토지"][-1]
         소재지 = convert_region(t['소재지'])
-        lines.append(f"       {t['번호']}. {소재지}")
-        lines.append(f"              {t['지목']} {t['면적']}")
+        lines.append(f"       1.{소재지}")
+        lines.append(f"           {t['지목']}  {t['면적']}")
     
-    lines.append(f"      대지권의 종류: {data['대지권종류']}")
-    lines.append(f"      대지권의 비율: {data['대지권비율']}")
+    lines.append(f"          대지권의 종류: {data['대지권종류']}")
+    lines.append(f"          대지권의 비율: {data['대지권비율']}")
     
     return "\n".join(lines)
 
@@ -2346,11 +2346,39 @@ with tab4:
             if len(clean_val) == 13:
                 st.session_state[key] = f"{clean_val[:6]}-{clean_val[6:]}"
 
-    # 헤더와 버튼을 분리
-    st.markdown("### ✍️ 자필서명정보 작성")
-    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
+    # 헤더와 초기화 버튼
+    col_header = st.columns([6, 1])
+    col_header[0].markdown("### ✍️ 자필서명정보 작성")
+    with col_header[1]:
+        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2", help="모든 입력 초기화"):
+            # 등기의무자 1
+            st.session_state['tab2_owner1_name'] = ''
+            st.session_state['tab2_owner1_name_input'] = ''
+            st.session_state['tab2_owner1_rrn'] = ''
+            st.session_state['tab2_owner1_rrn_input'] = ''
+            
+            # 등기의무자 2
+            st.session_state['tab2_owner2_name'] = ''
+            st.session_state['tab2_owner2_name_input'] = ''
+            st.session_state['tab2_owner2_rrn'] = ''
+            st.session_state['tab2_owner2_rrn_input'] = ''
+            
+            # 부동산 표시
+            st.session_state['tab2_estate'] = ''
+            st.session_state['tab2_estate_input'] = ''
+            
+            # 날짜
+            st.session_state['tab2_date'] = datetime.now().date()
+            st.session_state['tab2_date_input'] = datetime.now().date()
+            
+            # 신청서 구분
+            st.session_state['tab2_receipt_type'] = '전자신청'
+            
+            st.success("✅ 초기화되었습니다!")
+            st.rerun()
     
-    # [수정됨] 1탭 가져오기 로직 (위젯 Key 강제 동기화 적용)
+    # [수정됨] 2탭 가져오기 버튼
+    col_btn1, col_spacer = st.columns([1, 5])
     with col_btn1:
         if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab2", help="2탭(대부업) 정보 불러오기"):
             # 1. 1탭 데이터 확보 (위젯 Key 기준)
@@ -2405,34 +2433,6 @@ with tab4:
             st.session_state['tab2_date'] = date_val
             
             st.success("✅ 2탭(대부업) 정보를 불러왔습니다!")
-            st.rerun()
-    
-    with col_btn2:
-        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab2", help="모든 입력 초기화"):
-            # 등기의무자 1
-            st.session_state['tab2_owner1_name'] = ''
-            st.session_state['tab2_owner1_name_input'] = ''
-            st.session_state['tab2_owner1_rrn'] = ''
-            st.session_state['tab2_owner1_rrn_input'] = ''
-            
-            # 등기의무자 2
-            st.session_state['tab2_owner2_name'] = ''
-            st.session_state['tab2_owner2_name_input'] = ''
-            st.session_state['tab2_owner2_rrn'] = ''
-            st.session_state['tab2_owner2_rrn_input'] = ''
-            
-            # 부동산 표시
-            st.session_state['tab2_estate'] = ''
-            st.session_state['tab2_estate_input'] = ''
-            
-            # 날짜
-            st.session_state['tab2_date'] = datetime.now().date()
-            st.session_state['tab2_date_input'] = datetime.now().date()
-            
-            # 신청서 구분
-            st.session_state['tab2_receipt_type'] = '전자신청'
-            
-            st.success("✅ 초기화되었습니다!")
             st.rerun()
     
     st.markdown("---")
@@ -2602,38 +2602,10 @@ with tab4:
 
 # Tab 5: 비용계산(대부업)
 with tab5:
-    # 헤더와 버튼을 분리
-    st.markdown("### 🧾 등기비용 계산기(대부업)")
-    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
-    with col_btn1:
-        if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="2탭(대부업) 정보 불러오기"):
-            # 1탭 값 직접 가져와서 Tab3 위젯에 설정
-            creditor_val = st.session_state.get('input_creditor', '')
-            debtor_val = st.session_state.get('t1_debtor_name', '')
-            amount_val = st.session_state.get('input_amount', '')
-            estate_val = st.session_state.get('input_collateral_addr', '')
-            if not estate_val:
-                estate_val = extract_address_from_estate(st.session_state.get('estate_text') or "")
-            
-            # Tab3 위젯에 직접 설정 (selectbox는 이 값을 사용함)
-            st.session_state['tab3_creditor_select'] = creditor_val
-            st.session_state['tab3_debtor_input'] = debtor_val
-            st.session_state['calc_amount_input'] = amount_val
-            st.session_state['tab3_estate_input'] = estate_val
-            
-            # 수기입력 기본값 설정 (금융사에 따라)
-            if "(주)유노스프레스티지대부" in creditor_val:
-                st.session_state['cost_manual_제증명'] = "20,000"
-                st.session_state['cost_manual_교통비'] = "100,000"
-                st.session_state['cost_manual_원인증서'] = "50,000"
-            else:
-                st.session_state['cost_manual_제증명'] = "50,000"
-                st.session_state['cost_manual_교통비'] = "100,000"
-                st.session_state['cost_manual_원인증서'] = "50,000"
-            
-            st.success("✅ 2탭(대부업) 정보가 동기화되었습니다!")
-            st.rerun()
-    with col_btn2:
+    # 헤더와 초기화 버튼
+    col_header = st.columns([6, 1])
+    col_header[0].markdown("### 🧾 등기비용 계산기(대부업)")
+    with col_header[1]:
         if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab3", help="모든 입력 초기화"):
             # 동기화 방지 플래그 설정
             st.session_state['tab3_reset_flag'] = True
@@ -2694,6 +2666,37 @@ with tab5:
             st.session_state['disc_fee_val'] = '0'
             
             st.success("✅ 초기화되었습니다!")
+            st.rerun()
+    
+    # 2탭 가져오기 버튼
+    col_btn1, col_spacer = st.columns([1, 5])
+    with col_btn1:
+        if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab3", help="2탭(대부업) 정보 불러오기"):
+            # 1탭 값 직접 가져와서 Tab3 위젯에 설정
+            creditor_val = st.session_state.get('input_creditor', '')
+            debtor_val = st.session_state.get('t1_debtor_name', '')
+            amount_val = st.session_state.get('input_amount', '')
+            estate_val = st.session_state.get('input_collateral_addr', '')
+            if not estate_val:
+                estate_val = extract_address_from_estate(st.session_state.get('estate_text') or "")
+            
+            # Tab3 위젯에 직접 설정 (selectbox는 이 값을 사용함)
+            st.session_state['tab3_creditor_select'] = creditor_val
+            st.session_state['tab3_debtor_input'] = debtor_val
+            st.session_state['calc_amount_input'] = amount_val
+            st.session_state['tab3_estate_input'] = estate_val
+            
+            # 수기입력 기본값 설정 (금융사에 따라)
+            if "(주)유노스프레스티지대부" in creditor_val:
+                st.session_state['cost_manual_제증명'] = "20,000"
+                st.session_state['cost_manual_교통비'] = "100,000"
+                st.session_state['cost_manual_원인증서'] = "50,000"
+            else:
+                st.session_state['cost_manual_제증명'] = "50,000"
+                st.session_state['cost_manual_교통비'] = "100,000"
+                st.session_state['cost_manual_원인증서'] = "50,000"
+            
+            st.success("✅ 2탭(대부업) 정보가 동기화되었습니다!")
             st.rerun()
     st.markdown("---")
 
@@ -3133,9 +3136,62 @@ with tab3:
     if 'malso_saved_list' not in st.session_state:
         st.session_state['malso_saved_list'] = []
     
-    # 헤더와 버튼 분리
-    st.markdown("### 🗑️ 말소 문서 작성")
-    col_btn1, col_btn2, col_btn3, col_spacer = st.columns([1, 1, 1, 3])
+    # 헤더와 초기화 버튼
+    col_header = st.columns([6, 1])
+    col_header[0].markdown("### 🗑️ 말소 문서 작성")
+    with col_header[1]:
+        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4", help="모든 입력 초기화"):
+            # 말소 유형
+            st.session_state['malso_type'] = '근저당권'
+            
+            # 등기의무자 (채권자)
+            st.session_state['malso_obligor_name'] = ''
+            st.session_state['malso_obligor_id'] = ''
+            st.session_state['malso_obligor_addr'] = ''
+            st.session_state['malso_obligor_rep'] = ''
+            st.session_state['malso_obligor_branch'] = ''
+            st.session_state['malso_obligor_select'] = "직접입력"
+            st.session_state['malso_obligor_name_input'] = ''
+            st.session_state['malso_obligor_id_input'] = ''
+            st.session_state['malso_obligor_addr_input'] = ''
+            st.session_state['malso_obligor_rep_input'] = ''
+            st.session_state['malso_obligor_branch_input'] = ''
+            
+            # 등기권리자 1
+            st.session_state['malso_holder1_name'] = ''
+            st.session_state['malso_holder1_rrn'] = ''
+            st.session_state['malso_holder1_addr'] = ''
+            
+            # 등기권리자 2
+            st.session_state['malso_holder2_name'] = ''
+            st.session_state['malso_holder2_rrn'] = ''
+            st.session_state['malso_holder2_addr'] = ''
+            
+            # 부동산 표시
+            st.session_state['malso_estate_detail'] = ''
+            
+            # 물건지 주소
+            st.session_state['malso_property_addr'] = ''
+            
+            # 말소 내역
+            st.session_state['malso_cancel_text'] = ''
+            
+            # 이전등기소
+            st.session_state['malso_from_branch'] = ''
+            st.session_state['malso_to_branch'] = ''
+            
+            # 원인일자
+            st.session_state['malso_cause_date'] = datetime.now().date()
+            st.session_state['malso_cause_date_input'] = datetime.now().date()
+            
+            # 임시저장 목록도 초기화
+            st.session_state['malso_saved_list'] = []
+            
+            st.success("✅ 초기화되었습니다!")
+            st.rerun()
+    
+    # 2탭 가져오기 및 임시저장 버튼
+    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 4])
     with col_btn1:
         if st.button("📥 2탭 가져오기", type="primary", use_container_width=True, key="sync_tab4", help="2탭(대부업) 정보 불러오기"):
             # 2탭 데이터 동기화
@@ -3232,57 +3288,6 @@ with tab3:
                     st.session_state['malso_saved_list'].append(malso_data)
                     st.success(f"✅ {malso_type}말소 - {holder_name} 저장 완료!")
                 st.rerun()
-    
-    with col_btn3:
-        if st.button("🔄 초기화", type="secondary", use_container_width=True, key="reset_tab4", help="모든 입력 초기화"):
-            # 말소 유형
-            st.session_state['malso_type'] = '근저당권'
-            
-            # 등기의무자 (채권자)
-            st.session_state['malso_obligor_name'] = ''
-            st.session_state['malso_obligor_id'] = ''
-            st.session_state['malso_obligor_addr'] = ''
-            st.session_state['malso_obligor_rep'] = ''
-            st.session_state['malso_obligor_branch'] = ''
-            st.session_state['malso_obligor_select'] = "직접입력"
-            st.session_state['malso_obligor_name_input'] = ''
-            st.session_state['malso_obligor_id_input'] = ''
-            st.session_state['malso_obligor_addr_input'] = ''
-            st.session_state['malso_obligor_rep_input'] = ''
-            st.session_state['malso_obligor_branch_input'] = ''
-            
-            # 등기권리자 1
-            st.session_state['malso_holder1_name'] = ''
-            st.session_state['malso_holder1_rrn'] = ''
-            st.session_state['malso_holder1_addr'] = ''
-            
-            # 등기권리자 2
-            st.session_state['malso_holder2_name'] = ''
-            st.session_state['malso_holder2_rrn'] = ''
-            st.session_state['malso_holder2_addr'] = ''
-            
-            # 부동산 표시
-            st.session_state['malso_estate_detail'] = ''
-            
-            # 물건지 주소
-            st.session_state['malso_property_addr'] = ''
-            
-            # 말소 내역
-            st.session_state['malso_cancel_text'] = ''
-            
-            # 이전등기소
-            st.session_state['malso_from_branch'] = ''
-            st.session_state['malso_to_branch'] = ''
-            
-            # 원인일자
-            st.session_state['malso_cause_date'] = datetime.now().date()
-            st.session_state['malso_cause_date_input'] = datetime.now().date()
-            
-            # 임시저장 목록도 초기화
-            st.session_state['malso_saved_list'] = []
-            
-            st.success("✅ 초기화되었습니다!")
-            st.rerun()
     
     # 임시저장된 말소건 목록 표시
     if st.session_state.get('malso_saved_list'):
@@ -3620,7 +3625,20 @@ with tab3:
 # Tab 1: 시중은행
 # =============================================================================
 with tab1:
-    st.markdown("### 🏦 시중은행 서류 (설정계약서/위임장/자필서명정보)")
+    col_header = st.columns([6, 1])
+    col_header[0].markdown("### 🏦 시중은행 서류 (설정계약서/위임장/자필서명정보)")
+    with col_header[1]:
+        if st.button("🔄 초기화", key="reset_tab5", use_container_width=True, type="secondary"):
+            st.session_state['tab5_bank'] = "하나은행"
+            st.session_state['tab5_estate_input'] = ""
+            st.session_state['tab5_date'] = datetime.now().date()
+            st.session_state['tab5_amount'] = ""
+            st.session_state['tab5_property_addr'] = ""
+            for i in range(1, 4):
+                st.session_state[f'tab5_owner{i}_name_input'] = ""
+                st.session_state[f'tab5_owner{i}_rrn_input'] = ""
+                st.session_state[f'tab5_owner{i}_addr_input'] = ""
+            st.rerun()
     
     # 세션 상태 초기화
     if 'tab5_bank' not in st.session_state:
@@ -3649,21 +3667,6 @@ with tab1:
         if st.session_state.get(pending_key):
             st.session_state[f'tab5_owner{i}_addr_input'] = st.session_state[pending_key]
             del st.session_state[pending_key]
-    
-    # 상단 버튼
-    col_btn1, col_spacer = st.columns([1, 5])
-    with col_btn1:
-        if st.button("🔄 초기화", key="reset_tab5", use_container_width=True):
-            st.session_state['tab5_bank'] = "하나은행"
-            st.session_state['tab5_estate_input'] = ""
-            st.session_state['tab5_date'] = datetime.now().date()
-            st.session_state['tab5_amount'] = ""
-            st.session_state['tab5_property_addr'] = ""
-            for i in range(1, 4):
-                st.session_state[f'tab5_owner{i}_name_input'] = ""
-                st.session_state[f'tab5_owner{i}_rrn_input'] = ""
-                st.session_state[f'tab5_owner{i}_addr_input'] = ""
-            st.rerun()
     
     st.markdown("---")
     
@@ -3925,7 +3928,30 @@ with tab1:
 # Tab 6: 위택스 등록면허세 신고
 # =============================================================================
 with tab6:
-    st.markdown("### 🏛️ 위택스신고 (등록면허세)")
+    col_header = st.columns([6, 1])
+    col_header[0].markdown("### 🏛️ 위택스신고 (등록면허세)")
+    with col_header[1]:
+        if st.button("🔄 초기화", key="wetax_reset", use_container_width=True, type="secondary"):
+            # 위택스 관련 세션 상태 초기화
+            st.session_state['wetax_data_source'] = ''
+            st.session_state['wetax_report_type'] = '설정'
+            st.session_state['wetax_manual_list'] = []
+            st.session_state['wetax_malso_list'] = []
+            st.session_state['wetax_creditor_name'] = ''
+            st.session_state['wetax_creditor_corp_num'] = ''
+            st.session_state['wetax_creditor_addr'] = ''
+            st.session_state['wetax_debtor_name'] = ''
+            st.session_state['wetax_debtor_rrn'] = ''
+            st.session_state['wetax_debtor_addr'] = ''
+            st.session_state['wetax_owner_name'] = ''
+            st.session_state['wetax_owner_rrn'] = ''
+            st.session_state['wetax_owner_addr'] = ''
+            st.session_state['wetax_property_addr'] = ''
+            st.session_state['wetax_amount'] = ''
+            st.session_state['wetax_contract_type'] = '개인'
+            st.session_state['wetax_tab1_owners'] = []
+            st.success("✅ 초기화되었습니다!")
+            st.rerun()
     
     # =========================================================================
     # 터널 연결 설정
@@ -3986,7 +4012,7 @@ with tab6:
     if 'wetax_manual_list' not in st.session_state:
         st.session_state['wetax_manual_list'] = []
     
-    btn_cols = st.columns(5)
+    btn_cols = st.columns(4)
     
     with btn_cols[0]:
         if st.button("🏦 1탭 가져오기\n(시중은행 설정)", key="wetax_load_tab1", use_container_width=True, type="primary"):
@@ -4085,29 +4111,6 @@ with tab6:
             st.session_state['wetax_data_source'] = 'manual'
             st.session_state['wetax_report_type'] = '수기'
             st.session_state['wetax_manual_list'] = []
-            st.rerun()
-    
-    with btn_cols[4]:
-        if st.button("🔄 초기화", key="wetax_reset", use_container_width=True, type="secondary"):
-            # 위택스 관련 세션 상태 초기화
-            st.session_state['wetax_data_source'] = ''
-            st.session_state['wetax_report_type'] = '설정'
-            st.session_state['wetax_manual_list'] = []
-            st.session_state['wetax_malso_list'] = []
-            st.session_state['wetax_creditor_name'] = ''
-            st.session_state['wetax_creditor_corp_num'] = ''
-            st.session_state['wetax_creditor_addr'] = ''
-            st.session_state['wetax_debtor_name'] = ''
-            st.session_state['wetax_debtor_rrn'] = ''
-            st.session_state['wetax_debtor_addr'] = ''
-            st.session_state['wetax_owner_name'] = ''
-            st.session_state['wetax_owner_rrn'] = ''
-            st.session_state['wetax_owner_addr'] = ''
-            st.session_state['wetax_property_addr'] = ''
-            st.session_state['wetax_amount'] = ''
-            st.session_state['wetax_contract_type'] = '개인'
-            st.session_state['wetax_tab1_owners'] = []
-            st.success("✅ 초기화되었습니다!")
             st.rerun()
     
     st.markdown("---")

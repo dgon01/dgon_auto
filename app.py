@@ -1791,17 +1791,20 @@ def calculate_all(data):
     creditor = st.session_state.get('tab3_creditor_select', '')
     is_elharvest = (creditor == "㈜엘하비스트대부 대표이사 김상수")
     
-    # 기본료 (수기입력 우선, 없으면 자동계산)
-    manual_base_fee = parse_int_input(data.get('기본료_val', 0))
-    if manual_base_fee > 0:
-        base_fee = manual_base_fee
-    elif is_elharvest:
-        base_fee = 70000  # 엘하비스트대부 고정 기본료
+    # 기본료 계산
+    if is_elharvest:
+        # 엘하비스트대부는 항상 70,000원 고정
+        base_fee = 70000
+        data['기본료_자동'] = 70000
     else:
-        base_fee = lookup_base_fee(amount)
+        # 일반 금융사: 수기입력 우선, 없으면 자동계산
+        manual_base_fee = parse_int_input(data.get('기본료_val', 0))
+        if manual_base_fee > 0:
+            base_fee = manual_base_fee
+        else:
+            base_fee = lookup_base_fee(amount)
+        data['기본료_자동'] = lookup_base_fee(amount)
     data['기본료'] = base_fee
-    # 자동계산 값 별도 저장 (엘하비스트대부는 70,000원 고정)
-    data['기본료_자동'] = 70000 if is_elharvest else lookup_base_fee(amount)
     
     add_fee = parse_int_input(data.get('추가보수_val'))
     etc_fee = parse_int_input(data.get('기타보수_val'))
@@ -2955,15 +2958,24 @@ with tab5:
         with st.container(border=True, height=650):
             # 기본료: 수기 입력 가능 (자동계산 값 표시)
             auto_base_fee = final_data.get('기본료_자동', 0)
+            
+            # 엘하비스트대부 체크
+            current_creditor = st.session_state.get('tab3_creditor_select', '')
+            is_elharvest = (current_creditor == "㈜엘하비스트대부 대표이사 김상수")
+            
             c1, c2 = st.columns([1, 1.8])
             with c1: 
                 st.markdown("<div class='row-label'>기본료</div>", unsafe_allow_html=True)
                 st.caption(f"(자동: {format_number_with_comma(auto_base_fee)})")
             with c2:
-                # 수기입력 값이 0이면 자동계산 값으로 초기화
-                if st.session_state.get('base_fee_val', "0") == "0" and auto_base_fee > 0:
-                    st.session_state['base_fee_val'] = format_number_with_comma(auto_base_fee)
-                st.text_input("기본료", value=st.session_state.get('base_fee_val', "0"), key="base_fee_val", on_change=format_cost_input, args=("base_fee_val",), label_visibility="collapsed")
+                if is_elharvest:
+                    # 엘하비스트대부는 항상 70,000원 고정
+                    st.session_state['base_fee_val'] = "70,000"
+                else:
+                    # 수기입력 값이 0이면 자동계산 값으로 초기화
+                    if st.session_state.get('base_fee_val', "0") == "0" and auto_base_fee > 0:
+                        st.session_state['base_fee_val'] = format_number_with_comma(auto_base_fee)
+                st.text_input("기본료", value=st.session_state.get('base_fee_val', "0"), key="base_fee_val", on_change=format_cost_input, args=("base_fee_val",), label_visibility="collapsed", disabled=is_elharvest)
             
             make_row("추가보수", st.session_state['add_fee_val'], "add_fee_val", format_cost_input)
             make_row("기타보수", st.session_state['etc_fee_val'], "etc_fee_val", format_cost_input)

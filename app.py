@@ -2372,7 +2372,10 @@ with tab2:
     st.caption("※ 등기부등본 내용을 입력하세요")
     col_estate, col_pdf = st.columns([3, 1])
     with col_estate:
-        st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state['estate_text'], height=300, key='estate_text_area', label_visibility="collapsed")
+        # estate_text가 없으면 초기화
+        if 'estate_text' not in st.session_state:
+            st.session_state['estate_text'] = ""
+        st.session_state['estate_text'] = st.text_area("부동산 표시 내용", value=st.session_state.get('estate_text', ''), height=300, key='estate_text_area', label_visibility="collapsed")
     with col_pdf:
         st.markdown("#### 📑 파일 생성")
         selected_template_path = st.session_state['template_status'].get(st.session_state['contract_type'])
@@ -4797,62 +4800,57 @@ with tab7:
         "본점이전(타관)": {"fee": 154000, "tax": 0, "note": "이전 지역에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 금융인증서(주주전원) / 전자증명서 / 공증서류(필요시)"},
         "법인설립": {"fee": 165000, "tax": 0, "note": "자본금/본점에 따라 공과금 상이 (과밀:550,000 / 비과밀:280,000)", "docs": "전원 인증서 / 초본 / 잔고증명서"},
         "법인설립(제휴)": {"fee": 99000, "tax": 0, "note": "자본금/본점에 따라 공과금 상이", "docs": "전원 인증서 / 초본 / 잔고증명서"},
-        "주식매수선택권 행사": {"fee": 165000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 청구인 정보 / 전자증명서(OTP)"},
-        "유상증자(보통주)": {"fee": 209000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 신주인수인 정보 / 금융인증서(주주전원) / 전자증명서 / 잔고증명서"},
-        "유상증자(우선주)": {"fee": 275000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 투자계약서 / 금융인증서(주주전원) / 전자증명서 / 잔고증명서"},
-        "유상증자(가수금)": {"fee": 220000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 금융인증서(주주전원) / 전자증명서 / 계정별원장(가수금)"},
+        "주식매수선택권 행사": {"fee": 165000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 청구인 정보 / 전자증명서(OTP 포함) / 잔고증명서"},
+        "유상증자(보통주)": {"fee": 209000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 신주인수인 정보 / 금융인증서(주주전원) / 전자증명서(OTP 포함) / 잔고증명서 / 공증서류(필요시)"},
+        "유상증자(우선주)": {"fee": 275000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 투자계약서(워드 또는 한글) / 금융인증서(주주전원) / 전자증명서(OTP 포함) / 잔고증명서 / 공증서류(필요시)"},
+        "유상증자(가수금)": {"fee": 220000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이", "docs": "정관 / 주주명부 / 등기부등본 / 금융인증서(주주전원) / 전자증명서(OTP 포함) / 계정별원장(가수금) / 공증서류(필요시)"},
         "감자등기": {"fee": 275000, "tax": 52240, "note": "공증 여부 확인 / 공고 별도", "docs": "-"},
-        "사채발행": {"fee": 275000, "tax": 52240, "note": "공증 여부 확인", "docs": "정관 / 주주명부 / 등기부등본 / 투자계약서 / 금융인증서(주주전원) / 전자증명서"},
+        "사채발행": {"fee": 275000, "tax": 52240, "note": "공증 여부 확인", "docs": "정관 / 주주명부 / 등기부등본 / 투자계약서(워드 또는 한글) / 금융인증서(주주전원) / 전자증명서(OTP 포함)"},
         "무상증자": {"fee": 363000, "tax": 0, "note": "설립연도/지역/증자금액에 따라 공과금 상이, 공증 여부 확인", "docs": "-"},
         "해산/청산": {"fee": 660000, "tax": 156720, "note": "공증 여부 확인", "docs": "-"},
     }
     
-    # 추가 옵션
-    CORP_EXTRA_OPTIONS = {
-        "공증료 추가": {"fee": 110000, "tax_options": [30000, 60000]},
-        "전자증명서 발급대행": {"fee": 55000, "tax": 0},
-        "목적 추가 (10개당)": {"fee": 22000, "tax": 0},
-    }
+    # 3컬럼 레이아웃
+    col_sec1, col_sec2, col_sec3 = st.columns([1.2, 1, 1])
     
-    col_left, col_right = st.columns([1.5, 1])
-    
-    with col_left:
+    # ===== 섹션 1: 등기 종류 & 추가 옵션 =====
+    with col_sec1:
         st.markdown("#### 📋 등기 종류 선택")
         
-        # 등기 종류 선택
         selected_type = st.selectbox(
             "등기 종류",
             options=list(CORP_REGISTRY_FEES.keys()),
-            key="corp_reg_type"
+            key="corp_reg_type",
+            label_visibility="collapsed"
         )
         
-        # 선택된 등기 정보
         selected_info = CORP_REGISTRY_FEES[selected_type]
         
-        # 추가 옵션
+        # 비고
+        if selected_info["note"]:
+            st.caption(f"📌 {selected_info['note']}")
+        
+        st.markdown("---")
         st.markdown("#### ➕ 추가 옵션")
         
-        col_opt1, col_opt2 = st.columns(2)
-        with col_opt1:
-            add_notary = st.checkbox("공증료 추가", key="corp_add_notary")
-            if add_notary:
-                notary_type = st.radio("공증 유형", ["일반 (30,000원)", "특별 (60,000원)"], key="corp_notary_type", horizontal=True)
-                notary_tax = 30000 if "30,000" in notary_type else 60000
-            else:
-                notary_tax = 0
+        add_notary = st.checkbox("공증료 추가", key="corp_add_notary")
+        if add_notary:
+            notary_type = st.radio("", ["일반 (30,000원)", "특별 (60,000원)"], key="corp_notary_type", horizontal=True, label_visibility="collapsed")
+            notary_tax = 30000 if "30,000" in notary_type else 60000
+        else:
+            notary_tax = 0
         
-        with col_opt2:
-            add_cert = st.checkbox("전자증명서 발급대행 (+55,000원)", key="corp_add_cert")
+        add_cert = st.checkbox("전자증명서 발급대행 (+55,000원)", key="corp_add_cert")
         
         # 목적 추가 (법인설립 시)
         extra_purpose_fee = 0
         if "법인설립" in selected_type:
             st.markdown("---")
-            purpose_count = st.number_input("목적 개수 (기본 10개 포함)", min_value=10, value=10, step=10, key="corp_purpose_count")
+            purpose_count = st.number_input("목적 개수 (기본 10개)", min_value=10, value=10, step=10, key="corp_purpose_count")
             if purpose_count > 10:
                 extra_sets = (purpose_count - 10) // 10
                 extra_purpose_fee = extra_sets * 22000
-                st.caption(f"※ 추가 목적 {purpose_count - 10}개 → +{extra_purpose_fee:,}원")
+                st.caption(f"※ 추가 +{extra_purpose_fee:,}원")
         
         # 공과금 직접 입력 (변동 항목용)
         if selected_info["tax"] == 0:
@@ -4862,17 +4860,13 @@ with tab7:
                 min_value=0, 
                 value=0, 
                 step=10000,
-                key="corp_manual_tax",
-                help=selected_info["note"]
+                key="corp_manual_tax"
             )
         else:
             manual_tax = selected_info["tax"]
-        
-        # 비고
-        if selected_info["note"]:
-            st.info(f"📌 {selected_info['note']}")
     
-    with col_right:
+    # ===== 섹션 2: 비용 계산 =====
+    with col_sec2:
         st.markdown("#### 💰 비용 계산")
         
         # 계산
@@ -4888,52 +4882,52 @@ with tab7:
         
         # 결과 표시
         with st.container(border=True):
-            st.markdown(f"**등기 종류:** {selected_type}")
+            st.markdown(f"**{selected_type}**")
             st.markdown("---")
             
             st.markdown("**📑 대행료**")
-            st.markdown(f"- 기본 대행료: **{base_fee:,}원**")
+            st.markdown(f"기본: **{base_fee:,}원**")
             if notary_fee > 0:
-                st.markdown(f"- 공증료: **{notary_fee:,}원**")
+                st.markdown(f"공증: **{notary_fee:,}원**")
             if cert_fee > 0:
-                st.markdown(f"- 전자증명서 발급: **{cert_fee:,}원**")
+                st.markdown(f"전자증명서: **{cert_fee:,}원**")
             if extra_purpose_fee > 0:
-                st.markdown(f"- 목적 추가: **{extra_purpose_fee:,}원**")
-            st.markdown(f"**대행료 소계: {total_fee:,}원**")
+                st.markdown(f"목적추가: **{extra_purpose_fee:,}원**")
+            st.markdown(f"**소계: {total_fee:,}원**")
             
             st.markdown("---")
             st.markdown("**🏛️ 공과금**")
-            st.markdown(f"- 등록면허세 등: **{base_tax:,}원**")
+            st.markdown(f"등록면허세 등: **{base_tax:,}원**")
             if notary_tax > 0:
-                st.markdown(f"- 공증 공과금: **{notary_tax:,}원**")
-            st.markdown(f"**공과금 소계: {total_tax:,}원**")
+                st.markdown(f"공증: **{notary_tax:,}원**")
+            st.markdown(f"**소계: {total_tax:,}원**")
             
             st.markdown("---")
             st.markdown(f"""
-            <div style='background-color: #ff0033; color: white; padding: 15px; text-align: center; border-radius: 8px; margin-top: 10px;'>
-                <div style='font-size: 1rem;'>총 합계</div>
-                <div style='font-size: 1.8rem; font-weight: 800;'>{grand_total:,} 원</div>
+            <div style='background-color: #ff0033; color: white; padding: 12px; text-align: center; border-radius: 8px;'>
+                <div style='font-size: 0.9rem;'>총 합계</div>
+                <div style='font-size: 1.5rem; font-weight: 800;'>{grand_total:,} 원</div>
             </div>
             """, unsafe_allow_html=True)
-        
-        # 필요서류
+    
+    # ===== 섹션 3: 필요서류 & 입금안내 =====
+    with col_sec3:
         st.markdown("#### 📎 필요서류")
-        with st.expander("필요서류 보기", expanded=False):
+        with st.container(border=True):
             docs = selected_info["docs"]
             if docs and docs != "-":
                 for doc in docs.split(" / "):
-                    st.markdown(f"- {doc.strip()}")
+                    st.markdown(f"• {doc.strip()}")
             else:
-                st.markdown("- 별도 문의")
+                st.markdown("• 별도 문의")
         
-        # 입금 안내
         st.markdown("#### 🏦 입금 안내")
         with st.container(border=True):
             st.markdown("""
-            **입금자:** 법인명  
-            **은 행:** 신한은행  
-            **계 좌:** 100-035-852291  
-            **예금주:** 법무법인시화
+**입금자:** 법인명  
+**은 행:** 신한은행  
+**계 좌:** 100-035-852291  
+**예금주:** 법무법인시화
             """)
     
     # 카카오톡 메시지 생성

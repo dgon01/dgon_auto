@@ -2972,9 +2972,14 @@ with tab5:
                 st.session_state[key] = formatted_val
                 st.markdown(f"<div style='text-align:right; padding:8px 12px; background:#2a2a2a; border-radius:4px; color:#00d26a; font-weight:bold;'>{formatted_val} 원</div>", unsafe_allow_html=True)
             elif on_change:
-                st.text_input(label, value=formatted_val, key=key, on_change=on_change, args=(key,), label_visibility="collapsed")
+                # key만 사용 (value와 key 동시 사용 시 충돌 방지)
+                if key not in st.session_state or st.session_state[key] == "0":
+                    st.session_state[key] = formatted_val
+                st.text_input(label, key=key, on_change=on_change, args=(key,), label_visibility="collapsed")
             else:
-                st.text_input(label, value=formatted_val, key=key, label_visibility="collapsed")
+                if key not in st.session_state or st.session_state[key] == "0":
+                    st.session_state[key] = formatted_val
+                st.text_input(label, key=key, label_visibility="collapsed")
 
     def format_cost_input(key):
         val = st.session_state[key]

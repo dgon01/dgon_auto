@@ -4953,6 +4953,142 @@ with tab7:
     vat = int(total_fee * 0.1)
     final_total = total_fee + vat + total_tax
     
+    # 등기 종류별 서류 안내 문구 생성
+    def get_docs_guide(reg_type):
+        # 기본 안내 (전자증명서 관련)
+        cert_guide = """
+💡 전자증명서가 없으시다면?
+   • 가까운 등기소 방문 발급
+   • 등기온 대행 신청 (대행료 5만원)"""
+        
+        if reg_type == "대표자 주소변경":
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 주민등록초본 (대표이사)
+   → 이 카카오톡 채팅방에 사진으로 올려주세요
+
+2️⃣ 법인인감도장
+   → 신청서 작성 후 날인 안내드립니다
+
+3️⃣ 전자증명서 (법인 인증서)
+   → 신청서 작성 후 별도 매뉴얼 발송드립니다
+{cert_guide}"""
+
+        elif reg_type == "임원변경":
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 정관 / 주주명부 / 등기부등본
+   → 이 카카오톡 채팅방에 파일로 올려주세요
+
+2️⃣ 사임/취임 임원 주민등록초본
+   → 이 카카오톡 채팅방에 사진으로 올려주세요
+
+3️⃣ 금융인증서 (주주 전원 + 사/취임 임원)
+   → 전자서명 시 필요합니다
+
+4️⃣ 전자증명서 (법인 인증서)
+   → 신청서 작성 후 별도 매뉴얼 발송드립니다
+
+※ 공증 필요 여부는 별도 안내드립니다
+{cert_guide}"""
+
+        elif "본점이전" in reg_type:
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 정관 / 등기부등본
+   → 이 카카오톡 채팅방에 파일로 올려주세요
+
+2️⃣ 전자증명서 (법인 인증서)
+   → 신청서 작성 후 별도 매뉴얼 발송드립니다
+
+3️⃣ 새 주소지 상세정보
+   → 도로명주소 전체를 알려주세요
+{cert_guide}"""
+
+        elif reg_type in ["상호변경", "목적변경", "공고방법변경"]:
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 정관 / 주주명부 / 등기부등본
+   → 이 카카오톡 채팅방에 파일로 올려주세요
+
+2️⃣ 금융인증서 (주주 전원)
+   → 전자서명 시 필요합니다
+
+3️⃣ 전자증명서 (법인 인증서)
+   → 신청서 작성 후 별도 매뉴얼 발송드립니다
+
+※ 공증 필요 여부는 별도 안내드립니다
+{cert_guide}"""
+
+        elif "법인설립" in reg_type:
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 발기인(주주) 전원 주민등록초본
+   → 이 카카오톡 채팅방에 사진으로 올려주세요
+
+2️⃣ 잔고증명서
+   → 자본금 입금 후 은행에서 발급
+
+3️⃣ 금융인증서 (발기인 전원)
+   → 전자서명 시 필요합니다
+
+※ 설립 완료 후 전자증명서 발급 안내드립니다"""
+
+        elif "유상증자" in reg_type:
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 정관 / 주주명부 / 등기부등본
+   → 이 카카오톡 채팅방에 파일로 올려주세요
+
+2️⃣ 잔고증명서
+   → 증자금 입금 후 은행에서 발급
+
+3️⃣ 금융인증서 (주주 전원)
+   → 전자서명 시 필요합니다
+
+4️⃣ 전자증명서 (법인 인증서)
+   → 신청서 작성 후 별도 매뉴얼 발송드립니다
+
+※ 신주인수인 정보 (성명/주소/주식수) 별도 안내 필요
+{cert_guide}"""
+
+        elif reg_type == "해산/청산":
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 정관 / 주주명부 / 등기부등본
+   → 이 카카오톡 채팅방에 파일로 올려주세요
+
+2️⃣ 금융인증서 (주주 전원)
+   → 전자서명 시 필요합니다
+
+3️⃣ 전자증명서 (법인 인증서)
+   → 신청서 작성 후 별도 매뉴얼 발송드립니다
+
+※ 해산/청산 절차는 별도 상담이 필요합니다
+{cert_guide}"""
+
+        else:
+            # 기본 안내
+            return f"""
+📎 서류 제출 방법 안내
+
+1️⃣ 필요서류
+   → 이 카카오톡 채팅방에 파일/사진으로 올려주세요
+
+2️⃣ 전자증명서 (법인 인증서)
+   → 신청서 작성 후 별도 매뉴얼 발송드립니다
+{cert_guide}"""
+    
+    # 서류 안내 문구 가져오기
+    docs_guide = get_docs_guide(selected_type)
+    
     # 메시지 템플릿
     kakao_message = f"""<법인 변경등기 견적서>
 
@@ -4968,54 +5104,18 @@ with tab7:
 은 행: 신한은행
 계 좌 : 100-035-852291
 예금주: 법무법인시화
-
-<필요서류>
-{docs_text}
-위 필요서류중 주민등록초본은 카카오톡 창에 올려주시고,
-전자증명서는 신청서 작성이 완료되면 보내드리는 매뉴얼대로 인터넷등기소에서 직접 승인 하실 때 필요합니다.
-
-전자증명서란? 등기소에서 발급한 법인의 인증서입니다.
-만약, 없으시면
-1. 가까운 등기소에 대표자 방문하여 발급
-2. 등기온에 의뢰(대행료:5만원)"""
+{docs_guide}"""
 
     # 메시지 미리보기 및 복사
-    col_msg1, col_msg2 = st.columns([3, 1])
+    st.text_area(
+        "📋 아래 텍스트를 전체 선택(Ctrl+A) 후 복사(Ctrl+C)하세요", 
+        value=kakao_message, 
+        height=500, 
+        key="kakao_msg_preview"
+    )
     
-    with col_msg1:
-        st.text_area("견적 메시지 미리보기", value=kakao_message, height=400, key="kakao_msg_preview")
-    
-    with col_msg2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # 클립보드 복사 (JavaScript 사용)
-        copy_script = f"""
-        <script>
-        function copyToClipboard() {{
-            const text = `{kakao_message.replace('`', '\\`').replace('$', '\\$')}`;
-            navigator.clipboard.writeText(text).then(function() {{
-                alert('클립보드에 복사되었습니다!');
-            }}, function(err) {{
-                console.error('복사 실패: ', err);
-            }});
-        }}
-        </script>
-        <button onclick="copyToClipboard()" style="
-            background-color: #FEE500;
-            color: #000000;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            margin-bottom: 10px;
-        ">📋 메시지 복사</button>
-        """
-        st.markdown(copy_script, unsafe_allow_html=True)
-        
-        st.info("💡 위 텍스트를 직접 선택하여 복사하거나, 복사 버튼을 클릭하세요.")
+    # 복사 안내
+    st.info("💡 **복사 방법**: 위 텍스트 영역을 클릭 → Ctrl+A (전체선택) → Ctrl+C (복사) → 카카오톡에 Ctrl+V (붙여넣기)")
 
 # =============================================================================
 # 하단 푸터

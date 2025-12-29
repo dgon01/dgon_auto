@@ -1787,14 +1787,21 @@ def calculate_all(data):
     # 원본 데이터 보존
     data['input_amount'] = data.get('채권최고액', '')
     
+    # 금융사 확인 (엘하비스트대부 체크)
+    creditor = st.session_state.get('tab3_creditor_select', '')
+    is_elharvest = (creditor == "㈜엘하비스트대부 대표이사 김상수")
+    
     # 기본료 (수기입력 우선, 없으면 자동계산)
     manual_base_fee = parse_int_input(data.get('기본료_val', 0))
     if manual_base_fee > 0:
         base_fee = manual_base_fee
+    elif is_elharvest:
+        base_fee = 70000  # 엘하비스트대부 고정 기본료
     else:
         base_fee = lookup_base_fee(amount)
     data['기본료'] = base_fee
-    data['기본료_자동'] = lookup_base_fee(amount)  # 자동계산 값 별도 저장
+    # 자동계산 값 별도 저장 (엘하비스트대부는 70,000원 고정)
+    data['기본료_자동'] = 70000 if is_elharvest else lookup_base_fee(amount)
     
     add_fee = parse_int_input(data.get('추가보수_val'))
     etc_fee = parse_int_input(data.get('기타보수_val'))

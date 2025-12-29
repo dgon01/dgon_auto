@@ -114,6 +114,12 @@ st.markdown(f"""
     .stTabs [data-baseweb="tab-list"] {{ gap: 10px; background-color: #ffffff; padding: 10px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }}
     .stTabs [data-baseweb="tab"] {{ background-color: #f8f9fa; border-radius: 8px; padding: 10px 20px; font-weight: 600; color: #495057; border: 1px solid #dee2e6; }}
     .stTabs [aria-selected="true"] {{ background-color: #00428B; color: white; border-color: #00428B; }}
+    
+    /* 탭 스크롤 그림자 제거 */
+    .stTabs [data-baseweb="tab-list"]::after,
+    .stTabs [data-baseweb="tab-list"]::before {{ display: none !important; }}
+    .stTabs [data-baseweb="tab-highlight"] {{ display: none !important; }}
+    .stTabs > div > div {{ box-shadow: none !important; }}
 
     .stTextInput > div > div > input, .stNumberInput > div > div > input, .stSelectbox > div > div > select {{
         border-radius: 6px; border: 1px solid #ced4da; padding: 8px 12px; font-size: 0.95rem;
@@ -4929,6 +4935,87 @@ with tab7:
             **계 좌:** 100-035-852291  
             **예금주:** 법무법인시화
             """)
+    
+    # 카카오톡 메시지 생성
+    st.markdown("---")
+    st.markdown("### 📱 카카오톡 견적 메시지")
+    
+    # 필요서류 텍스트 생성
+    docs_text = ""
+    if selected_info["docs"] and selected_info["docs"] != "-":
+        doc_list = selected_info["docs"].split(" / ")
+        for i, doc in enumerate(doc_list, 1):
+            docs_text += f"{i}. {doc.strip()}\n"
+    else:
+        docs_text = "- 별도 문의\n"
+    
+    # 부가세 계산 (대행료의 10%)
+    vat = int(total_fee * 0.1)
+    final_total = total_fee + vat + total_tax
+    
+    # 메시지 템플릿
+    kakao_message = f"""<법인 변경등기 견적서>
+
+{selected_type}
+
+보수료 : {total_fee:,}원
+부가세 : {vat:,}원
+공과금 : {total_tax:,}원
+--------------------------
+합계 : {final_total:,}원
+
+입금자: 법인명
+은 행: 신한은행
+계 좌 : 100-035-852291
+예금주: 법무법인시화
+
+<필요서류>
+{docs_text}
+위 필요서류중 주민등록초본은 카카오톡 창에 올려주시고,
+전자증명서는 신청서 작성이 완료되면 보내드리는 매뉴얼대로 인터넷등기소에서 직접 승인 하실 때 필요합니다.
+
+전자증명서란? 등기소에서 발급한 법인의 인증서입니다.
+만약, 없으시면
+1. 가까운 등기소에 대표자 방문하여 발급
+2. 등기온에 의뢰(대행료:5만원)"""
+
+    # 메시지 미리보기 및 복사
+    col_msg1, col_msg2 = st.columns([3, 1])
+    
+    with col_msg1:
+        st.text_area("견적 메시지 미리보기", value=kakao_message, height=400, key="kakao_msg_preview")
+    
+    with col_msg2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 클립보드 복사 (JavaScript 사용)
+        copy_script = f"""
+        <script>
+        function copyToClipboard() {{
+            const text = `{kakao_message.replace('`', '\\`').replace('$', '\\$')}`;
+            navigator.clipboard.writeText(text).then(function() {{
+                alert('클립보드에 복사되었습니다!');
+            }}, function(err) {{
+                console.error('복사 실패: ', err);
+            }});
+        }}
+        </script>
+        <button onclick="copyToClipboard()" style="
+            background-color: #FEE500;
+            color: #000000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 10px;
+        ">📋 메시지 복사</button>
+        """
+        st.markdown(copy_script, unsafe_allow_html=True)
+        
+        st.info("💡 위 텍스트를 직접 선택하여 복사하거나, 복사 버튼을 클릭하세요.")
 
 # =============================================================================
 # 하단 푸터

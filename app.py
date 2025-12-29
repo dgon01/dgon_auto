@@ -2831,19 +2831,34 @@ with tab5:
         # 기본 목록
         creditor_list = list(CREDITORS.keys())
         
-        # 직접입력한 채권자가 있으면 목록에 추가
+        # 직접입력한 채권자 목록 관리
+        if 'custom_creditors' not in st.session_state:
+            st.session_state['custom_creditors'] = []
+        
+        # 기존 input_creditor_name이 있으면 custom_creditors로 이전
         direct_creditor_name = st.session_state.get('input_creditor_name', '')
         if direct_creditor_name:
-            creditor_list.append(f"📝 {direct_creditor_name}")
+            is_duplicate = any(direct_creditor_name in key for key in CREDITORS.keys())
+            if not is_duplicate and direct_creditor_name not in st.session_state['custom_creditors']:
+                st.session_state['custom_creditors'].append(direct_creditor_name)
+        
+        # 직접입력한 채권자들 목록에 추가
+        for custom_name in st.session_state['custom_creditors']:
+            creditor_list.append(f"📝 {custom_name}")
         
         creditor_list.append("🖊️ 직접입력")
         
         # 1탭 값을 우선 사용
         current_creditor = creditor_from_tab1 if creditor_from_tab1 else creditor_list[0]
         
-        # "🖊️ 직접입력"이면서 이름이 있으면 → "📝 이름"으로 변환
+        # "🖊️ 직접입력"이면서 이름이 있으면 → 기존 목록에서 찾거나 "📝 이름"으로 변환
         if current_creditor == "🖊️ 직접입력" and direct_creditor_name:
-            current_creditor = f"📝 {direct_creditor_name}"
+            # 기존 CREDITORS에서 매칭되는 키 찾기
+            matched_key = next((key for key in CREDITORS.keys() if direct_creditor_name in key), None)
+            if matched_key:
+                current_creditor = matched_key
+            elif f"📝 {direct_creditor_name}" in creditor_list:
+                current_creditor = f"📝 {direct_creditor_name}"
         
         if current_creditor not in creditor_list:
             current_creditor = creditor_list[0]
@@ -2860,7 +2875,22 @@ with tab5:
                 # 기타 금융사는 초기화된 값이 아니면 유지
                 pass
         
-        selected_creditor_tab3 = st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change)
+        # 금융사 선택과 삭제 버튼을 나란히 배치
+        col_select, col_del = st.columns([5, 1])
+        with col_select:
+            selected_creditor_tab3 = st.selectbox("금융사", options=creditor_list, index=default_index, key='tab3_creditor_select', on_change=on_tab3_creditor_change, label_visibility="collapsed")
+        with col_del:
+            # 📝로 시작하는 직접입력 항목일 때만 삭제 버튼 표시
+            if selected_creditor_tab3.startswith("📝 "):
+                if st.button("🗑️", key="del_custom_creditor", help="직접입력 채권자 삭제"):
+                    custom_name = selected_creditor_tab3[2:].strip()
+                    if custom_name in st.session_state['custom_creditors']:
+                        st.session_state['custom_creditors'].remove(custom_name)
+                    # input_creditor_name도 초기화
+                    if st.session_state.get('input_creditor_name') == custom_name:
+                        st.session_state['input_creditor_name'] = ''
+                    st.session_state['tab3_creditor_select'] = list(CREDITORS.keys())[0]
+                    st.rerun()
         
         # 직접입력 선택 시 입력 필드 표시
         if selected_creditor_tab3 == "🖊️ 직접입력":

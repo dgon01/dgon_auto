@@ -4934,14 +4934,197 @@ with tab7:
     st.markdown("---")
     st.markdown("### 📱 카카오톡 견적 메시지")
     
-    # 필요서류 텍스트 생성
-    docs_text = ""
-    if selected_info["docs"] and selected_info["docs"] != "-":
-        doc_list = selected_info["docs"].split(" / ")
-        for i, doc in enumerate(doc_list, 1):
-            docs_text += f"{i}. {doc.strip()}\n"
+    # 등기 종류별 상세 정보 입력
+    st.markdown("#### ✏️ 상세 정보 입력")
+    detail_info = ""
+    
+    if selected_type == "대표자 주소변경":
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+            rep_name = st.text_input("대표이사명", key="corp_detail_rep", placeholder="홍길동")
+        with col_d2:
+            old_addr = st.text_input("변경 전 주소", key="corp_detail_old_addr", placeholder="서울시 강남구...")
+            new_addr = st.text_input("변경 후 주소", key="corp_detail_new_addr", placeholder="서울시 서초구...")
+        if corp_name or new_addr:
+            detail_info = f"""
+📌 변경 내용
+• 법인명: {corp_name}
+• 대표이사: {rep_name}
+• 변경 전: {old_addr}
+• 변경 후: {new_addr}
+"""
+
+    elif selected_type == "임원변경":
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+            resign_info = st.text_input("사임 임원", key="corp_detail_resign", placeholder="대표이사 홍길동")
+        with col_d2:
+            appoint_info = st.text_input("취임 임원", key="corp_detail_appoint", placeholder="대표이사 김철수")
+            change_date = st.text_input("변경일", key="corp_detail_date", placeholder="2025.01.01")
+        if corp_name or resign_info or appoint_info:
+            detail_info = f"""
+📌 변경 내용
+• 법인명: {corp_name}
+• 사임: {resign_info}
+• 취임: {appoint_info}
+• 변경일: {change_date}
+"""
+
+    elif "본점이전" in selected_type:
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+            old_addr = st.text_input("현재 본점 주소", key="corp_detail_old_addr", placeholder="서울시 강남구...")
+        with col_d2:
+            new_addr = st.text_input("이전할 주소", key="corp_detail_new_addr", placeholder="서울시 서초구...")
+            move_date = st.text_input("이전일", key="corp_detail_date", placeholder="2025.01.01")
+        if corp_name or new_addr:
+            detail_info = f"""
+📌 이전 내용
+• 법인명: {corp_name}
+• 현재 주소: {old_addr}
+• 이전 주소: {new_addr}
+• 이전일: {move_date}
+"""
+
+    elif selected_type == "상호변경":
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            old_name = st.text_input("현재 상호", key="corp_detail_old_name", placeholder="주식회사 OOO")
+        with col_d2:
+            new_name = st.text_input("변경할 상호", key="corp_detail_new_name", placeholder="주식회사 XXX")
+        if old_name or new_name:
+            detail_info = f"""
+📌 상호 변경 내용
+• 현재 상호: {old_name}
+• 변경 상호: {new_name}
+"""
+
+    elif selected_type == "목적변경":
+        corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+        purpose_add = st.text_area("추가할 목적", key="corp_detail_purpose_add", placeholder="1. 소프트웨어 개발업\n2. 전자상거래업", height=100)
+        purpose_del = st.text_input("삭제할 목적 (있는 경우)", key="corp_detail_purpose_del", placeholder="")
+        if corp_name or purpose_add:
+            detail_info = f"""
+📌 목적 변경 내용
+• 법인명: {corp_name}
+• 추가 목적:
+{purpose_add}
+""" + (f"• 삭제 목적: {purpose_del}\n" if purpose_del else "")
+
+    elif "법인설립" in selected_type:
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            new_corp_name = st.text_input("설립할 상호", key="corp_detail_new_name", placeholder="주식회사 OOO")
+            capital = st.text_input("자본금", key="corp_detail_capital", placeholder="10,000,000원")
+            rep_name = st.text_input("대표이사명", key="corp_detail_rep", placeholder="홍길동")
+        with col_d2:
+            head_addr = st.text_input("본점 주소", key="corp_detail_addr", placeholder="서울시 강남구...")
+            shareholder_cnt = st.text_input("주주 수", key="corp_detail_shareholder", placeholder="2명")
+            business_type = st.text_input("주요 업종", key="corp_detail_business", placeholder="소프트웨어 개발업")
+        if new_corp_name or capital:
+            detail_info = f"""
+📌 설립 정보
+• 상호: {new_corp_name}
+• 자본금: {capital}
+• 대표이사: {rep_name}
+• 본점 주소: {head_addr}
+• 주주 수: {shareholder_cnt}
+• 주요 업종: {business_type}
+"""
+
+    elif "유상증자" in selected_type:
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+            increase_amt = st.text_input("증자 금액", key="corp_detail_increase", placeholder="100,000,000원")
+            share_price = st.text_input("1주 발행가액", key="corp_detail_share_price", placeholder="10,000원")
+        with col_d2:
+            share_cnt = st.text_input("발행 주식수", key="corp_detail_share_cnt", placeholder="10,000주")
+            investor = st.text_input("신주인수인", key="corp_detail_investor", placeholder="김투자")
+            pay_date = st.text_input("납입일", key="corp_detail_date", placeholder="2025.01.01")
+        if corp_name or increase_amt:
+            detail_info = f"""
+📌 증자 내용
+• 법인명: {corp_name}
+• 증자 금액: {increase_amt}
+• 1주 발행가액: {share_price}
+• 발행 주식수: {share_cnt}
+• 신주인수인: {investor}
+• 납입일: {pay_date}
+"""
+
+    elif selected_type == "주식매수선택권 행사":
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+            grantee = st.text_input("행사자(청구인)", key="corp_detail_grantee", placeholder="홍길동")
+            grant_date = st.text_input("부여일", key="corp_detail_grant_date", placeholder="2023.01.01")
+        with col_d2:
+            exercise_cnt = st.text_input("행사 주식수", key="corp_detail_exercise_cnt", placeholder="1,000주")
+            exercise_price = st.text_input("행사 금액", key="corp_detail_exercise_price", placeholder="5,000원/주")
+            pay_date = st.text_input("납입일", key="corp_detail_date", placeholder="2025.01.01")
+        if corp_name or grantee:
+            detail_info = f"""
+📌 스톡옵션 행사 내용
+• 법인명: {corp_name}
+• 행사자: {grantee}
+• 부여일: {grant_date}
+• 행사 주식수: {exercise_cnt}
+• 행사 금액: {exercise_price}
+• 납입일: {pay_date}
+"""
+
+    elif selected_type == "사채발행":
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+            bond_amt = st.text_input("사채 총액", key="corp_detail_bond_amt", placeholder="500,000,000원")
+            bond_type = st.text_input("사채 종류", key="corp_detail_bond_type", placeholder="전환사채")
+        with col_d2:
+            investor = st.text_input("인수인", key="corp_detail_investor", placeholder="XX벤처투자")
+            issue_date = st.text_input("발행일", key="corp_detail_date", placeholder="2025.01.01")
+        if corp_name or bond_amt:
+            detail_info = f"""
+📌 사채발행 내용
+• 법인명: {corp_name}
+• 사채 종류: {bond_type}
+• 사채 총액: {bond_amt}
+• 인수인: {investor}
+• 발행일: {issue_date}
+"""
+
+    elif selected_type == "해산/청산":
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+            liquidator = st.text_input("청산인", key="corp_detail_liquidator", placeholder="홍길동")
+        with col_d2:
+            dissolve_date = st.text_input("해산일", key="corp_detail_date", placeholder="2025.01.01")
+            reason = st.text_input("해산 사유", key="corp_detail_reason", placeholder="주주총회 결의")
+        if corp_name:
+            detail_info = f"""
+📌 해산/청산 내용
+• 법인명: {corp_name}
+• 청산인: {liquidator}
+• 해산일: {dissolve_date}
+• 해산 사유: {reason}
+"""
+
     else:
-        docs_text = "- 별도 문의\n"
+        # 기타 등기 종류
+        corp_name = st.text_input("법인명", key="corp_detail_name", placeholder="주식회사 OOO")
+        memo = st.text_input("메모", key="corp_detail_memo", placeholder="추가 사항")
+        if corp_name:
+            detail_info = f"""
+📌 등기 내용
+• 법인명: {corp_name}
+• 메모: {memo}
+"""
+
+    st.markdown("---")
     
     # 부가세 계산 (대행료의 10%)
     vat = int(total_fee * 0.1)
@@ -4974,7 +5157,7 @@ with tab7:
         # 등기 종류별 추가 안내
         extra_note = ""
         if reg_type == "대표자 주소변경":
-            extra_note = "\n※ 초본은 카카오톡으로, 날인은 신청서 작성 후 안내드립니다."
+            extra_note = "\n※ 초본은 카카오톡으로, 날인 및 전자서명은 신청서 작성 후 안내드립니다."
         elif reg_type == "임원변경":
             extra_note = "\n※ 공증 필요 여부는 별도 안내드립니다."
         elif "본점이전" in reg_type:
@@ -5006,7 +5189,7 @@ with tab7:
     kakao_message = f"""<법인 변경등기 견적서>
 
 {selected_type}
-
+{detail_info}
 보수료 : {total_fee:,}원
 부가세 : {vat:,}원
 공과금 : {total_tax:,}원
@@ -5019,16 +5202,45 @@ with tab7:
 예금주: 법무법인시화
 {docs_guide}"""
 
-    # 메시지 미리보기 및 복사
-    st.text_area(
-        "📋 아래 텍스트를 전체 선택(Ctrl+A) 후 복사(Ctrl+C)하세요", 
-        value=kakao_message, 
-        height=500, 
-        key="kakao_msg_preview"
-    )
+    # 메시지 미리보기 및 복사 버튼
+    col_preview, col_btn = st.columns([4, 1])
     
-    # 복사 안내
-    st.info("💡 **복사 방법**: 위 텍스트 영역을 클릭 → Ctrl+A (전체선택) → Ctrl+C (복사) → 카카오톡에 Ctrl+V (붙여넣기)")
+    with col_preview:
+        st.text_area(
+            "견적 메시지 미리보기", 
+            value=kakao_message, 
+            height=400, 
+            key="kakao_msg_preview",
+            label_visibility="collapsed"
+        )
+    
+    with col_btn:
+        # 세션 상태에 메시지 저장
+        st.session_state['corp_kakao_message'] = kakao_message
+        
+        # 복사 버튼 (HTML/JS 사용)
+        copy_button_html = f'''
+        <button onclick="
+            navigator.clipboard.writeText(document.getElementById('kakao_msg_hidden').value).then(function() {{
+                alert('✅ 클립보드에 복사되었습니다!');
+            }});
+        " style="
+            background-color: #FEE500;
+            color: #191919;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        ">📋 복사</button>
+        <textarea id="kakao_msg_hidden" style="position:absolute;left:-9999px;">{kakao_message}</textarea>
+        '''
+        st.markdown(copy_button_html, unsafe_allow_html=True)
+        
+        st.caption("버튼 클릭 시 복사")
     
     # =============================================================================
     # 위택스 신고 데이터 생성

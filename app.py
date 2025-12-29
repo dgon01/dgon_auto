@@ -4869,44 +4869,59 @@ with tab7:
     with col_sec2:
         st.markdown("#### 💰 비용 계산")
         
-        # 계산
-        base_fee = selected_info["fee"]
-        base_tax = manual_tax
+        # 자동 계산값
+        auto_base_fee = selected_info["fee"]
+        auto_notary_fee = 110000 if add_notary else 0
+        auto_cert_fee = 55000 if add_cert else 0
+        auto_total_fee = auto_base_fee + auto_notary_fee + auto_cert_fee + extra_purpose_fee
+        auto_base_tax = manual_tax
+        auto_notary_tax = notary_tax if add_notary else 0
+        auto_total_tax = auto_base_tax + auto_notary_tax
         
-        notary_fee = 110000 if add_notary else 0
-        cert_fee = 55000 if add_cert else 0
+        # 세션 상태 초기화 (등기 종류 변경 시)
+        if st.session_state.get('corp_last_type') != selected_type:
+            st.session_state['corp_last_type'] = selected_type
+            st.session_state['corp_edit_fee'] = auto_total_fee
+            st.session_state['corp_edit_tax'] = auto_total_tax
         
-        total_fee = base_fee + notary_fee + cert_fee + extra_purpose_fee
-        total_tax = base_tax + (notary_tax if add_notary else 0)
-        grand_total = total_fee + total_tax
-        
-        # 결과 표시
+        # 수기 입력 가능한 비용
         with st.container(border=True):
             st.markdown(f"**{selected_type}**")
             st.markdown("---")
             
             st.markdown("**📑 대행료**")
-            st.markdown(f"기본: **{base_fee:,}원**")
-            if notary_fee > 0:
-                st.markdown(f"공증: **{notary_fee:,}원**")
-            if cert_fee > 0:
-                st.markdown(f"전자증명서: **{cert_fee:,}원**")
-            if extra_purpose_fee > 0:
-                st.markdown(f"목적추가: **{extra_purpose_fee:,}원**")
-            st.markdown(f"**소계: {total_fee:,}원**")
+            edit_fee = st.number_input(
+                "대행료", 
+                value=st.session_state.get('corp_edit_fee', auto_total_fee),
+                step=1000,
+                key="corp_fee_input",
+                label_visibility="collapsed"
+            )
+            st.session_state['corp_edit_fee'] = edit_fee
+            
+            # 부가세 자동계산
+            edit_vat = int(edit_fee * 0.1)
+            st.markdown(f"부가세: **{edit_vat:,}원**")
             
             st.markdown("---")
             st.markdown("**🏛️ 공과금**")
-            st.markdown(f"등록면허세 등: **{base_tax:,}원**")
-            if notary_tax > 0:
-                st.markdown(f"공증: **{notary_tax:,}원**")
-            st.markdown(f"**소계: {total_tax:,}원**")
+            edit_tax = st.number_input(
+                "공과금",
+                value=st.session_state.get('corp_edit_tax', auto_total_tax),
+                step=1000,
+                key="corp_tax_input",
+                label_visibility="collapsed"
+            )
+            st.session_state['corp_edit_tax'] = edit_tax
+            
+            # 합계 자동계산
+            edit_total = edit_fee + edit_vat + edit_tax
             
             st.markdown("---")
             st.markdown(f"""
             <div style='background-color: #ff0033; color: white; padding: 12px; text-align: center; border-radius: 8px;'>
                 <div style='font-size: 0.9rem;'>총 합계</div>
-                <div style='font-size: 1.5rem; font-weight: 800;'>{grand_total:,} 원</div>
+                <div style='font-size: 1.5rem; font-weight: 800;'>{edit_total:,} 원</div>
             </div>
             """, unsafe_allow_html=True)
     
@@ -4929,38 +4944,44 @@ with tab7:
 **계 좌:** 100-035-852291  
 **예금주:** 법무법인시화
             """)
-        
-        # 부가세 계산 (대행료의 10%)
-        vat = int(total_fee * 0.1)
-        final_total = total_fee + vat + total_tax
-        
-        # 필요서류 목록 생성
-        docs_numbered = ""
-        if selected_info["docs"] and selected_info["docs"] != "-":
-            doc_list = [doc.strip() for doc in selected_info["docs"].split(" / ")]
-            for i, doc in enumerate(doc_list, 1):
-                emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"][i-1] if i <= 10 else f"{i}."
-                docs_numbered += f"{emoji} {doc}\n"
-        else:
-            docs_numbered = "※ 필요서류는 별도 안내드립니다.\n"
-        
-        # 전자증명서 안내
-        cert_guide = """
+    
+    # ===== 카카오톡 견적 (3컬럼 밖) =====
+    st.markdown("---")
+    st.markdown("### 📱 카카오톡 견적 메시지")
+    
+    # 필요서류 목록 생성
+    docs_numbered = ""
+    if selected_info["docs"] and selected_info["docs"] != "-":
+        doc_list = [doc.strip() for doc in selected_info["docs"].split(" / ")]
+        for i, doc in enumerate(doc_list, 1):
+            emoji = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"][i-1] if i <= 10 else f"{i}."
+            docs_numbered += f"{emoji} {doc}\n"
+    else:
+        docs_numbered = "※ 필요서류는 별도 안내드립니다.\n"
+    
+    # 전자증명서 안내
+    cert_guide = """
 💡 전자증명서가 없으시다면?
    • 가까운 등기소 방문 발급
    • 등기온 대행 신청 (대행료 5만원)"""
-        
-        if "법인설립" in selected_type:
-            cert_guide = ""
-        
-        # 카카오톡 메시지 생성
-        kakao_message = f"""<법인 변경등기 견적서>
+    
+    if "법인설립" in selected_type:
+        cert_guide = ""
+    
+    # 수기입력 값 사용
+    final_fee = st.session_state.get('corp_edit_fee', auto_total_fee)
+    final_vat = int(final_fee * 0.1)
+    final_tax = st.session_state.get('corp_edit_tax', auto_total_tax)
+    final_total = final_fee + final_vat + final_tax
+    
+    # 카카오톡 메시지 생성
+    kakao_message = f"""<법인 등기 견적서>
 
 {selected_type}
 
-보수료 : {total_fee:,}원
-부가세 : {vat:,}원
-공과금 : {total_tax:,}원
+보수료 : {final_fee:,}원
+부가세 : {final_vat:,}원
+공과금 : {final_tax:,}원
 --------------------------
 합계 : {final_total:,}원
 
@@ -4971,14 +4992,18 @@ with tab7:
 
 📎 필요서류
 {docs_numbered}{cert_guide}"""
-        
-        # 카카오톡 메시지 복사 영역
-        st.markdown("---")
-        st.markdown("#### 📱 카카오톡 견적")
+    
+    # 버튼과 미리보기
+    col_btn, col_msg = st.columns([1, 3])
+    
+    with col_btn:
+        st.session_state['corp_kakao_msg'] = kakao_message
+        if st.button("📋 견적서 복사", type="primary", use_container_width=True, key="btn_copy_kakao"):
+            st.success("✅ 아래 텍스트를 복사하세요!")
+    
+    with col_msg:
         st.text_area("", value=kakao_message, height=350, key="kakao_msg_preview", label_visibility="collapsed")
-        
-        # 복사 안내
-        st.caption("💡 텍스트 클릭 → Ctrl+A → Ctrl+C")
+        st.caption("💡 Ctrl+A → Ctrl+C → 카카오톡에 붙여넣기")
     
     # =============================================================================
     # 위택스 신고 데이터 생성
